@@ -314,15 +314,92 @@ async function terminateWorker() {
   }
 }
 
-// ---------- 4. Parser hasil tesseract ----------
-// Format target per item nota cetak (typical):
-//   "SCM-001  Kampas Rem Beat   3 pcs  Rp 25.000   10%"
-// Strategi: per baris, ekstrak field dengan regex; abaikan baris header/total.
+// ---------- 4. Parser hasil tesseract (WORD-LEVEL SPATIAL) ----------
+//
+// Strategi parsing: BYPASS Tesseract's own line-grouping. Flatten semua
+// data.words → regroup-by-Y manual → per row, isolate kolom by X-zone,
+// → apply LOCALIZED REGEX per zona. Pendekatan ini robust terhadap kasus
+// dot-matrix di mana Tesseract:
+//   (a) salah grup line — qty Row N nyangkut ke nama Row N+1
+//   (b) misread noise di kolom tengah (mis. "V 20,00 PCS" — checkmark pena
+//       sebelum qty) yang sebelumnya merusak regex per-line keseluruhan.
+//
+//   1. Y-AXIS ROW GROUPING (groupWordsIntoRows)
+//      - Cluster words by vertical center; threshold = max(15px, 0.4 × median
+//        word height). Adaptive supaya bisa handle scan resolusi tinggi
+//        maupun rendah.
+//      - Sort top-to-bottom, lalu within-row left-to-right.
+//
+//   2. X-AXIS ZONE ISOLATION (wordsInZone)
+//      Zone (fraksi lebar gambar):
+//        CODE  10..35%   → kode barang
+//        NAME  35..65%   → nama barang
+//        QTY   65..80%   → qty + unit (PCS/KG/dll)
+//        PRICE 80..100%  → harga
+//      Word di-assign by X-center, bukan x0, supaya word lebar yang
+//      straddle batas tidak nyangkut ke zona salah.
+//
+//   3. LOCALIZED CLEANSING (per-zona regex)
+//      - CODE  : regex /\b[A-Z0-9]{2,10}-[A-Z0-9]{2,10}/ pada teks zona,
+//                buang non-alphanumeric/dash dulu.
+//      - QTY   : strip prefix non-digit ("V", "v", "*", tanda centang dll)
+//                via match (\d+[,.]?\d*)\s*UNIT, round ke int.
+//      - PRICE : buang semua huruf, deteksi pola ribuan terpisah-spasi
+//                ("1 500 000"), drop trailing 2-digit cents ("1500000 00"
+//                → 1500000), fallback ke largest numeric block.
+//      - NAME  : sisa setelah strip non-alphanum (kecuali spasi/dash/slash).
+//
+//   4. ROW VALIDATION (final gate)
+//      Push row HANYA jika: extractItemCodeFromZone() balas non-null
+//      AND extractPriceFromZone() balas nilai ≥ 1000. Header/footer noise
+//      otomatis di-drop karena tidak ada code valid di kolom kiri.
+//
+// Fallback (jalur PDF text-layer): ketika data tidak punya bbox/words sama
+// sekali (PDF "lahir digital" via pdf-parse), pakai parseLineToItemTextOnly()
+// yang TETAP menerapkan strict code anchor — tanpa spatial.
 
 // Header tabel + footer + label non-item yang sering muncul di nota Indonesia.
 // Baris yang start-with kata-kata ini akan di-skip di parser.
 const SKIP_LINE_RE =
-  /^(total|sub\s?total|grand\s?total|invoice|nota|tanggal|tgl|tanda\s+terima|hormat|tunai|kembalian|ppn|pajak|diskon\s+total|pot\.?|potongan|biaya|terbilang|disetujui|disiapkan|kepada|alamat|telp\.?|hp|email|kode\s+pel|nama\s+pel|kabag|disetorkan|banyaknya|nama\s+barang|harga\s|jumlah|kode\s|qty\s*$|barang\s*$|merk|satuan|admin|cashier|kasir|no\.?\s*kd|kd\.?\s*item|kd\.?\s*barang|nama\s*item|jml\b|sat\.?\s|pot\s*%|asia\s+jaya|dept|transaksi|s1[-\s]\d|tr\s*:|peja\s*:|hormat\s+kami)/i;
+  /^(total|sub\s?total|grand\s?total|invoice|nota|tanggal|tgl|tanda\s+terima|hormat|tunai|kembalian|ppn|pajak|diskon\s+total|pot\.?|potongan|biaya|terbilang|disetujui|disiapkan|kepada|alamat|telp\.?|hp|email|kode\s+pel|nama\s+pel|kabag|disetorkan|banyaknya|nama\s+barang|harga\s|jumlah|kode\s|qty\s*$|barang\s*$|merk|satuan|admin|cashier|kasir|no\.?\s*kd|kd\.?\s*item|kd\.?\s*barang|nama\s*item|jml\b|sat\.?\s|pot\s*%|asia\s+jaya|dept|transaksi|s1[-\s]\d|tr\s*:|peja\s*:|hormat\s+kami|pelanggan|customer|sales)/i;
+
+// Strict item code (anchor wajib). Harus alphanumeric + dash, min 1 digit,
+// ≤ 70% huruf. Contoh real: 90111-08815, 93306-002YR, SVD-E1310-20,
+// 5TL-E7623-00, BK6-F3145-00, 401-16111-00-30.
+const STRICT_ITEM_CODE_RE = /^[A-Z0-9]+(?:-[A-Z0-9]+)+$/;
+
+// Threshold confidence per-word (jalur cetak). Word di bawah ini dibuang
+// sebelum parsing. Sinkron dengan threshold flagLowConfidence supaya
+// behaviour konsisten.
+const WORD_CONFIDENCE_MIN = 60;
+
+// Zona spatial (sebagai fraksi lebar gambar). Word di-assign by X-CENTER.
+const ZONE_CODE_MIN = 0.10;
+const ZONE_CODE_MAX = 0.35;
+const ZONE_NAME_MIN = 0.35;
+const ZONE_NAME_MAX = 0.65;
+const ZONE_QTY_MIN = 0.65;
+const ZONE_QTY_MAX = 0.80;
+const ZONE_PRICE_MIN = 0.80;
+const ZONE_PRICE_MAX = 1.00;
+
+// Threshold vertical untuk cluster word jadi row (px). Adaptive: dinaikkan
+// ke 0.4 × median word-height kalau gambar resolusi tinggi.
+const ROW_Y_THRESHOLD_PX = 15;
+
+function isValidItemCode(token) {
+  if (!token) return false;
+  const t = String(token).toUpperCase().trim();
+  if (t.length < 5 || t.length > 22) return false;
+  if (!STRICT_ITEM_CODE_RE.test(t)) return false;
+  if (!/\d/.test(t)) return false;
+  // Tolak kalau >70% huruf (cegah tangkap kata biasa, mis. "PIRINGAN-AS")
+  const letters = (t.match(/[A-Z]/g) || []).length;
+  const total = t.replace(/-/g, "").length;
+  if (total === 0) return false;
+  if (letters / total > 0.7) return false;
+  return true;
+}
 
 // Pattern untuk pemisah multi-transaksi dalam satu nota (S1-XXXXXXXX).
 // OCR sering miss-read 'S1' jadi 'SL', 'Si', 'S|', '51', 'SI'. Pattern
@@ -387,133 +464,429 @@ function wordsMatching(words, snippet) {
 const UNIT_RE_SRC =
   "pcs?|pc|unit|btl|botol|pak|paket|set|kg|gr|gram|bal|bks|bungkus|bh|buah|lusin|dus|krg|karung|liter|ltr|l|ml|ekor|roll|lbr|lembar|sak|kaleng|kotak|tube|sachet|rim|sht";
 
-function parseLineToItem(line) {
+// ---------- 4a. WORD-LEVEL SPATIAL parser (PATH UTAMA) ------------------
+// Flatten data.words → Y-cluster jadi rows → per-row X-zone isolation →
+// localized cleansing per zona → row validation (code + price wajib).
+
+// Y-axis clustering: group words by vertical center proximity.
+// Output: array of rows; tiap row = array of words (sudah sort left-to-right).
+function groupWordsIntoRows(words, baseThreshold = ROW_Y_THRESHOLD_PX) {
+  if (!words || words.length === 0) return [];
+
+  const valid = words.filter(
+    (w) =>
+      w &&
+      w.bbox &&
+      typeof w.bbox.y0 === "number" &&
+      typeof w.bbox.y1 === "number" &&
+      String(w.text || "").trim().length > 0
+  );
+  if (valid.length === 0) return [];
+
+  const yCenter = (w) => (w.bbox.y0 + w.bbox.y1) / 2;
+  const hOf = (w) => w.bbox.y1 - w.bbox.y0;
+
+  // Adaptive threshold: 0.4 × median height (atau baseThreshold, mana lebih besar).
+  // Untuk scan resolusi tinggi (font ~30px), threshold naik ke ~12px;
+  // untuk scan low-res (font ~20px), tetap di baseThreshold (15px).
+  const heights = valid.map(hOf).sort((a, b) => a - b);
+  const medianH = heights[Math.floor(heights.length / 2)] || 20;
+  const yThr = Math.max(baseThreshold, medianH * 0.4);
+
+  const sorted = [...valid].sort((a, b) => yCenter(a) - yCenter(b));
+  const rows = [];
+  let curr = [sorted[0]];
+  let currYC = yCenter(sorted[0]);
+
+  for (let i = 1; i < sorted.length; i++) {
+    const w = sorted[i];
+    const wc = yCenter(w);
+    if (Math.abs(wc - currYC) <= yThr) {
+      curr.push(w);
+      // Running average untuk row center supaya tidak drift
+      currYC = curr.reduce((s, x) => s + yCenter(x), 0) / curr.length;
+    } else {
+      curr.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+      rows.push(curr);
+      curr = [w];
+      currYC = wc;
+    }
+  }
+  if (curr.length > 0) {
+    curr.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+    rows.push(curr);
+  }
+  return rows;
+}
+
+// X-zone filter: word masuk zone kalau X-CENTER dalam [xMinFrac, xMaxFrac].
+function wordsInZone(rowWords, xMinFrac, xMaxFrac, imageWidth) {
+  return rowWords.filter((w) => {
+    const xc = (w.bbox.x0 + w.bbox.x1) / 2;
+    const xcFrac = xc / imageWidth;
+    return xcFrac >= xMinFrac && xcFrac < xMaxFrac;
+  });
+}
+
+function joinWordTexts(words) {
+  return words
+    .slice()
+    .sort((a, b) => a.bbox.x0 - b.bbox.x0)
+    .map((w) => String(w.text || "").trim())
+    .filter((t) => t.length > 0)
+    .join(" ");
+}
+
+// ---- Localized cleansers ----
+
+// CODE: pattern alphanumeric{2-10}-alphanumeric{2-10} (optional 3rd group).
+// Buang karakter non [A-Z0-9\s-] dulu agar OCR garbage tidak ngeganggu regex.
+function extractItemCodeFromZone(zoneText) {
+  if (!zoneText) return null;
+  const cleaned = String(zoneText).toUpperCase().replace(/[^A-Z0-9\s-]/g, " ");
+  const m = cleaned.match(/\b[A-Z0-9]{2,10}-[A-Z0-9]{2,10}(?:-[A-Z0-9]{2,10})?\b/);
+  if (!m) return null;
+  const code = m[0];
+  if (!/\d/.test(code)) return null; // minimal 1 digit
+  if (code.length < 5 || code.length > 22) return null;
+  // Tolak >70% huruf (cegah false-positive nama produk yang kebetulan ada dash)
+  const letters = (code.match(/[A-Z]/g) || []).length;
+  const total = code.replace(/-/g, "").length;
+  if (total === 0 || letters / total > 0.7) return null;
+  return code;
+}
+
+// QTY: tolerant terhadap noise prefix (V/v/centang/asterisk/dll).
+// Pattern wajib (user spec): (\d+[,.]?\d*)\s*PCS — di-generalisasi ke
+// daftar UNIT_RE_SRC. Indonesian comma decimal ("20,00") → bulatkan ke int.
+function extractQtyFromZone(zoneText) {
+  if (!zoneText) return { qty: 0, unit: "" };
+  const text = String(zoneText);
+  // Coba dengan unit eksplisit dulu (paling reliable)
+  const withUnit = text.match(
+    new RegExp(`(\\d+(?:[,.]\\d+)?)\\s*(${UNIT_RE_SRC})\\b`, "i")
+  );
+  if (withUnit) {
+    const num = parseFloat(withUnit[1].replace(",", "."));
+    const qty = Math.round(num);
+    if (qty >= 1 && qty <= 9999) {
+      return { qty, unit: withUnit[2].toUpperCase() };
+    }
+  }
+  // Fallback: token numerik pertama (anggap qty), kalau wajar (1..9999)
+  const m = text.match(/(\d+(?:[,.]\d+)?)/);
+  if (!m) return { qty: 0, unit: "" };
+  const num = parseFloat(m[1].replace(",", "."));
+  const qty = Math.round(num);
+  if (qty < 1 || qty > 9999) return { qty: 0, unit: "" };
+  return { qty, unit: "" };
+}
+
+// PRICE: zone-localized — buang huruf, deteksi format ribuan terpisah-spasi,
+// drop trailing 2-digit cents bila ada, fallback largest numeric block.
+function extractPriceFromZone(zoneText) {
+  if (!zoneText) return 0;
+  // Buang alphabetical (user spec: "ignore alphabetical characters completely")
+  const noAlpha = String(zoneText).replace(/[a-zA-Z]/g, "");
+  const tokens = noAlpha.match(/\d+/g);
+  if (!tokens || tokens.length === 0) return 0;
+
+  // Helper: hapus trailing 2-digit cents kalau cocok pola
+  let work = tokens.slice();
+  if (
+    work.length >= 2 &&
+    work[work.length - 1].length === 2 &&
+    work.slice(0, -1).some((t) => t.length >= 3)
+  ) {
+    work = work.slice(0, -1);
+  }
+
+  // Pola ribuan terpisah-spasi: first 1-3 digit, sisanya semua exactly 3
+  // → concat. Contoh "1 500 000" → 1500000, "150 000" → 150000.
+  if (
+    work.length >= 2 &&
+    work[0].length >= 1 &&
+    work[0].length <= 3 &&
+    work.slice(1).every((t) => t.length === 3)
+  ) {
+    const v = parseInt(work.join(""), 10) || 0;
+    return v >= 1000 ? v : 0;
+  }
+
+  // Single token — parse via parseAmount (handle titik/koma separator).
+  if (work.length === 1) {
+    // Re-include original token (parseAmount akan handle separator)
+    const raw = String(zoneText).match(/[\d.,]+/g);
+    if (raw && raw.length) {
+      let best = 0;
+      for (const r of raw) {
+        const v = parseAmount(r);
+        if (v > best) best = v;
+      }
+      return best >= 1000 ? best : 0;
+    }
+    const v = parseInt(work[0], 10) || 0;
+    return v >= 1000 ? v : 0;
+  }
+
+  // Fallback: largest numeric block by digit-length
+  let largest = work[0];
+  for (const t of work) if (t.length > largest.length) largest = t;
+  const v = parseInt(largest, 10) || 0;
+  return v >= 1000 ? v : 0;
+}
+
+// NAME: keep alphanumeric + space + slash/dash/dot, collapse whitespace.
+function extractItemNameFromZone(zoneText) {
+  if (!zoneText) return "";
+  return String(zoneText)
+    .replace(/[^a-zA-Z0-9\s/.\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Discount: scan ENTIRE row (bukan zone tertentu) untuk "NN%"
+function extractDiscountFromRow(rowText) {
+  if (!rowText) return 0;
+  const m = String(rowText).match(/(\d{1,2}(?:[.,]\d{1,2})?)\s*%/);
+  if (!m) return 0;
+  const v = parseFloat(m[1].replace(",", "."));
+  return v >= 0 && v <= 100 ? v : 0;
+}
+
+// Main word-level entry. Returns array of validated items, in document order.
+function parseWordsToRows(data, imageWidth) {
+  // Flatten semua words across all lines (bypass line grouping Tesseract)
+  const allWords = [];
+  for (const ln of data?.lines || []) {
+    for (const w of ln.words || []) {
+      if (w && w.bbox && String(w.text || "").trim()) {
+        allWords.push(w);
+      }
+    }
+  }
+  if (allWords.length === 0) return [];
+
+  // Drop hanya word ber-confidence sangat rendah (< 30) supaya bbox-nya
+  // tidak mengacaukan row grouping. Confidence per-field di-evaluasi
+  // setelahnya di flagLowConfidence (threshold 60 untuk cetak).
+  const usable = allWords.filter((w) => (w.confidence || 0) >= 30);
+
+  const rows = groupWordsIntoRows(usable);
+
+  const items = [];
+  let transactionIndex = 0;
+  let lastTransactionCode = null;
+
+  const avgConf = (arr) =>
+    arr.length
+      ? Math.round(arr.reduce((s, w) => s + (w.confidence || 0), 0) / arr.length)
+      : 0;
+
+  for (const rowWords of rows) {
+    const rowText = joinWordTexts(rowWords);
+
+    // Multi-transaksi separator (S1-XXXXXX, variasi misread)
+    const trxMatch = rowText.match(/\b(?:S[1lLI|i!]|51)[-\s]?(\d{6,10})\b/);
+    if (trxMatch) {
+      const code = trxMatch[0];
+      if (code !== lastTransactionCode) {
+        if (items.length > 0) transactionIndex++;
+        lastTransactionCode = code;
+      }
+      continue;
+    }
+
+    // Pre-filter: cheap dropouts (header/decorative). Code-zone check
+    // di bawah akan tetap nge-drop sisanya; ini cuma optimization.
+    if (rowText.length < 6) continue;
+    if (SKIP_LINE_RE.test(rowText)) continue;
+    if (isDecorativeLine(rowText)) continue;
+
+    // X-zone isolation
+    const codeWords = wordsInZone(rowWords, ZONE_CODE_MIN, ZONE_CODE_MAX, imageWidth);
+    const nameWords = wordsInZone(rowWords, ZONE_NAME_MIN, ZONE_NAME_MAX, imageWidth);
+    const qtyWords = wordsInZone(rowWords, ZONE_QTY_MIN, ZONE_QTY_MAX, imageWidth);
+    const priceWords = wordsInZone(
+      rowWords,
+      ZONE_PRICE_MIN,
+      ZONE_PRICE_MAX,
+      imageWidth
+    );
+
+    // CODE — coba zone strict dulu, lalu safety net: seluruh half kiri
+    let kode_barang = extractItemCodeFromZone(joinWordTexts(codeWords));
+    if (!kode_barang) {
+      const leftHalf = wordsInZone(rowWords, 0, 0.50, imageWidth);
+      kode_barang = extractItemCodeFromZone(joinWordTexts(leftHalf));
+    }
+    // ROW VALIDATION (1): code wajib → drop kalau tidak ada
+    if (!kode_barang) continue;
+
+    // PRICE — coba zone strict dulu, lalu fallback ke seluruh half kanan
+    let harga_beli = extractPriceFromZone(joinWordTexts(priceWords));
+    if (harga_beli < 1000) {
+      // Coba right half exclusive qty zone (supaya qty integer kecil tidak
+      // ke-pick-up sebagai harga)
+      const rightFallback = wordsInZone(rowWords, ZONE_QTY_MAX, 1.0, imageWidth);
+      if (rightFallback.length > 0) {
+        harga_beli = extractPriceFromZone(joinWordTexts(rightFallback));
+      }
+    }
+    if (harga_beli < 1000) {
+      // Last resort: full right half (mulai dari mid)
+      const wideRight = wordsInZone(rowWords, 0.50, 1.0, imageWidth);
+      const exclQty = wideRight.filter((w) => !qtyWords.includes(w));
+      harga_beli = extractPriceFromZone(joinWordTexts(exclQty));
+    }
+    // ROW VALIDATION (2): price wajib ≥ 1000 → drop kalau tidak ada
+    if (harga_beli < 1000) continue;
+
+    // QTY (boleh kosong; bukan validation gate)
+    const { qty, unit } = extractQtyFromZone(joinWordTexts(qtyWords));
+
+    // NAME — zone strict, fallback ke "antara kode dan harga" by X
+    let nama_barang = extractItemNameFromZone(joinWordTexts(nameWords));
+    if (!nama_barang || nama_barang.length < 3) {
+      const codeMaxX = codeWords.length
+        ? Math.max(...codeWords.map((w) => w.bbox.x1))
+        : imageWidth * ZONE_CODE_MAX;
+      const priceMinX = priceWords.length
+        ? Math.min(...priceWords.map((w) => w.bbox.x0))
+        : imageWidth * ZONE_PRICE_MIN;
+      const between = rowWords.filter(
+        (w) => w.bbox.x0 > codeMaxX && w.bbox.x1 < priceMinX
+      );
+      nama_barang = extractItemNameFromZone(joinWordTexts(between));
+    }
+    if (!nama_barang) nama_barang = "(tidak terbaca)";
+
+    // DISCOUNT — scan whole-row (bukan zone)
+    const diskon_persen = extractDiscountFromRow(rowText);
+
+    items.push({
+      raw: {
+        kode_barang,
+        nama_barang,
+        qty: qty || 0,
+        harga_beli,
+        diskon_persen,
+      },
+      confidence: {
+        kode_barang: avgConf(codeWords),
+        nama_barang: avgConf(nameWords),
+        qty: avgConf(qtyWords),
+        harga_beli: avgConf(priceWords),
+        diskon_persen: 0,
+      },
+      line_text: rowText,
+      transaction_index: transactionIndex,
+      transaction_code: lastTransactionCode,
+      spatial: {
+        image_width: imageWidth,
+        unit_detected: unit || null,
+        n_code_words: codeWords.length,
+        n_name_words: nameWords.length,
+        n_qty_words: qtyWords.length,
+        n_price_words: priceWords.length,
+      },
+    });
+  }
+  return items;
+}
+
+// ---------- 4b. TEXT-ONLY parser (FALLBACK — PDF text-layer / no bbox) ------
+// Dipakai saat data tidak punya word-level bbox (PDF "lahir digital" yang
+// di-extract via pdf-parse, atau worker Tesseract yang tidak balas struktur
+// words). Tetap menerapkan STRICT ANCHOR (wajib ada kode barang valid),
+// tapi tanpa spatial disambiguation — pakai heuristik regex saja.
+function parseLineToItemTextOnly(line) {
   const text = (line.text || "").trim();
   if (text.length < 6) return null;
   if (SKIP_LINE_RE.test(text)) return null;
   if (TRANSACTION_HEADER_RE.test(text)) return null;
   if (isDecorativeLine(text)) return null;
-  // Skip baris yang isinya cuma angka/separator (no letters) — biasanya line total
   if (!/[a-zA-Z]/.test(text)) return null;
 
-  const words = line.words || [];
+  // STRICT ANCHOR: kode wajib
+  let kode_barang = "";
+  const tokens = text.toUpperCase().match(/\b[A-Z0-9]+(?:-[A-Z0-9]+)+\b/g) || [];
+  for (const t of tokens) {
+    if (isValidItemCode(t)) {
+      kode_barang = t;
+      break;
+    }
+  }
+  if (!kode_barang) return null; // ← ANCHOR FAIL
 
-  // Field qty: prioritas pattern dengan satuan (pcs/kg/dll) karena
-  // paling tidak ambigu. Sanity cap: qty > 9999 hampir pasti misread
-  // dari nilai harga, jadi ditolak.
-  const qtyMatchPriority =
-    text.match(new RegExp(`\\b(\\d{1,4})(?:[.,]\\d+)?\\s*(?:${UNIT_RE_SRC})\\b`, "i")) ||
+  // Qty: angka + satuan, atau keyword qty/jml, atau "X x ..."
+  const qtyMatch =
+    text.match(
+      new RegExp(`\\b(\\d{1,4})(?:[.,]\\d+)?\\s*(?:${UNIT_RE_SRC})\\b`, "i")
+    ) ||
     text.match(/(?:qty|jml|jumlah|jum|banyak)\s*[:.]?\s*(\d{1,4})/i) ||
-    text.match(/\b(\d{1,4})\s*x\s/i) ||
-    text.match(/^(\d{1,4})\s+[a-zA-Z]/);
-  const qtyRaw = qtyMatchPriority ? parseInt(qtyMatchPriority[1], 10) : null;
-  const qty = qtyRaw && qtyRaw <= 9999 ? qtyRaw : null;
-  const qtyMatch = qtyMatchPriority;
+    text.match(/\b(\d{1,4})\s*x\s/i);
+  const qtyRaw = qtyMatch ? parseInt(qtyMatch[1], 10) : null;
+  const qty = qtyRaw && qtyRaw <= 9999 ? qtyRaw : 0;
 
-  // Field harga_beli: cari SEMUA angka dengan separator ribuan (≥ 4 digit
-  // setelah dibersihkan), lalu pilih yang terbesar. Ini ngalahkan
-  // bug column-scrambling di mana qty/harga/total ketukar posisi —
-  // harga satuan biasanya angka terbesar yang masuk akal di line item.
-  // Pengecualian: kalau ada "Rp"/"IDR" prefix → ambil yang itu langsung.
-  let harga_beli = null;
+  // Harga: Rp/IDR prefix, atau angka berseparator ribuan (median dari semua)
+  let harga_beli = 0;
   let hargaMatch = text.match(/(?:rp\.?|idr)\s*([\d.,]+)/i);
   if (hargaMatch) {
     harga_beli = parseAmount(hargaMatch[1]);
   } else {
-    // Token format normal (titik/koma separator ribuan)
-    const numericTokensDot = text.match(
-      /\b\d{1,3}(?:[.,]\d{3}){1,3}(?:[.,]\d{2})?\b/g
-    ) || [];
-    // Token format space-separator (Tesseract sering baca titik sebagai spasi).
-    // Pattern: digit 1-3 + (spasi + digit 3) minimal 1x.
-    // Contoh: "320 000" → 320000, "1 800 000" → 1800000.
-    const numericTokensSpace = text.match(/\b\d{1,3}(?:\s+\d{3}){1,3}\b/g) || [];
-    const numericTokens = [...numericTokensDot, ...numericTokensSpace];
-    const numericValues = numericTokens
+    const tDot = text.match(/\b\d{1,3}(?:[.,]\d{3}){1,3}(?:[.,]\d{2})?\b/g) || [];
+    const tSpace = text.match(/\b\d{1,3}(?:\s+\d{3}){1,3}\b/g) || [];
+    const vals = [...tDot, ...tSpace]
       .map((t) => parseAmount(t.replace(/\s+/g, ".")))
-      .filter((v) => v >= 1000); // harga sparepart minimal 1k
-    if (numericValues.length > 0) {
-      // Kalau hanya 1 angka → pakai. Kalau banyak (qty/harga/total),
-      // ambil MEDIAN supaya tidak terpengaruh outlier (total).
-      // Sortir, ambil tengah.
-      numericValues.sort((a, b) => a - b);
-      // Untuk 3 angka [qty_total, harga, total] median = harga.
-      // Untuk 2 angka pilih yang lebih kecil (harga vs total).
-      if (numericValues.length >= 3) {
-        harga_beli = numericValues[Math.floor(numericValues.length / 2)];
-      } else {
-        harga_beli = numericValues[0];
-      }
-      // Bangun stub hargaMatch untuk leftover stripping di bawah
-      hargaMatch = { 0: numericTokens.find((t) => parseAmount(t) === harga_beli) || numericTokens[0] };
+      .filter((v) => v >= 1000);
+    if (vals.length) {
+      vals.sort((a, b) => a - b);
+      harga_beli =
+        vals.length >= 3 ? vals[Math.floor(vals.length / 2)] : vals[0];
+      hargaMatch = { 0: [...tDot, ...tSpace][0] || "" };
     }
   }
 
-  // Field diskon_persen: angka diikuti %
+  // Diskon
   const diskMatch = text.match(/(\d{1,2}(?:[.,]\d{1,2})?)\s*%/);
   const diskon_persen = diskMatch
     ? parseFloat(String(diskMatch[1]).replace(",", ".")) || 0
     : 0;
 
-  // Field kode_barang: pattern khas sparepart motor.
-  // Contoh real dari nota: 90111-08815, 93306-002YR, SVD-E1310-20,
-  // 5TL-E7623-00, BK6-F3145-00, 4YS-E4500-00, 401-16111-00-30, BPNE2228.
-  // Aturan: panjang ≥ 5, harus ada minimal 1 digit, boleh ada strip,
-  // huruf tidak melebihi 70% (cegah tangkap kata biasa seperti "PIRINGAN").
-  let kode_barang = "";
-  const kodeCandidates = text.match(/\b[A-Z0-9]+(?:-[A-Z0-9]+)*\b/g) || [];
-  for (const cand of kodeCandidates) {
-    if (cand.length < 5 || cand.length > 22) continue;
-    if (!/\d/.test(cand)) continue;
-    const letters = (cand.match(/[A-Z]/g) || []).length;
-    const total = cand.replace(/-/g, "").length;
-    if (letters / total > 0.7) continue;
-    // Reject pure numeric tanpa strip (kemungkinan harga/qty)
-    if (!cand.includes("-") && !/[A-Z]/.test(cand)) continue;
-    kode_barang = cand;
-    break;
-  }
-  const kodeMatch = kode_barang ? { 0: kode_barang } : null;
-
-  // Sisa untuk nama_barang: hilangkan field-field yang sudah ditangkap.
-  // Pakai global regex untuk strip SEMUA occurrence harga/qty (bukan cuma yang
-  // pertama), karena nota typical menampilkan harga@unit dan total per row.
+  // Nama barang: leftover setelah strip semua field
   let leftover = text;
   if (qtyMatch) leftover = leftover.replace(qtyMatch[0], " ");
-  // Strip semua angka berformat ribuan + prefix Rp/IDR + decimal opsional
   leftover = leftover
     .replace(/(?:rp\.?|idr)\s*[\d.,]+/gi, " ")
     .replace(/\b\d{1,3}(?:[.,]\d{3}){1,3}(?:[.,]\d{2})?\b/g, " ");
   if (diskMatch) leftover = leftover.replace(diskMatch[0], " ");
-  if (kodeMatch) leftover = leftover.replace(kodeMatch[0], " ");
+  leftover = leftover.replace(kode_barang, " ");
   const nama_barang = leftover
     .replace(/[^a-zA-Z0-9\s/]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-  // Filter baris yang tidak terlihat seperti item (perlu nama + minimal qty atau harga)
   if (!nama_barang || nama_barang.length < 3) return null;
-  if (qty === null && harga_beli === null) return null;
 
-  // Confidence per field dari word-level confidence
+  // Confidence: pakai overall confidence dari line (text-only tidak punya
+  // word-level). avgConfidenceOfWords akan fallback ke 0 kalau words kosong.
+  const words = line.words || [];
+  const overall = avgConfidenceOfWords(words);
   const confidence = {
-    kode_barang: avgConfidenceOfWords(wordsMatching(words, kode_barang)),
-    nama_barang: avgConfidenceOfWords(wordsMatching(words, nama_barang)),
-    qty: avgConfidenceOfWords(wordsMatching(words, qty != null ? String(qty) : "")),
-    harga_beli: avgConfidenceOfWords(
-      wordsMatching(words, hargaMatch ? hargaMatch[0] : "")
-    ),
-    diskon_persen: avgConfidenceOfWords(
-      wordsMatching(words, diskMatch ? diskMatch[0] : "")
-    ),
+    kode_barang: overall,
+    nama_barang: overall,
+    qty: overall,
+    harga_beli: overall,
+    diskon_persen: overall,
   };
 
   return {
     raw: {
       kode_barang,
       nama_barang,
-      qty: qty || 0,
-      harga_beli: harga_beli || 0,
+      qty,
+      harga_beli,
       diskon_persen,
     },
     confidence,
@@ -521,49 +894,82 @@ function parseLineToItem(line) {
   };
 }
 
+// Hitung lebar gambar dari word bboxes (max x1 across all words).
+// Dipakai untuk normalisasi zona spatial (kanan/tengah/kiri).
+function inferImageWidth(lines) {
+  let maxX = 0;
+  for (const ln of lines || []) {
+    for (const w of ln.words || []) {
+      if (w.bbox && typeof w.bbox.x1 === "number" && w.bbox.x1 > maxX) {
+        maxX = w.bbox.x1;
+      }
+    }
+  }
+  return maxX;
+}
+
 function parseTesseractData(data) {
   let lines = data?.lines || [];
-  // Fallback: tesseract.js v6+ kadang tidak balas struktur lines lengkap saat
-  // PSM=6. Pecah data.text per newline secara manual. Word-level confidence
-  // hilang untuk line ini → kita seed dengan overall data.confidence supaya
-  // parser tetap bisa lapor angka, bukan 0%.
   const overallConf = typeof data?.confidence === "number" ? data.confidence : 0;
+
+  // Routing:
+  //   - Kalau ada bbox di word-level → WORD-LEVEL SPATIAL (parseWordsToRows).
+  //     Y-axis grouping bypass Tesseract line grouping → robust ke dot-matrix
+  //     yang baris-barisnya rapat / qty-mishooked-to-next-row.
+  //   - Kalau bbox tidak ada (PDF text-layer atau worker tanpa words) →
+  //     TEXT-ONLY (parseLineToItemTextOnly) yang tetap pasang strict code
+  //     anchor.
+  const imageWidth = inferImageWidth(lines);
+  const useSpatial = imageWidth > 0 && lines.length > 0;
+
+  if (useSpatial) {
+    const items = parseWordsToRows(data, imageWidth);
+    // Annotate overall confidence sebagai cadangan kalau word-level kosong
+    if (overallConf > 0) {
+      for (const it of items) {
+        const allZero = Object.values(it.confidence).every((v) => v === 0);
+        if (allZero) {
+          it.confidence = {
+            kode_barang: overallConf,
+            nama_barang: overallConf,
+            qty: overallConf,
+            harga_beli: overallConf,
+            diskon_persen: overallConf,
+          };
+        }
+      }
+    }
+    return items;
+  }
+
+  // TEXT-ONLY fallback (PDF digital-born). Bangun pseudo-lines dari data.text
+  // bila lines kosong, lalu parse via text-only parser (strict anchor wajib).
   if (lines.length === 0 && typeof data?.text === "string" && data.text.trim()) {
     lines = data.text
       .split(/\r?\n/)
       .map((t) => ({
         text: t,
-        // Bikin satu pseudo-word ber-confidence overall, supaya
-        // wordsMatching() di parseLineToItem mengembalikan ≥1 word
-        // dan avgConfidenceOfWords() balas overallConf, bukan 0.
-        words: t.trim()
-          ? [{ text: t, confidence: overallConf }]
-          : [],
+        words: t.trim() ? [{ text: t, confidence: overallConf }] : [],
       }))
       .filter((l) => l.text.trim().length > 0);
   }
+
   const items = [];
-  // Multi-transaksi: sebuah nota bisa berisi beberapa transaksi berurutan
-  // (S1-25120493, S1-25120494, dst.). Tiap line yang match TRANSACTION_HEADER_RE
-  // = pemisah → naikkan transactionIndex. Item yang sudah keluar akan
-  // di-tag dengan transactionIndex saat ini.
   let transactionIndex = 0;
   let lastTransactionCode = null;
   for (const line of lines) {
     const text = (line.text || "").trim();
     const trxMatch = text.match(/\b(?:S[1lLI|i!]|51)[-\s]?(\d{6,10})\b/);
     if (trxMatch) {
-      // Naikkan index hanya kalau kode transaksi baru (bukan duplikasi OCR)
       const code = trxMatch[0];
       if (code !== lastTransactionCode) {
         if (items.length > 0) transactionIndex++;
         lastTransactionCode = code;
       }
-      continue; // baris header, jangan parse jadi item
+      continue;
     }
-    const item = parseLineToItem(line);
+    const item = parseLineToItemTextOnly(line);
     if (item) {
-      // Annotate dengan overall confidence sebagai cadangan terakhir
       const allZero = Object.values(item.confidence).every((v) => v === 0);
       if (allZero && overallConf > 0) {
         item.confidence = {
@@ -922,6 +1328,15 @@ module.exports = {
   preprocessHandwritten,
   computeOtsuThreshold,
   parseTesseractData,
+  parseWordsToRows,
+  parseLineToItemTextOnly,
+  groupWordsIntoRows,
+  wordsInZone,
+  extractItemCodeFromZone,
+  extractQtyFromZone,
+  extractPriceFromZone,
+  extractItemNameFromZone,
+  isValidItemCode,
   flagLowConfidence,
   terminateWorker,
 };
