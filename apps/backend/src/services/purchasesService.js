@@ -313,6 +313,8 @@ async function commitPurchase({ user, payload }) {
     file_nota_url,
     status_validasi,
     items,
+    diskon_persen,
+    potongan_harga,
   } = payload || {};
 
   // R2 LAYER 1: validasi konfirmasi user + bentuk payload
@@ -349,6 +351,7 @@ async function commitPurchase({ user, payload }) {
     if (action === "new") {
       base.kode_barang = String(it.kode_barang || "").trim();
       base.nama_barang = String(it.nama_barang || "").trim();
+      if (it.harga_jual) base.harga_jual = Number(it.harga_jual);
     } else {
       base.product_id = it.product_id;
     }
@@ -364,6 +367,8 @@ async function commitPurchase({ user, payload }) {
       noNotaSupplier: no_nota_supplier || null,
       fileNotaUrl: file_nota_url || null,
       items: normalizedItems,
+      diskonPersen: Number(diskon_persen) || 0,
+      potonganHarga: Number(potongan_harga) || 0,
     });
   } catch (err) {
     const mapped = ruleEngine.mapDbErrorToHttp(err);

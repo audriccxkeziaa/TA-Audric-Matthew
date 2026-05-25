@@ -80,7 +80,7 @@ export default function LoginPage() {
             POS — CV Asia Jaya Maju
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Sistem Point of Sale Suku Cadang Motor
+            Sistem Point of Sale Motorcycle Spareparts
           </p>
         </div>
 
@@ -114,7 +114,7 @@ export default function LoginPage() {
             className="w-full"
             disabled={submitting}
           >
-            {submitting ? "Memproses..." : "Masuk"}
+            {submitting ? "Please wait..." : "Login"}
           </Button>
         </form>
       </Card>

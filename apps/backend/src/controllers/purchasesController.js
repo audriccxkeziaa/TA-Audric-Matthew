@@ -1,4 +1,5 @@
 const purchasesService = require("../services/purchasesService");
+const purchaseRepository = require("../repositories/purchaseRepository");
 
 // POST /api/purchases/ocr (multipart/form-data, field "file")
 // Optional body: no_nota_supplier, nota_type ('cetak'|'tulisan_tangan')
@@ -15,7 +16,7 @@ async function processOcr(req, res) {
     let message = "OCR berhasil — silakan validasi hasil sebelum simpan";
     if (result.status === "ambiguous_classification") {
       message =
-        "Sistem tidak yakin jenis nota — mohon konfirmasi: cetak atau tulisan tangan";
+        "Sistem tidak yakin jenis nota, mohon konfirmasi: cetak atau tulisan tangan";
     } else if (result.status === "manual_input_required") {
       message =
         "Kualitas hasil OCR rendah — silakan lanjut dengan input manual";
@@ -72,6 +73,18 @@ async function listPurchases(req, res) {
   } catch (err) {
     console.error("[POS-PURCHASES] listPurchases error:", err.message);
     return res.status(500).json({ error: "Gagal memuat daftar pembelian" });
+  }
+}
+
+// GET /api/purchases/:id
+async function getPurchaseDetailCtrl(req, res) {
+  try {
+    const data = await purchaseRepository.getPurchaseDetail(req.params.id);
+    if (!data) return res.status(404).json({ error: "Pembelian tidak ditemukan" });
+    return res.json({ data });
+  } catch (err) {
+    console.error("[POS-PURCHASES] getPurchaseDetail error:", err.message);
+    return res.status(500).json({ error: "Gagal memuat detail pembelian" });
   }
 }
 
@@ -136,6 +149,7 @@ module.exports = {
   processOcr,
   commitPurchase,
   listPurchases,
+  getPurchaseDetailCtrl,
   saveDraft,
   listDrafts,
   getDraft,

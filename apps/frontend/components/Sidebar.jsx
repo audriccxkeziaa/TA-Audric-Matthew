@@ -18,7 +18,7 @@ const NAV = [
   },
   {
     href: "/stok-masuk",
-    label: "Stok Masuk (OCR)",
+    label: "Stok Masuk",
     roles: ["kasir"],
     icon: "scan",
   },

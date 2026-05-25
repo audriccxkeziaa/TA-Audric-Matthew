@@ -34,6 +34,7 @@ export const purchasesApi = {
     apiFetch("/purchases/ocr", { method: "POST", body: formData, isForm: true }),
   commit: (body) => apiFetch("/purchases/commit", { method: "POST", body }),
   list: (params) => apiFetch("/purchases", { query: params }),
+  get: (id) => apiFetch(`/purchases/${id}`),
   drafts: {
     list: () => apiFetch("/purchases/drafts"),
     save: (body) => apiFetch("/purchases/drafts", { method: "POST", body }),

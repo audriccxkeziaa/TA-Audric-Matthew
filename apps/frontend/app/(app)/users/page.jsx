@@ -2,9 +2,6 @@
 // =================================================================
 // /users — Manajemen User (admin only)
 // =================================================================
-// CRUD user + aktif/nonaktif. Admin tidak boleh menonaktifkan atau
-// menurunkan role akunnya sendiri (dijaga backend & UI).
-// =================================================================
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,22 +18,30 @@ import {
   Select,
   Badge,
   Modal,
-  ConfirmDialog,
   Skeleton,
   EmptyState,
 } from "@/components/ui";
 
-// ---------- Form tambah / edit user ----------
-function UserForm({ open, onClose, editing }) {
+// Eye icon
+function EyeIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  );
+}
+
+// ---------- Modal detail / edit user (eye button) ----------
+function UserDetailModal({ open, onClose, target, isSelf }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const isEdit = Boolean(editing);
 
   const [form, setForm] = useState(() => ({
-    username: editing?.username || "",
-    email: editing?.email || "",
+    username: target?.username || "",
+    email: target?.email || "",
     password: "",
-    role: editing?.role || "kasir",
+    role: target?.role || "kasir",
   }));
   const [err, setErr] = useState("");
 
@@ -44,46 +49,46 @@ function UserForm({ open, onClose, editing }) {
     setForm((s) => ({ ...s, [f]: v }));
   }
 
-  const mutation = useMutation({
+  const active = target?.is_active !== false;
+
+  const saveMutation = useMutation({
     mutationFn: async () => {
       if (!form.username.trim()) throw new Error("Username wajib diisi");
-      if (!isEdit) {
-        if (!form.email.trim() || !form.password)
-          throw new Error("Email dan password wajib diisi");
-        if (form.password.length < 6)
-          throw new Error("Password minimal 6 karakter");
-        return usersApi.create({
-          username: form.username.trim(),
-          email: form.email.trim(),
-          password: form.password,
-          role: form.role,
-        });
-      }
-      // Edit — kirim hanya field yang relevan.
       const body = { username: form.username.trim(), role: form.role };
       if (form.email.trim()) body.email = form.email.trim();
       if (form.password) {
-        if (form.password.length < 6)
-          throw new Error("Password minimal 6 karakter");
+        if (form.password.length < 6) throw new Error("Password minimal 6 karakter");
         body.password = form.password;
       }
-      return usersApi.update(editing.id, body);
+      return usersApi.update(target.id, body);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["users"] });
-      toast.success(isEdit ? "User diperbarui" : "User ditambahkan");
+      toast.success("User berhasildiperbarui");
       onClose();
     },
     onError: (e) => setErr(e.message),
   });
 
+  const toggleMutation = useMutation({
+    mutationFn: () => usersApi.setStatus(target.id, !active),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      toast.success(active ? "User dinonaktifkan" : "User berhasil diaktifkan");
+      onClose();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={isEdit ? "Edit User" : "Tambah User Baru"}
-    >
+    <Modal open={open} onClose={onClose} title={`Detail User — ${target?.username}`}>
       <div className="space-y-3">
+        {/* Status badge */}
+        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+          <span className="text-sm text-slate-500">Status saat ini:</span>
+          <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
+        </div>
+
         <Input
           label="Username"
           value={form.username}
@@ -96,11 +101,7 @@ function UserForm({ open, onClose, editing }) {
           onChange={(e) => set("email", e.target.value)}
         />
         <Input
-          label={
-            isEdit
-              ? "Password baru (kosongkan jika tidak diubah)"
-              : "Password"
-          }
+          label="Password baru (kosongkan jika tidak diubah)"
           type="password"
           value={form.password}
           onChange={(e) => set("password", e.target.value)}
@@ -109,29 +110,102 @@ function UserForm({ open, onClose, editing }) {
           label="Role"
           value={form.role}
           onChange={(e) => set("role", e.target.value)}
+          disabled={isSelf}
         >
           <option value="kasir">Kasir</option>
           <option value="admin">Admin</option>
         </Select>
 
         {err && (
-          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {err}
+          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+          {/* Toggle aktif/nonaktif — admin tidak bisa nonaktifkan dirinya sendiri */}
+          {!isSelf ? (
+            <Button
+              variant="ghost"
+              className={active ? "text-red-600 hover:bg-red-50" : "text-emerald-600 hover:bg-emerald-50"}
+              onClick={() => toggleMutation.mutate()}
+              disabled={toggleMutation.isPending}
+            >
+              {toggleMutation.isPending
+                ? "Memproses..."
+                : active
+                ? "Nonaktifkan User"
+                : "Aktifkan User"}
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => { setErr(""); saveMutation.mutate(); }}
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending ? "Saving..." : "Save"}
+            </Button>
           </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ---------- Form tambah user baru ----------
+function AddUserForm({ open, onClose }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+
+  const [form, setForm] = useState({ username: "", email: "", password: "", role: "kasir" });
+  const [err, setErr] = useState("");
+
+  function set(f, v) {
+    setForm((s) => ({ ...s, [f]: v }));
+  }
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!form.username.trim()) throw new Error("Username wajib diisi");
+      if (!form.email.trim() || !form.password) throw new Error("Email dan password wajib diisi");
+      if (form.password.length < 6) throw new Error("Password minimal 6 karakter");
+      return usersApi.create({
+        username: form.username.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      toast.success("User ditambahkan");
+      onClose();
+    },
+    onError: (e) => setErr(e.message),
+  });
+
+  return (
+    <Modal open={open} onClose={onClose} title="Tambah User Baru">
+      <div className="space-y-3">
+        <Input label="Username" value={form.username} onChange={(e) => set("username", e.target.value)} />
+        <Input label="Email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+        <Input label="Password" type="password" value={form.password} onChange={(e) => set("password", e.target.value)} />
+        <Select label="Role" value={form.role} onChange={(e) => set("role", e.target.value)}>
+          <option value="kasir">Kasir</option>
+          <option value="admin">Admin</option>
+        </Select>
+
+        {err && (
+          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</div>
         )}
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>
-            Batal
-          </Button>
-          <Button
-            onClick={() => {
-              setErr("");
-              mutation.mutate();
-            }}
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? "Menyimpan..." : "Simpan"}
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => { setErr(""); mutation.mutate(); }} disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>
@@ -141,12 +215,8 @@ function UserForm({ open, onClose, editing }) {
 
 export default function UsersPage() {
   const { user } = useAuth();
-  const qc = useQueryClient();
-  const toast = useToast();
-
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [confirm, setConfirm] = useState(null); // { user, nextActive }
+  const [showAdd, setShowAdd] = useState(false);
+  const [viewTarget, setViewTarget] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["users"],
@@ -154,40 +224,19 @@ export default function UsersPage() {
   });
   const users = data?.data || [];
 
-  const toggleStatus = useMutation({
-    mutationFn: ({ id, is_active }) => usersApi.setStatus(id, is_active),
-    onSuccess: (_res, vars) => {
-      qc.invalidateQueries({ queryKey: ["users"] });
-      toast.success(
-        vars.is_active ? "User diaktifkan" : "User dinonaktifkan"
-      );
-      setConfirm(null);
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
   return (
     <PageShell>
       <PageHeader
         title="Manajemen User"
-        description="Kelola akun admin dan kasir."
+        description="Halaman untuk mengelola role admin dan kasir."
         actions={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setShowForm(true);
-            }}
-          >
-            + Tambah User
-          </Button>
+          <Button onClick={() => setShowAdd(true)}>+ Add User</Button>
         }
       />
 
       <Card className="flex min-h-0 flex-1 flex-col p-0">
         {isLoading ? (
-          <div className="p-4">
-            <Skeleton rows={5} />
-          </div>
+          <div className="p-4"><Skeleton rows={5} /></div>
         ) : users.length === 0 ? (
           <EmptyState title="Belum ada user" />
         ) : (
@@ -200,7 +249,7 @@ export default function UsersPage() {
                   <th className="px-4 py-2.5">Role</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Dibuat</th>
-                  <th className="px-4 py-2.5 text-right">Aksi</th>
+                  <th className="px-4 py-2.5 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -211,58 +260,24 @@ export default function UsersPage() {
                     <tr key={u.id} className="hover:bg-slate-50">
                       <td className="px-4 py-2.5 font-medium">
                         {u.username}
-                        {isSelf && (
-                          <span className="ml-1 text-xs text-slate-400">
-                            (Anda)
-                          </span>
-                        )}
+                        {isSelf && <span className="ml-1 text-xs text-slate-400">(Anda)</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-slate-500">
-                        {u.email || "-"}
+                      <td className="px-4 py-2.5 text-slate-500">{u.email || "-"}</td>
+                      <td className="px-4 py-2.5">
+                        <Badge tone={u.role === "admin" ? "indigo" : "slate"}>{u.role}</Badge>
                       </td>
                       <td className="px-4 py-2.5">
-                        <Badge tone={u.role === "admin" ? "indigo" : "slate"}>
-                          {u.role}
-                        </Badge>
+                        <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
                       </td>
-                      <td className="px-4 py-2.5">
-                        <Badge tone={active ? "green" : "red"}>
-                          {active ? "Aktif" : "Nonaktif"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-2.5 text-slate-500">
-                        {tanggal(u.created_at)}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditing(u);
-                              setShowForm(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          {/* Admin tidak boleh nonaktifkan dirinya sendiri */}
-                          {!isSelf && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className={
-                                active
-                                  ? "text-red-600 hover:bg-red-50"
-                                  : "text-emerald-600 hover:bg-emerald-50"
-                              }
-                              onClick={() =>
-                                setConfirm({ user: u, nextActive: !active })
-                              }
-                            >
-                              {active ? "Nonaktifkan" : "Aktifkan"}
-                            </Button>
-                          )}
-                        </div>
+                      <td className="px-4 py-2.5 text-slate-500">{tanggal(u.created_at)}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        <button
+                          onClick={() => setViewTarget(u)}
+                          className="inline-flex items-center justify-center rounded p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
+                          title="Lihat / Edit user"
+                        >
+                          <EyeIcon />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -273,32 +288,16 @@ export default function UsersPage() {
         )}
       </Card>
 
-      {showForm && (
-        <UserForm
-          open={showForm}
-          editing={editing}
-          onClose={() => setShowForm(false)}
+      {showAdd && <AddUserForm open={showAdd} onClose={() => setShowAdd(false)} />}
+
+      {viewTarget && (
+        <UserDetailModal
+          open={Boolean(viewTarget)}
+          onClose={() => setViewTarget(null)}
+          target={viewTarget}
+          isSelf={viewTarget?.id === user?.id}
         />
       )}
-
-      <ConfirmDialog
-        open={Boolean(confirm)}
-        onClose={() => setConfirm(null)}
-        onConfirm={() =>
-          toggleStatus.mutate({
-            id: confirm.user.id,
-            is_active: confirm.nextActive,
-          })
-        }
-        title={confirm?.nextActive ? "Aktifkan User" : "Nonaktifkan User"}
-        message={
-          confirm?.nextActive
-            ? `Aktifkan kembali akun "${confirm?.user.username}"?`
-            : `Nonaktifkan akun "${confirm?.user.username}"? User tidak akan bisa login.`
-        }
-        confirmLabel="Ya, lanjutkan"
-        tone={confirm?.nextActive ? "success" : "danger"}
-      />
     </PageShell>
   );
 }

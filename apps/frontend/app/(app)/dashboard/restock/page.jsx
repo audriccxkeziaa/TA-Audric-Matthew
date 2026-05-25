@@ -136,8 +136,8 @@ export default function RestockPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Rekomendasi Restock (R5)"
-        description="Barang yang perlu dipesan ulang. Min. stok ditetapkan manual oleh admin."
+        title="Rekomendasi Restock"
+        description="Halaman untuk menampilkan daftar spareparts yang perlu restock."
       />
 
       <div className="mb-3 grid shrink-0 gap-3 sm:grid-cols-4">

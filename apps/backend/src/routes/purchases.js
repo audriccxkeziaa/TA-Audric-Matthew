@@ -6,6 +6,7 @@ const {
   processOcr,
   commitPurchase,
   listPurchases,
+  getPurchaseDetailCtrl,
   saveDraft,
   listDrafts,
   getDraft,
@@ -60,5 +61,8 @@ router.get("/drafts", listDrafts);
 router.post("/drafts", express.json({ limit: "5mb" }), saveDraft);
 router.get("/drafts/:id", getDraft);
 router.delete("/drafts/:id", deleteDraft);
+
+// Must come after /drafts to avoid catching "drafts" as :id
+router.get("/:id", getPurchaseDetailCtrl);
 
 module.exports = router;

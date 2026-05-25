@@ -106,7 +106,7 @@ export default function Topbar({ onToggleSidebar }) {
             onClick={logout}
             className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
           >
-            Keluar
+            Logout
           </button>
         </div>
       </div>

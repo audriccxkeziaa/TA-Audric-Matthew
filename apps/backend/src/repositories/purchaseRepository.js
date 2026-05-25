@@ -38,12 +38,14 @@ async function createNotaSignedUrl(path) {
 }
 
 // Panggil function plpgsql fn_commit_purchase (lihat migrasi 009).
-async function commitPurchaseViaRpc({ userId, noNotaSupplier, fileNotaUrl, items }) {
+async function commitPurchaseViaRpc({ userId, noNotaSupplier, fileNotaUrl, items, diskonPersen = 0, potonganHarga = 0 }) {
   const { data, error } = await supabase.rpc("fn_commit_purchase", {
     p_user_id: userId,
     p_no_nota_supplier: noNotaSupplier,
     p_file_nota_url: fileNotaUrl,
     p_items: items,
+    p_diskon_persen: diskonPersen,
+    p_potongan_harga: potonganHarga,
   });
 
   if (error) {
@@ -61,7 +63,7 @@ async function getPurchaseDetail(purchaseId) {
   const { data: purchase, error: pErr } = await supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, user_id, total, status_validasi, file_nota_url, created_at"
+      "id, no_nota_supplier, user_id, total, status_validasi, file_nota_url, diskon_persen, potongan_harga, created_at"
     )
     .eq("id", purchaseId)
     .single();
