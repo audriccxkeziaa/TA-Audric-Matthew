@@ -46,17 +46,18 @@ function validateProductPayload(payload, { isUpdate = false } = {}) {
   return errors;
 }
 
-// GET /api/products?q=&limit=&status=&stock=
+// GET /api/products?q=&limit=&page=&status=&stock=
 async function searchProducts(req, res) {
   try {
-    const { q = "", limit, status, stock } = req.query;
-    const data = await productRepository.search({
+    const { q = "", limit, page, status, stock } = req.query;
+    const result = await productRepository.search({
       q,
       status: status === "aktif" || status === "nonaktif" ? status : status === "all" ? null : "aktif",
       stockFilter: ["low", "out", "normal"].includes(stock) ? stock : null,
       limit: limit ? Math.min(parseInt(limit, 10), 200) : 20,
+      page: parseInt(page, 10) || 1,
     });
-    return res.json({ data });
+    return res.json({ data: result.rows, total: result.total, page: result.page, total_pages: result.total_pages });
   } catch (err) {
     console.error("[POS-PROD] searchProducts error:", err.message);
     return res.status(500).json({ error: "Gagal mencari produk" });

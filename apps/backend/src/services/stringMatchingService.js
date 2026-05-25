@@ -1,8 +1,8 @@
 // =================================================================
 // stringMatchingService.js — Levenshtein top-3 candidate matcher
 // =================================================================
-// Dipakai modul OCR untuk memberi rekomendasi product_id kepada hasil
-// ekstraksi nama_barang yang biasanya kotor (typo, spasi hilang, dll).
+// Mencocokkan hasil OCR ke produk database. Prioritas: kode_barang (70%)
+// lalu nama_barang (30%). Exact kode match → score 1.0 otomatis.
 // Formula similarity: 1 - distance / max(len_a, len_b).
 // =================================================================
 
@@ -47,12 +47,12 @@ function isCodeExactMatch(ocrKode, prodKode) {
   return false;
 }
 
-// Cari top-N kandidat produk untuk satu hasil OCR (nama + opsional kode).
-// products: array { id, kode_barang, nama_barang, ... } dari catalog aktif.
+// Cari top-N kandidat produk (nama + opsional kode).
 // Strategi prioritas:
-//   1. Kalau ocrKode exact match (substring/identik) dengan kode produk → score 1.0.
-//   2. Kalau tidak, weighted: nama 70% + kode 30% (Levenshtein).
-//   3. Drop kandidat dengan score < MIN_SIMILARITY_FOR_SUGGESTION.
+//   1. Kalau ocrKode exact match (substring/identik) → score 1.0
+//   2. Kalau ocrKode ada tapi tidak exact → kode 70% + nama 30%
+//   3. Kalau hanya nama → nama 100%
+//   4. Drop kandidat dengan score < MIN_SIMILARITY_FOR_SUGGESTION
 function findTopCandidates({ ocrName, ocrKode, products, topN = 3 }) {
   if (!products || products.length === 0) return [];
 
@@ -63,9 +63,9 @@ function findTopCandidates({ ocrName, ocrKode, products, topN = 3 }) {
 
     let score;
     if (exactKode) {
-      score = 1.0; // exact-match pemenang mutlak
+      score = 1.0;
     } else if (ocrKode) {
-      score = simNama * 0.7 + simKode * 0.3;
+      score = simKode * 0.7 + simNama * 0.3;
     } else {
       score = simNama;
     }

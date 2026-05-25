@@ -48,7 +48,6 @@ function ProductForm({ open, onClose, editing, isAdmin }) {
     harga_beli: editing?.harga_beli ?? "",
     harga_jual: editing?.harga_jual ?? "",
     min_stock: editing?.min_stock ?? 0,
-    status: editing?.status || "aktif",
   }));
   const [alasan, setAlasan] = useState("");
   const [err, setErr] = useState("");
@@ -83,7 +82,6 @@ function ProductForm({ open, onClose, editing, isAdmin }) {
         merk: form.merk.trim() || null,
         harga_beli: Number(form.harga_beli) || 0,
         harga_jual: Number(form.harga_jual) || 0,
-        status: form.status,
       };
       // min_stock hanya disertakan oleh admin (backend tolak kasir).
       if (isAdmin) body.min_stock = parseInt(form.min_stock, 10) || 0;
@@ -143,33 +141,15 @@ function ProductForm({ open, onClose, editing, isAdmin }) {
             onChange={(e) => set("harga_jual", e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label={`Min. Stok ${isAdmin ? "" : "(admin saja)"}`}
-            type="number"
-            min="0"
-            value={form.min_stock}
-            disabled={!isAdmin}
-            onChange={(e) => set("min_stock", e.target.value)}
-          />
-          <Select
-            label="Status"
-            value={form.status}
-            onChange={(e) => set("status", e.target.value)}
-          >
-            <option value="aktif">Aktif</option>
-            <option value="nonaktif">Nonaktif</option>
-          </Select>
-        </div>
+        <Input
+          label={`Min. Stok ${isAdmin ? "" : "(admin saja)"}`}
+          type="number"
+          min="0"
+          value={form.min_stock}
+          disabled={!isAdmin}
+          onChange={(e) => set("min_stock", e.target.value)}
+        />
 
-        {/* Stok tidak bisa diedit manual — R3 */}
-        <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-          {isEdit
-            ? `Stok saat ini: ${angka(editing.stok)}. `
-            : "Stok awal otomatis 0. "}
-          Stok hanya berubah lewat transaksi penjualan atau stok masuk
-          tervalidasi (Aturan R3).
-        </div>
 
         {/* Alasan perubahan — WAJIB saat edit (admin) untuk audit trail */}
         {isEdit && isAdmin && (
@@ -185,10 +165,6 @@ function ProductForm({ open, onClose, editing, isAdmin }) {
               placeholder="mis. Penyesuaian harga jual karena harga supplier naik / Koreksi nama barang typo"
               className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
             />
-            <p className="mt-1 text-xs text-slate-500">
-              Akan tercatat di <b>Audit Trail</b> bersama timestamp{" "}
-              <span className="font-mono">{nowLabel}</span> dan username Anda.
-            </p>
           </div>
         )}
 
@@ -200,7 +176,7 @@ function ProductForm({ open, onClose, editing, isAdmin }) {
 
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="secondary" onClick={onClose}>
-            Batal
+            Cancel
           </Button>
           <Button
             onClick={() => {
@@ -209,7 +185,7 @@ function ProductForm({ open, onClose, editing, isAdmin }) {
             }}
             disabled={mutation.isPending}
           >
-            {mutation.isPending ? "Menyimpan..." : "Simpan"}
+            {mutation.isPending ? "Menyimpan..." : "Save"}
           </Button>
         </div>
       </div>
@@ -223,35 +199,41 @@ export default function MasterBarangPage() {
 
   const [q, setQ] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["products", q, stockFilter],
+    queryKey: ["products", q, stockFilter, page],
     queryFn: () =>
       productsApi.list({
         q,
         status: "aktif",
         stock: stockFilter === "all" ? undefined : stockFilter,
-        limit: 200,
+        limit: 20,
+        page,
       }),
   });
   const products = data?.data || [];
+  const totalPages = data?.total_pages || 1;
+  const total = data?.total || 0;
 
   return (
     <PageShell>
       <PageHeader
         title="Master Barang"
-        description="Kelola data suku cadang. Stok tidak dapat diubah manual (R3)."
+        description="Halaman untuk mengelola data spareparts. Stok tidak dapat diubah manual."
         actions={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setShowForm(true);
-            }}
-          >
-            + Tambah Barang
-          </Button>
+          isAdmin && (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setShowForm(true);
+              }}
+            >
+              + Add Items
+            </Button>
+          )
         }
       />
 
@@ -261,11 +243,11 @@ export default function MasterBarangPage() {
           <Input
             placeholder="Cari nama / kode barang..."
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setQ(e.target.value); setPage(1); }}
           />
           <Select
             value={stockFilter}
-            onChange={(e) => setStockFilter(e.target.value)}
+            onChange={(e) => { setStockFilter(e.target.value); setPage(1); }}
           >
             <option value="all">Semua Kondisi Stok</option>
             <option value="normal">Stok Normal</option>
@@ -299,9 +281,7 @@ export default function MasterBarangPage() {
                   <th className="px-4 py-2.5 text-right">Stok</th>
                   <th className="px-4 py-2.5 text-right">Min</th>
                   <th className="px-4 py-2.5">Kondisi</th>
-                  {isAdmin && (
-                    <th className="px-4 py-2.5 text-right">Aksi</th>
-                  )}
+                  {isAdmin && <th className="px-4 py-2.5 text-center">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -333,17 +313,22 @@ export default function MasterBarangPage() {
                     <td className="px-4 py-2.5 text-right text-slate-500">
                       {angka(p.min_stock)}
                     </td>
-                    <td className="px-4 py-2.5">{stokBadge(p)}</td>
+                    <td className="px-4 py-2.5">
+                      {stokBadge(p)}
+                    </td>
                     {isAdmin && (
-                      <td className="px-4 py-2.5 text-right">
+                      <td className="px-4 py-2.5 text-center">
                         <button
                           onClick={() => {
                             setEditing(p);
                             setShowForm(true);
                           }}
-                          className="text-xs font-medium text-brand-600 hover:underline"
+                          className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
+                          title="Edit barang"
                         >
-                          Edit
+                          <svg className="w-4 h-4 text-slate-600 hover:text-brand-600" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 5C7 5 2.73 8.11 1 12.46c1.73 4.35 6 7.54 11 7.54s9.27-3.19 11-7.54C21.27 8.11 17 5 12 5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                          </svg>
                         </button>
                       </td>
                     )}
@@ -355,10 +340,18 @@ export default function MasterBarangPage() {
         )}
       </Card>
 
-      {products.length > 0 && (
-        <p className="mt-2 shrink-0 text-xs text-slate-400">
-          Menampilkan {products.length} barang.
-        </p>
+      {total > 0 && (
+        <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500">
+          <span>{total} items · pages {page}/{totalPages}</span>
+          <div className="flex gap-1">
+            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
       )}
 
       {showForm && (

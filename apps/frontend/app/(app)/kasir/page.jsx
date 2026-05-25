@@ -50,6 +50,7 @@ export default function KasirPage() {
   const [cart, setCart] = useState([]); // [{id, kode_barang, nama_barang, harga_jual, stok, qty}]
   const [bayarOpen, setBayarOpen] = useState(false);
   const [receipt, setReceipt] = useState(null);
+  const tunaiRef = useRef(0);
 
   // ----- Pencarian produk untuk panel cari -----
   const { data: searchRes, isFetching: searchFetching } = useQuery({
@@ -101,6 +102,7 @@ export default function KasirPage() {
           kode_barang: p.kode_barang,
           nama_barang: p.nama_barang,
           merk: p.merk,
+          harga_beli: Number(p.harga_beli) || 0,
           harga_jual: Number(p.harga_jual),
           stok: Number(p.stok),
           qty,
@@ -138,8 +140,9 @@ export default function KasirPage() {
       // Cari by kode (backend ILIKE — kita filter exact match di FE)
       const res = await productsApi.list({ q: code, status: "aktif", limit: 5 });
       const items = res?.data || [];
+      const norm = (k) => (k || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const exact = items.find(
-        (p) => (p.kode_barang || "").toUpperCase() === code.toUpperCase()
+        (p) => norm(p.kode_barang) === norm(code)
       );
 
       if (exact) {
@@ -219,7 +222,7 @@ export default function KasirPage() {
         })),
       }),
     onSuccess: (res) => {
-      setReceipt(res.data);
+      setReceipt({ ...res.data, tunai: tunaiRef.current });
       clearCart();
       setBayarOpen(false);
       toast.success("Transaksi berhasil disimpan");
@@ -237,7 +240,7 @@ export default function KasirPage() {
     <PageShell>
       <PageHeader
         title="Kasir — Transaksi Penjualan"
-        description="Scan barcode / ketik kode produk lalu Enter. F1 fokus, F2 cari, F12 BAYAR."
+        description="Scan barcode / ketik kode produk lalu Enter."
       />
 
       {/* Barcode/Kode input — primary entry */}
@@ -266,7 +269,7 @@ export default function KasirPage() {
             </kbd>
           </div>
           <Button type="submit" size="lg">
-            Tambah
+            Add
           </Button>
           <Button
             type="button"
@@ -277,7 +280,7 @@ export default function KasirPage() {
               setTimeout(() => searchRef.current?.focus(), 50);
             }}
           >
-            Cari (F2)
+            Browse (F2)
           </Button>
         </form>
       </Card>
@@ -335,6 +338,7 @@ export default function KasirPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold">{rupiah(p.harga_jual)}</p>
+                      <p className="text-[11px] text-slate-400">Beli: {rupiah(p.harga_beli)}</p>
                       <p className="text-xs">
                         {habis ? (
                           <Badge tone="red">Habis</Badge>
@@ -359,10 +363,11 @@ export default function KasirPage() {
             <thead className="sticky top-0 bg-slate-100 text-left text-xs uppercase text-slate-600">
               <tr>
                 <th className="px-3 py-2.5 text-center">No</th>
-                <th className="px-3 py-2.5">Kode</th>
-                <th className="px-3 py-2.5">Nama Produk</th>
+                <th className="px-3 py-2.5">Kode Barang</th>
+                <th className="px-3 py-2.5">Nama Barang</th>
                 <th className="px-3 py-2.5 text-center">Qty</th>
-                <th className="px-3 py-2.5 text-right">Harga</th>
+                <th className="px-3 py-2.5 text-right">Harga Beli</th>
+                <th className="px-3 py-2.5 text-right">Harga Jual</th>
                 <th className="px-3 py-2.5 text-center">Disc %</th>
                 <th className="px-3 py-2.5 text-right">Subtotal</th>
                 <th className="px-3 py-2.5"></th>
@@ -371,7 +376,7 @@ export default function KasirPage() {
             <tbody className="divide-y divide-slate-100">
               {cart.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={9}>
                     <EmptyState
                       title="Keranjang kosong"
                       description="Scan barcode atau ketik kode di atas, atau tekan F2 untuk mencari."
@@ -428,6 +433,9 @@ export default function KasirPage() {
                             +
                           </button>
                         </div>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-slate-500">
+                        {rupiah(x.harga_beli)}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         {rupiah(x.harga_jual)}
@@ -517,7 +525,7 @@ export default function KasirPage() {
                 onClick={() => setBayarOpen(true)}
                 className="bg-emerald-600 hover:bg-emerald-700"
               >
-                💰 BAYAR (F12)
+                💰 CHECKOUT (F12)
               </Button>
             </div>
           </div>
@@ -535,7 +543,7 @@ export default function KasirPage() {
         onClose={() => setBayarOpen(false)}
         total={total}
         cart={cart}
-        onConfirm={() => sale.mutate()}
+        onConfirm={(uangTunai) => { tunaiRef.current = uangTunai; sale.mutate(); }}
         processing={sale.isPending}
       />
 
@@ -618,7 +626,7 @@ function BayarModal({ open, onClose, total, cart, onConfirm, processing }) {
 
   function onKeyDown(e) {
     if (e.key === "Enter" && cukup && !processing) {
-      onConfirm();
+      onConfirm(n);
     }
   }
 
@@ -712,7 +720,7 @@ function BayarModal({ open, onClose, total, cart, onConfirm, processing }) {
             Batal (Esc)
           </Button>
           <Button
-            onClick={onConfirm}
+            onClick={() => onConfirm(n)}
             disabled={!cukup || processing}
             className="bg-emerald-600 hover:bg-emerald-700"
           >

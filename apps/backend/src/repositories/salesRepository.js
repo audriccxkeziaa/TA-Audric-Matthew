@@ -25,7 +25,7 @@ async function createSaleViaRpc({ userId, kodeTransaksi, items }) {
 async function getReceipt(saleId) {
   const { data: sale, error: saleErr } = await supabase
     .from("sales")
-    .select("id, kode_transaksi, user_id, total_harga, created_at")
+    .select("id, kode_transaksi, user_id, total_harga, diskon_persen, potongan_harga, created_at, users(username)")
     .eq("id", saleId)
     .single();
   if (saleErr) throw new Error("Gagal memuat header transaksi");
@@ -41,6 +41,7 @@ async function getReceipt(saleId) {
 
   return {
     ...sale,
+    kasir: sale.users?.username || null,
     items: items.map((it) => ({
       id: it.id,
       product_id: it.product_id,
@@ -59,7 +60,7 @@ async function getReceipt(saleId) {
 async function list({ from, to, limit = 50 }) {
   let query = supabase
     .from("sales")
-    .select("id, kode_transaksi, user_id, total_harga, created_at")
+    .select("id, kode_transaksi, user_id, total_harga, created_at, users(username), sale_items(id)")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -68,7 +69,15 @@ async function list({ from, to, limit = 50 }) {
 
   const { data, error } = await query;
   if (error) throw new Error("Gagal memuat daftar transaksi");
-  return data || [];
+  return (data || []).map((r) => ({
+    id: r.id,
+    kode_transaksi: r.kode_transaksi,
+    user_id: r.user_id,
+    total_harga: r.total_harga,
+    created_at: r.created_at,
+    kasir: r.users?.username || null,
+    item_count: r.sale_items?.length || 0,
+  }));
 }
 
 module.exports = { createSaleViaRpc, getReceipt, list };

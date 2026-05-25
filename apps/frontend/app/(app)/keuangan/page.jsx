@@ -10,7 +10,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { expensesApi } from "@/lib/api";
+import { expensesApi, salesApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { rupiah, angka } from "@/lib/format";
 import {
@@ -32,7 +32,6 @@ const JENIS_OPTIONS = [
   { value: "gaji", label: "Gaji Karyawan" },
   { value: "listrik", label: "Listrik" },
   { value: "air", label: "Air (PDAM)" },
-  { value: "supplier", label: "Beli Barang dari Supplier" },
   { value: "custom", label: "Custom" },
 ];
 
@@ -40,8 +39,7 @@ const JENIS_TONE = {
   gaji: "indigo",
   listrik: "amber",
   air: "blue",
-  supplier: "green",
-  custom: "slate",
+  custom: "green",
 };
 
 function tanggal(d) {
@@ -69,7 +67,7 @@ const DESKRIPSI_HINT = {
 };
 
 // ---------- Form tambah / edit pengeluaran ----------
-function ExpenseForm({ open, onClose, editing }) {
+function ExpenseForm({ open, onClose, editing, onDelete }) {
   const qc = useQueryClient();
   const toast = useToast();
   const isEdit = Boolean(editing);
@@ -103,17 +101,17 @@ function ExpenseForm({ open, onClose, editing }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       qc.invalidateQueries({ queryKey: ["finance-summary"] });
-      toast.success(isEdit ? "Pengeluaran diperbarui" : "Pengeluaran dicatat");
+      toast.success(isEdit ? "Pengeluaran Operasional diperbarui" : "Pengeluaran Operasional dicatat");
       onClose();
     },
     onError: (e) => setErr(e.message),
   });
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? "Edit Pengeluaran" : "Tambah Pengeluaran"}>
+    <Modal open={open} onClose={onClose} title={isEdit ? "Edit Pengeluaran Operasional" : "Tambah Pengeluaran Operasional"}>
       <div className="space-y-3">
         <Select
-          label="Jenis"
+          label="Jenis Pengeluaran"
           value={jenis}
           onChange={(e) => setJenis(e.target.value)}
         >
@@ -162,23 +160,39 @@ function ExpenseForm({ open, onClose, editing }) {
             {err}
           </div>
         )}
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>
-            Batal
-          </Button>
-          <Button
-            onClick={() => {
-              setErr("");
-              mut.mutate();
-            }}
-            disabled={mut.isPending}
-          >
-            {mut.isPending
-              ? "Menyimpan..."
-              : isEdit
-                ? "Simpan Perubahan"
-                : "Simpan"}
-          </Button>
+        <div className="flex justify-between gap-2 pt-1">
+          <div>
+            {isEdit && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  onClose();
+                  setTimeout(() => onDelete?.(editing), 100);
+                }}
+                className="text-red-600 hover:bg-red-50"
+              >
+                Hapus
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setErr("");
+                mut.mutate();
+              }}
+              disabled={mut.isPending}
+            >
+              {mut.isPending
+                ? "Menyimpan..."
+                : isEdit
+                  ? "Simpan Perubahan"
+                  : "Save"}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -212,7 +226,7 @@ function JenisDetailModal({ open, onClose, jenis, rows }) {
       {filtered.length === 0 ? (
         <EmptyState
           title={`Belum ada pengeluaran ${opt?.label || jenis}`}
-          description="Tambahkan lewat tombol 'Tambah Pengeluaran'."
+          description="Tambahkan lewat tombol 'Tambah Pengeluaran Operasional'."
         />
       ) : (
         <div className="max-h-80 overflow-auto thin-scroll rounded-lg border border-slate-200">
@@ -288,20 +302,46 @@ export default function KeuanganPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       qc.invalidateQueries({ queryKey: ["finance-summary"] });
-      toast.success("Pengeluaran dihapus");
+      toast.success("Pengeluaran Operasional berhasil dihapus");
       setConfirmDel(null);
     },
     onError: (e) => toast.error(e.message),
   });
 
+  const salesList = useQuery({
+    queryKey: ["finance-sales", from, to],
+    queryFn: () =>
+      salesApi.list({
+        ...(from ? { from } : {}),
+        ...(to ? { to: to + "T23:59:59.999Z" } : {}),
+        limit: 500,
+      }),
+  });
+
+  const [showSales, setShowSales] = useState(false);
+  const [detailTrx, setDetailTrx] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  async function openTrxDetail(id) {
+    setDetailLoading(true);
+    try {
+      const res = await salesApi.get(id);
+      setDetailTrx(res.data);
+    } catch {
+      setDetailTrx(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
   const s = summary.data?.data;
   const rows = list.data?.data || [];
+  const salesRows = salesList.data?.data || [];
 
   return (
     <PageShell>
       <PageHeader
         title="Keuangan"
-        description="Saldo bersih = Omset Kotor − Pembelian Supplier − Pengeluaran Operasional. Pembelian otomatis dari nota OCR/manual tervalidasi."
         actions={
           <Button
             onClick={() => {
@@ -309,7 +349,7 @@ export default function KeuanganPage() {
               setOpenForm(true);
             }}
           >
-            + Tambah Pengeluaran
+            + Add Operational Cost
           </Button>
         }
       />
@@ -330,7 +370,7 @@ export default function KeuanganPage() {
             onChange={(e) => setTo(e.target.value)}
           />
           <Select
-            label="Jenis"
+            label="Jenis Pengeluaran"
             value={jenisFilter}
             onChange={(e) => setJenisFilter(e.target.value)}
           >
@@ -399,7 +439,7 @@ export default function KeuanganPage() {
       {s?.per_jenis && (
         <Card className="mb-3 shrink-0 p-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-            Breakdown Pengeluaran per Jenis · klik kotak untuk detail
+            Breakdown Pengeluaran Operasional · klik kotak untuk detail
           </p>
           <div className="flex flex-wrap gap-2">
             {JENIS_OPTIONS.map((o) => (
@@ -422,6 +462,81 @@ export default function KeuanganPage() {
         </Card>
       )}
 
+      {/* Pemasukan dari Penjualan */}
+      <Card className="mb-3 shrink-0 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Pemasukan dari Penjualan
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowSales(!showSales)}
+            className="inline-flex items-center gap-1 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition"
+            title={showSales ? "Hide details" : "See details"}
+          >
+            {showSales ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12c1.292 4.338 5.31 7.5 10.066 7.5.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+              </svg>
+            )}
+          </button>
+        </div>
+        <p className="mt-1 text-lg font-bold text-emerald-700">
+          + {rupiah(s?.omset_kotor || salesRows.reduce((a, r) => a + Number(r.total_harga || 0), 0))}
+        </p>
+        {showSales && (
+          salesList.isLoading ? (
+            <Spinner label="Memuat..." />
+          ) : salesRows.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-400">Belum ada transaksi penjualan pada periode ini.</p>
+          ) : (
+            <div className="mt-2 max-h-60 overflow-auto thin-scroll rounded-lg border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2">Tanggal</th>
+                    <th className="px-3 py-2">Kode Transaksi</th>
+                    <th className="px-3 py-2">Kasir</th>
+                    <th className="px-3 py-2 text-right">Nominal</th>
+                    <th className="px-3 py-2 text-center">Detail</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {salesRows.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 text-xs">{tanggal(r.created_at)}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{r.kode_transaksi}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{r.kasir || r.users?.username || "-"}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-emerald-600">
+                        + {rupiah(r.total_harga)}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => openTrxDetail(r.id)}
+                          className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                          title="See transaction details"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </Card>
+
       {/* Tabel pengeluaran */}
       <Card className="flex min-h-0 flex-1 flex-col p-0">
         {list.isLoading ? (
@@ -430,8 +545,8 @@ export default function KeuanganPage() {
           </div>
         ) : rows.length === 0 ? (
           <EmptyState
-            title="Belum ada pengeluaran"
-            description="Klik 'Tambah Pengeluaran' untuk mencatat gaji/listrik/dll."
+            title="Belum ada pengeluaran operasional"
+            description="Klik 'Tambah Pengeluaran Operasional' untuk mencatat gaji/listrik/dll."
           />
         ) : (
           <div className="min-h-0 flex-1 overflow-auto thin-scroll">
@@ -464,23 +579,18 @@ export default function KeuanganPage() {
                       − {rupiah(r.nominal)}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => {
-                            setEditing(r);
-                            setOpenForm(true);
-                          }}
-                          className="text-xs text-brand-600 hover:underline"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setConfirmDel(r)}
-                          className="text-xs text-red-600 hover:underline"
-                        >
-                          Hapus
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => {
+                          setEditing(r);
+                          setOpenForm(true);
+                        }}
+                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
+                        title="Lihat detail"
+                      >
+                        <svg className="w-4 h-4 text-slate-600 hover:text-brand-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 5C7 5 2.73 8.11 1 12.46c1.73 4.35 6 7.54 11 7.54s9.27-3.19 11-7.54C21.27 8.11 17 5 12 5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -495,6 +605,7 @@ export default function KeuanganPage() {
           key={editing?.id || "new"}
           open={openForm}
           editing={editing}
+          onDelete={(r) => setConfirmDel(r)}
           onClose={() => {
             setOpenForm(false);
             setEditing(null);
@@ -513,12 +624,84 @@ export default function KeuanganPage() {
         open={Boolean(confirmDel)}
         onClose={() => setConfirmDel(null)}
         onConfirm={() => del.mutate(confirmDel.id)}
-        title="Hapus Pengeluaran"
-        message={`Hapus "${confirmDel?.deskripsi}" senilai ${rupiah(
+        title="Hapus Pengeluaran Operasional"
+        message={`Apakah anda yakin akan menghapus "${confirmDel?.deskripsi}" senilai ${rupiah(
           confirmDel?.nominal || 0
-        )}? Saldo akan dihitung ulang.`}
+        )}?`}
         confirmLabel="Ya, hapus"
       />
+      {/* Modal detail transaksi penjualan */}
+      <Modal
+        open={Boolean(detailTrx) || detailLoading}
+        onClose={() => setDetailTrx(null)}
+        title="Detail Transaksi Penjualan"
+      >
+        {detailLoading ? (
+          <Spinner label="Memuat detail..." />
+        ) : detailTrx ? (
+          <div>
+            <dl className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Kode Transaksi</dt>
+                <dd className="font-mono font-medium">{detailTrx.kode_transaksi}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Tanggal & Jam</dt>
+                <dd>{detailTrx.created_at ? new Date(detailTrx.created_at).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Kasir</dt>
+                <dd className="font-medium">{detailTrx.kasir || "-"}</dd>
+              </div>
+              {(Number(detailTrx.diskon_persen) > 0 || Number(detailTrx.potongan_harga) > 0) && (
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Diskon</dt>
+                  <dd className="text-amber-700">
+                    {Number(detailTrx.diskon_persen) > 0 && `${detailTrx.diskon_persen}%`}
+                    {Number(detailTrx.diskon_persen) > 0 && Number(detailTrx.potongan_harga) > 0 && " + "}
+                    {Number(detailTrx.potongan_harga) > 0 && rupiah(detailTrx.potongan_harga)}
+                  </dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Total</dt>
+                <dd className="font-bold text-emerald-700">{rupiah(detailTrx.total_harga)}</dd>
+              </div>
+            </dl>
+            {detailTrx.items && detailTrx.items.length > 0 && (
+              <div className="mt-3 max-h-60 overflow-auto thin-scroll rounded-lg border border-slate-200">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">Barang</th>
+                      <th className="px-3 py-2 text-right">Qty</th>
+                      <th className="px-3 py-2 text-right">Harga</th>
+                      <th className="px-3 py-2 text-right">Diskon</th>
+                      <th className="px-3 py-2 text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {detailTrx.items.map((it, i) => (
+                      <tr key={i} className="hover:bg-slate-50">
+                        <td className="px-3 py-2">
+                          <span className="text-xs">{it.nama_barang || "-"}</span>
+                          {it.kode_barang && (
+                            <span className="ml-1 text-[10px] text-slate-400">({it.kode_barang})</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right">{it.qty}</td>
+                        <td className="px-3 py-2 text-right">{rupiah(it.harga_satuan)}</td>
+                        <td className="px-3 py-2 text-right text-amber-600">{Number(it.diskon_persen) > 0 ? `${it.diskon_persen}%` : "-"}</td>
+                        <td className="px-3 py-2 text-right font-medium">{rupiah(it.subtotal)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </Modal>
     </PageShell>
   );
 }

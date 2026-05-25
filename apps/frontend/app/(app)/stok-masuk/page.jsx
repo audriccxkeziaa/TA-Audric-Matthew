@@ -17,7 +17,7 @@
 // =================================================================
 
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { purchasesApi } from "@/lib/api";
+import { purchasesApi, productsApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { rupiah, persen } from "@/lib/format";
 import ProductPicker from "@/components/ProductPicker";
@@ -42,9 +42,10 @@ const newUid = () => `row-${++rowSeq}`;
 function ocrItemToRow(item) {
   const raw = item.raw || {};
   const cands = item.candidates || [];
-  // Pra-pilih kandidat teratas bila similarity cukup tinggi (>= 0.6).
   const top = cands[0];
-  const preselect = top && top.similarity >= 0.6;
+  const exactMatch = top && top.similarity >= 1.0;
+  const hasHighMatch = top && top.similarity >= 0.8;
+  const autoNew = top ? top.similarity < 0.8 : true;
   return {
     uid: newUid(),
     source: "ocr",
@@ -52,16 +53,17 @@ function ocrItemToRow(item) {
     nama_barang: raw.nama_barang || "",
     qty: raw.qty || 1,
     harga_beli: raw.harga_beli || 0,
+    harga_jual: 0,
     diskon_persen: raw.diskon_persen || 0,
     confidence: item.confidence || {},
     confidence_avg: item.confidence_avg,
     low_confidence: item.low_confidence,
     line_text: item.line_text || "",
     candidates: cands,
-    action: preselect ? "restock" : null,
-    product_id: preselect ? top.product_id : null,
-    picked_label: preselect ? top.nama_barang : "",
-    reviewed: false, // dipakai jalur tulisan tangan
+    action: exactMatch ? "restock" : autoNew ? "new" : null,
+    product_id: exactMatch ? top.product_id : null,
+    picked_label: exactMatch ? top.nama_barang : "",
+    reviewed: false,
   };
 }
 
@@ -73,6 +75,7 @@ function blankManualRow() {
     nama_barang: "",
     qty: 1,
     harga_beli: 0,
+    harga_jual: 0,
     diskon_persen: 0,
     confidence: {},
     confidence_avg: null,
@@ -91,6 +94,7 @@ export default function StokMasukPage() {
   const fileInputRef = useRef(null);
 
   const [step, setStep] = useState("upload"); // upload | validate
+  const [inputMode, setInputMode] = useState(null); // null | "ocr" | "manual"
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [noNota, setNoNota] = useState("");
@@ -104,6 +108,8 @@ export default function StokMasukPage() {
   const [committing, setCommitting] = useState(false);
   const [pickerRowUid, setPickerRowUid] = useState(null);
   const [done, setDone] = useState(null);
+  const [diskonPersen, setDiskonPersen] = useState("");
+  const [potonganHarga, setPotonganHarga] = useState("");
 
   // --- Draft state (Cross-device Resume) -----------------------------
   // Skenario: kasir foto nota dari HP, jalan OCR, simpan draft, lalu
@@ -119,6 +125,17 @@ export default function StokMasukPage() {
   // nota_type efektif untuk hasil OCR aktif (penentu highlight & aturan review)
   const notaType = ocr?.nota_type || null;
   const isHandwritten = notaType === "tulisan_tangan";
+
+  // Cegah kehilangan data saat user tidak sengaja menutup/refresh/back browser
+  useEffect(() => {
+    if (step !== "validate" || rows.length === 0) return;
+    const handler = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [step, rows.length]);
 
   // ---------- Pilih file ----------
   function pickFile(f) {
@@ -140,6 +157,7 @@ export default function StokMasukPage() {
       toast.error("Pilih file nota terlebih dahulu");
       return;
     }
+    setInputMode("ocr");
     setOcrLoading(true);
     setAmbiguous(null);
     try {
@@ -156,7 +174,7 @@ export default function StokMasukPage() {
       if (data.status === "ambiguous_classification") {
         // Strategi 1 — sistem ragu, minta konfirmasi user.
         setAmbiguous(data.classification || {});
-        toast.info("Sistem tidak yakin jenis nota — mohon konfirmasi");
+        toast.info("Sistem tidak yakin dengan jenis nota, mohon konfirmasi...");
         return;
       }
 
@@ -172,7 +190,7 @@ export default function StokMasukPage() {
       const mapped = (data.items || []).map(ocrItemToRow);
       setRows(mapped.length ? mapped : [blankManualRow()]);
       setStep("validate");
-      toast.success(`OCR selesai — ${mapped.length} item terbaca`);
+      toast.success(`Proses OCR telah selesai, ${mapped.length} item terbaca`);
     } catch (e) {
       toast.error(e.message || "Gagal memproses OCR");
     } finally {
@@ -266,7 +284,7 @@ export default function StokMasukPage() {
         when: new Date(),
         count: rows.length,
       });
-      toast.success("Draft tersimpan — lanjutkan di laptop kapan saja.");
+      toast.success("Draft berhasil disimpan.");
     } catch (e) {
       toast.error(e.message || "Gagal menyimpan draft");
     } finally {
@@ -293,7 +311,7 @@ export default function StokMasukPage() {
       setRows(items.length ? items.map(draftItemToRow) : [blankManualRow()]);
       setCurrentDraftId(d.id);
       setStep("validate");
-      toast.info("Draft dibuka — silakan lanjutkan koreksi.");
+      toast.info("Draft dilanjutkan, silahkan edit kembali untuk disimpan.");
     } catch (e) {
       toast.error(e.message || "Gagal membuka draft");
     } finally {
@@ -304,7 +322,7 @@ export default function StokMasukPage() {
   async function removeDraft(draftId) {
     try {
       await purchasesApi.drafts.remove(draftId);
-      toast.success("Draft dihapus");
+      toast.success("Draft berhasil dihapus");
       setDrafts((arr) => arr.filter((d) => d.id !== draftId));
       if (currentDraftId === draftId) setCurrentDraftId(null);
     } catch (e) {
@@ -321,8 +339,12 @@ export default function StokMasukPage() {
   function removeRow(uid) {
     setRows((rs) => rs.filter((r) => r.uid !== uid));
   }
+  const rowsContainerRef = useRef(null);
   function addManualRow() {
     setRows((rs) => [...rs, blankManualRow()]);
+    setTimeout(() => {
+      rowsContainerRef.current?.scrollTo({ top: rowsContainerRef.current.scrollHeight, behavior: "smooth" });
+    }, 50);
   }
 
   // Ubah keputusan produk (dropdown kandidat).
@@ -364,6 +386,18 @@ export default function StokMasukPage() {
     });
   }, [rows, isHandwritten]);
 
+  // ---------- Hitung subtotal & diskon nota ----------
+  const subtotalBarang = useMemo(
+    () => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.harga_beli) || 0), 0),
+    [rows]
+  );
+  const diskonNilai = useMemo(() => {
+    const pct = Math.min(Number(diskonPersen) || 0, 100);
+    const pot = Number(potonganHarga) || 0;
+    return Math.round(subtotalBarang * pct / 100) + pot;
+  }, [diskonPersen, potonganHarga, subtotalBarang]);
+  const grandTotal = Math.max(subtotalBarang - diskonNilai, 0);
+
   // ---------- Commit (R2) ----------
   async function commit() {
     if (!canCommit) return;
@@ -373,16 +407,18 @@ export default function StokMasukPage() {
         const base = {
           qty: parseInt(r.qty, 10) || 0,
           harga_beli: Number(r.harga_beli) || 0,
-          diskon_persen: Number(r.diskon_persen) || 0,
+          diskon_persen: 0,
           source: r.source,
         };
         if (r.action === "new") {
-          return {
+          const obj = {
             ...base,
             action: "new",
             kode_barang: r.kode_barang.trim(),
             nama_barang: r.nama_barang.trim(),
           };
+          if (Number(r.harga_jual) > 0) obj.harga_jual = Number(r.harga_jual);
+          return obj;
         }
         return { ...base, action: "restock", product_id: r.product_id };
       });
@@ -390,9 +426,10 @@ export default function StokMasukPage() {
       const res = await purchasesApi.commit({
         no_nota_supplier: ocr?.no_nota_supplier || noNota.trim() || null,
         file_nota_url: ocr?.file_nota_url || null,
-        // R2: status_validasi di-set 'tervalidasi' SETELAH user konfirmasi.
         status_validasi: "tervalidasi",
         items,
+        diskon_persen: Math.min(Number(diskonPersen) || 0, 100),
+        potongan_harga: Number(potonganHarga) || 0,
       });
       setDone(res.data);
       toast.success("Stok masuk berhasil disimpan — stok bertambah (R4)");
@@ -418,6 +455,7 @@ export default function StokMasukPage() {
   function resetAll() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setStep("upload");
+    setInputMode(null);
     setFile(null);
     setPreviewUrl("");
     setNoNota("");
@@ -428,6 +466,20 @@ export default function StokMasukPage() {
     setDone(null);
     setCurrentDraftId(null);
     setDraftSavedInfo(null);
+    setDiskonPersen("");
+    setPotonganHarga("");
+  }
+
+  function startManualInput() {
+    setInputMode("manual");
+    if (rows.length === 0) {
+      setRows([blankManualRow(), blankManualRow(), blankManualRow()]);
+    }
+    setStep("validate");
+  }
+
+  function goBackToModeSelect() {
+    setStep("upload");
   }
 
   // =================================================================
@@ -436,8 +488,8 @@ export default function StokMasukPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Stok Masuk (OCR Nota Supplier)"
-        description="Unggah nota, validasi hasil OCR, lalu konfirmasi untuk menambah stok."
+        title="Stok Masuk"
+        description="Input stok masuk via teknologi OCR atau input manual."
       />
 
       {/* Stepper — selalu terlihat */}
@@ -449,7 +501,7 @@ export default function StokMasukPage() {
               : "bg-slate-200 text-slate-500"
           }`}
         >
-          1. Upload Nota
+          1. {inputMode === "manual" ? "Pilih Mode" : "Upload Nota"}
         </span>
         <span className="text-slate-300">→</span>
         <span
@@ -459,11 +511,11 @@ export default function StokMasukPage() {
               : "bg-slate-200 text-slate-500"
           }`}
         >
-          2. Validasi &amp; Konfirmasi
+          2. {inputMode === "manual" ? "Input & Konfirmasi" : "Validasi & Konfirmasi"}
         </span>
       </div>
 
-      {/* ============ STEP 1: UPLOAD ============ */}
+      {/* ============ STEP 1: UPLOAD / MODE SELECT ============ */}
       {step === "upload" && (
         <div className="min-h-0 flex-1 space-y-4 overflow-auto thin-scroll">
         {/* Daftar Draft (Cross-device Resume) */}
@@ -475,171 +527,225 @@ export default function StokMasukPage() {
           onRefresh={refreshDrafts}
         />
 
-        <Card className="p-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="No. Nota Supplier (opsional)"
-              value={noNota}
-              onChange={(e) => setNoNota(e.target.value)}
-              placeholder="mis. INV-2026-0481"
-            />
-            <Select
-              label="Jenis Nota"
-              value={notaTypeChoice}
-              onChange={(e) => setNotaTypeChoice(e.target.value)}
-            >
-              <option value="auto">Deteksi otomatis (Strategi 1)</option>
-              <option value="cetak">Cetak komputer</option>
-              <option value="tulisan_tangan">Tulisan tangan</option>
-            </Select>
-          </div>
-
-          {/* Drop zone */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition ${
-              dragOver
-                ? "border-brand-500 bg-brand-50"
-                : "border-slate-300 hover:border-brand-400"
+        {/* Mode selector */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setInputMode("ocr")}
+            className={`group relative rounded-xl border-2 p-6 text-left transition ${
+              inputMode === "ocr"
+                ? "border-brand-500 bg-brand-50 shadow-sm"
+                : "border-slate-200 bg-white hover:border-brand-300 hover:shadow-sm"
             }`}
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,application/pdf"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => pickFile(e.target.files?.[0])}
-            />
-            {file ? (
-              <div className="flex flex-col items-center gap-2">
-                {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt="Pratinjau nota"
-                    className="max-h-56 rounded-lg border border-slate-200"
-                  />
-                ) : (
-                  <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
-                    📄 {file.name}
-                  </div>
-                )}
-                <p className="text-xs text-slate-500">
-                  {file.name} — klik untuk ganti file
-                </p>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm font-medium text-slate-600">
-                  Tarik &amp; lepas file nota di sini, atau klik untuk pilih
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Format: JPG / PNG / WebP / PDF — maks 10 MB. Di HP, kamera
-                  akan terbuka langsung.
-                </p>
-              </>
-            )}
-          </div>
-
-          <div className="mt-4 flex justify-end">
-            <Button
-              size="lg"
-              disabled={!file || ocrLoading}
-              onClick={() => runOcr()}
-            >
-              {ocrLoading ? "Memproses OCR..." : "Proses OCR"}
-            </Button>
-          </div>
-
-          {ocrLoading && (
-            <div className="mt-4 flex justify-center">
-              <Spinner label="Menjalankan preprocessing + Tesseract — mohon tunggu..." />
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
-          )}
-        </Card>
+            <p className="text-sm font-semibold text-slate-800">Upload Nota Pembelian (OCR)</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Upload foto/scan nota supplier, sistem akan membaca otomatis menggunakan teknologi OCR.
+            </p>
+            {inputMode === "ocr" && (
+              <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </div>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={startManualInput}
+            className="group relative rounded-xl border-2 border-slate-200 bg-white p-6 text-left transition hover:border-emerald-300 hover:shadow-sm"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-slate-800">Input Nota Pembelian (Manual)</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Input data stok masuk spareparts. Direkomendasikan untuk nota yang kualitasnya buruk/rusak.
+            </p>
+          </button>
+        </div>
+
+        {/* OCR upload form — hanya tampil saat mode OCR dipilih */}
+        {inputMode === "ocr" && (
+          <Card className="p-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="No. Nota Supplier (opsional)"
+                value={noNota}
+                onChange={(e) => setNoNota(e.target.value)}
+                placeholder="mis. INV-2026-0481"
+              />
+              <Select
+                label="Jenis Nota"
+                value={notaTypeChoice}
+                onChange={(e) => setNotaTypeChoice(e.target.value)}
+              >
+                <option value="auto">Deteksi otomatis (Strategi 1)</option>
+                <option value="cetak">Cetak komputer</option>
+                <option value="tulisan_tangan">Tulisan tangan</option>
+              </Select>
+            </div>
+
+            {/* Drop zone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition ${
+                dragOver
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-slate-300 hover:border-brand-400"
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => pickFile(e.target.files?.[0])}
+              />
+              {file ? (
+                <div className="flex flex-col items-center gap-2">
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="Pratinjau nota"
+                      className="max-h-56 rounded-lg border border-slate-200"
+                    />
+                  ) : (
+                    <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
+                      {file.name}
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-500">
+                    {file.name} — klik untuk ganti file
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-slate-600">
+                    Drag &amp; drop file nota di sini, atau klik untuk pilih
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Format: JPG / PNG / WebP / PDF — maks 10 MB. Di HP, kamera
+                    akan terbuka langsung.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <Button
+                size="lg"
+                disabled={!file || ocrLoading}
+                onClick={() => runOcr()}
+              >
+                {ocrLoading ? "Memproses OCR..." : "Proses OCR"}
+              </Button>
+            </div>
+
+            {ocrLoading && (
+              <div className="mt-4 flex justify-center">
+                <Spinner label="File nota sedang diproses, mohon tunggu..." />
+              </div>
+            )}
+          </Card>
+        )}
         </div>
       )}
 
       {/* ============ STEP 2: VALIDASI ============ */}
       {step === "validate" && (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          {/* Info klasifikasi & kualitas */}
-          <Card className="flex flex-wrap items-center gap-3 p-3 text-sm">
-            <Badge tone={isHandwritten ? "amber" : "blue"}>
-              {isHandwritten ? "Tulisan Tangan" : "Cetak Komputer"}
-            </Badge>
-            {ocr?.preprocessing?.pipeline && (
-              <span className="text-xs text-slate-400">
-                Pipeline: {ocr.preprocessing.pipeline}
-              </span>
-            )}
-            {ocr?.quality && (
-              <span className="text-xs text-slate-400">
-                Avg confidence:{" "}
-                {Math.round(ocr.quality.avg_confidence || 0)} · Field kosong:{" "}
-                {Math.round((ocr.quality.empty_pct || 0) * 100)}%
-              </span>
-            )}
-            {isHandwritten && (
-              <span className="text-xs text-amber-600">
-                Field kuning = confidence &lt; 70, mohon periksa ekstra.
-              </span>
-            )}
-          </Card>
+          {/* Info klasifikasi & kualitas — hanya untuk OCR */}
+          {inputMode === "ocr" && (
+            <Card className="flex flex-wrap items-center gap-3 p-3 text-sm">
+              <Badge tone={isHandwritten ? "amber" : "blue"}>
+                {isHandwritten ? "Tulisan Tangan" : "Cetak Komputer"}
+              </Badge>
+              {isHandwritten && (
+                <span className="text-xs text-amber-600">
+                  Field kuning = confidence &lt; 70, mohon periksa ekstra.
+                </span>
+              )}
+            </Card>
+          )}
 
-          <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-3">
-            {/* Preview nota */}
-            <Card className="flex min-h-0 flex-col p-3 lg:col-span-1">
-              <p className="mb-2 shrink-0 text-sm font-semibold text-slate-700">
-                Pratinjau Nota
-              </p>
-              <div className="min-h-0 flex-1 overflow-auto thin-scroll">
-              {ocr?.file_nota_signed_url ? (
-                <img
-                  src={ocr.file_nota_signed_url}
-                  alt="Nota"
-                  className="w-full rounded-lg border border-slate-200"
+          {/* Manual mode header with No. Nota input */}
+          {inputMode === "manual" && (
+            <Card className="flex flex-wrap items-center gap-4 p-4">
+              <Badge tone="green">Input Manual</Badge>
+              <div className="flex-1 min-w-[200px]">
+                <Input
+                  label="No. Nota Supplier (opsional)"
+                  value={noNota}
+                  onChange={(e) => setNoNota(e.target.value)}
+                  placeholder="mis. INV-2026-0481"
                 />
-              ) : previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Nota"
-                  className="w-full rounded-lg border border-slate-200"
-                />
-              ) : (
-                <p className="text-xs text-slate-400">Pratinjau tidak tersedia.</p>
-              )}
-              {ocr?.raw_text && (
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-xs text-slate-500">
-                    Lihat teks mentah OCR
-                  </summary>
-                  <pre className="mt-1 max-h-48 overflow-auto thin-scroll whitespace-pre-wrap rounded bg-slate-50 p-2 text-[11px] text-slate-600">
-                    {ocr.raw_text}
-                  </pre>
-                </details>
-              )}
               </div>
             </Card>
+          )}
+
+          <div className={`grid min-h-0 flex-1 gap-4 ${inputMode === "ocr" ? "lg:grid-cols-3" : ""}`}>
+            {/* Preview nota — hanya untuk OCR */}
+            {inputMode === "ocr" && (
+              <Card className="flex min-h-0 flex-col p-3 lg:col-span-1">
+                <p className="mb-2 shrink-0 text-sm font-semibold text-slate-700">
+                  Pratinjau Nota
+                </p>
+                <div className="min-h-0 flex-1 overflow-auto thin-scroll">
+                {ocr?.file_nota_signed_url ? (
+                  <img
+                    src={ocr.file_nota_signed_url}
+                    alt="Nota"
+                    className="w-full rounded-lg border border-slate-200"
+                  />
+                ) : previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Nota"
+                    className="w-full rounded-lg border border-slate-200"
+                  />
+                ) : (
+                  <p className="text-xs text-slate-400">Pratinjau tidak tersedia.</p>
+                )}
+                {ocr?.raw_text && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-xs text-slate-500">
+                      Lihat teks mentah OCR
+                    </summary>
+                    <pre className="mt-1 max-h-48 overflow-auto thin-scroll whitespace-pre-wrap rounded bg-slate-50 p-2 text-[11px] text-slate-600">
+                      {ocr.raw_text}
+                    </pre>
+                  </details>
+                )}
+                </div>
+              </Card>
+            )}
 
             {/* Tabel validasi */}
-            <Card className="flex min-h-0 flex-col p-3 lg:col-span-2">
+            <Card className={`flex min-h-0 flex-col p-3 ${inputMode === "ocr" ? "lg:col-span-2" : ""}`}>
               <div className="mb-2 flex shrink-0 items-center justify-between">
                 <p className="text-sm font-semibold text-slate-700">
                   Item Stok Masuk ({rows.length})
                 </p>
                 <Button size="sm" variant="outline" onClick={addManualRow}>
-                  + Tambah Baris Manual
+                  + Add Row
                 </Button>
               </div>
 
-              <div className="min-h-0 flex-1 space-y-3 overflow-auto thin-scroll pr-1">
+              <div ref={rowsContainerRef} className="min-h-0 flex-1 space-y-3 overflow-auto thin-scroll pr-1">
                 {rows.map((row, idx) => (
                   <ItemRow
                     key={row.uid}
@@ -660,18 +766,72 @@ export default function StokMasukPage() {
             </Card>
           </div>
 
+          {/* Ringkasan & Diskon Nota */}
+          {rows.length > 0 && (
+            <Card className="shrink-0 p-4">
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <span className="block text-xs font-medium text-slate-500 mb-1">
+                    Subtotal ({rows.length} item)
+                  </span>
+                  <span className="text-base font-semibold text-slate-800">
+                    {rupiah(subtotalBarang)}
+                  </span>
+                </div>
+                <div className="min-w-[120px]">
+                  <span className="block text-xs font-medium text-slate-500 mb-1">Diskon (%)</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={diskonPersen}
+                      onChange={(e) => setDiskonPersen(e.target.value)}
+                      placeholder="0"
+                      className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <span className="text-sm text-slate-400">%</span>
+                  </div>
+                  {Number(diskonPersen) > 0 && (
+                    <span className="mt-0.5 block text-[11px] text-slate-400">
+                      −{rupiah(Math.round(subtotalBarang * Math.min(Number(diskonPersen), 100) / 100))}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-[140px]">
+                  <span className="block text-xs font-medium text-slate-500 mb-1">Potongan Harga (Rp)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={potonganHarga}
+                    onChange={(e) => setPotonganHarga(e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+                <div className="min-w-[140px] text-right">
+                  <span className="block text-xs font-medium text-slate-500 mb-1">Total</span>
+                  <span className="text-lg font-bold text-brand-700">
+                    {rupiah(grandTotal)}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Aksi — selalu terlihat */}
           <Card className="flex shrink-0 flex-wrap items-center justify-between gap-3 p-3">
             <div className="text-sm text-slate-500">
               {canCommit ? (
                 <span className="text-emerald-600">
-                  ✓ Semua item siap dikonfirmasi.
+                  Semua item siap dikonfirmasi.
                 </span>
               ) : (
                 <span>
-                  Lengkapi keputusan produk &amp; data tiap item
-                  {isHandwritten && " serta tandai 'Diperiksa'"} untuk
-                  mengaktifkan tombol konfirmasi (R2).
+                  Pastikan semua kolom sudah terisi agar tombol 'Konfirmasi dan Simpan' aktif. 
+                  {isHandwritten && " serta tandai 'Diperiksa'"}
                 </span>
               )}
               {draftSavedInfo && (
@@ -684,36 +844,40 @@ export default function StokMasukPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={resetAll}>
-                Batal
+                Cancel
               </Button>
-              <Button
-                variant="outline"
-                onClick={saveDraft}
-                disabled={savingDraft || !ocr?.file_nota_url}
-                title="Simpan progres sekarang, koreksi sisanya nanti di laptop"
-              >
-                {savingDraft
-                  ? "Menyimpan..."
-                  : currentDraftId
-                  ? "💾 Perbarui Draft"
-                  : "💾 Simpan sebagai Draft"}
-              </Button>
+              {inputMode === "ocr" && (
+                <Button
+                  variant="outline"
+                  onClick={saveDraft}
+                  disabled={savingDraft || !ocr?.file_nota_url}
+                  title="Simpan progres sekarang, koreksi sisanya nanti di laptop"
+                >
+                  {savingDraft
+                    ? "Menyimpan..."
+                    : currentDraftId
+                    ? "Perbarui Draft"
+                    : "Simpan sebagai Draft"}
+                </Button>
+              )}
               <Button
                 onClick={commit}
                 disabled={!canCommit || committing}
               >
-                {committing ? "Menyimpan..." : "Konfirmasi & Simpan Semua"}
+                {committing ? "Menyimpan..." : "Confirm & Save All"}
               </Button>
             </div>
           </Card>
 
-          {/* Tips untuk pengguna mobile */}
-          <Card className="shrink-0 border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 sm:hidden">
-            📱 <b>Mode HP:</b> jika tidak nyaman edit field di layar kecil,
-            tekan <b>"💾 Simpan sebagai Draft"</b>. Nota & hasil OCR akan
-            tersimpan, lalu buka halaman ini lagi di laptop untuk koreksi
-            sebelum konfirmasi.
-          </Card>
+          {/* Tips untuk pengguna mobile — hanya OCR */}
+          {inputMode === "ocr" && (
+            <Card className="shrink-0 border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800 sm:hidden">
+              Mode HP: jika tidak nyaman edit field di layar kecil,
+              tekan <b>&quot;Simpan sebagai Draft&quot;</b>. Nota &amp; hasil OCR akan
+              tersimpan, lalu buka halaman ini lagi di laptop untuk koreksi
+              sebelum konfirmasi.
+            </Card>
+          )}
         </div>
       )}
 
@@ -783,8 +947,8 @@ export default function StokMasukPage() {
         {done && (
           <div>
             <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              Pembelian tersimpan. Stok produk sudah bertambah otomatis lewat
-              trigger R4, dan tercatat di audit trail.
+              Data Pembelian tersimpan. Stok spareparts sudah terupdate otomatis ke database
+              dan tercatat di audit trail.
             </div>
             <dl className="mt-3 space-y-1 text-sm">
               <div className="flex justify-between">
@@ -798,7 +962,7 @@ export default function StokMasukPage() {
                 <dd className="font-medium">{done.items?.length || 0}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-slate-500">Total nilai</dt>
+                <dt className="text-slate-500">Subtotal</dt>
                 <dd className="font-medium">{rupiah(done.total)}</dd>
               </div>
               {done.products_created > 0 && (
@@ -815,7 +979,7 @@ export default function StokMasukPage() {
               </div>
             </dl>
             <div className="mt-4 flex justify-end">
-              <Button onClick={resetAll}>Input Nota Lain</Button>
+              <Button onClick={resetAll}>Input Nota Pembelian Lain</Button>
             </div>
           </div>
         )}
@@ -825,8 +989,88 @@ export default function StokMasukPage() {
 }
 
 // =================================================================
+// Komponen: input diskon fleksibel (% atau nominal Rp)
+// =================================================================
+function DiskonInput({ diskonPersen, hargaBeli, fieldClass, onPatch }) {
+  const [mode, setMode] = useState("persen"); // "persen" | "rupiah"
+  const [rpValue, setRpValue] = useState("");
+
+  const toggleMode = () => {
+    if (mode === "persen") {
+      const rp = hargaBeli > 0 ? Math.round((diskonPersen / 100) * hargaBeli) : 0;
+      setRpValue(rp > 0 ? String(rp) : "");
+      setMode("rupiah");
+    } else {
+      setMode("persen");
+    }
+  };
+
+  const onPersenChange = (e) => {
+    const v = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+    onPatch({ diskon_persen: v });
+  };
+
+  const onRupiahChange = (e) => {
+    const v = e.target.value;
+    setRpValue(v);
+    const num = Number(v) || 0;
+    if (hargaBeli > 0) {
+      const pct = Math.min(100, Math.max(0, (num / hargaBeli) * 100));
+      onPatch({ diskon_persen: Math.round(pct * 100) / 100 });
+    }
+  };
+
+  return (
+    <label className="flex-1 min-w-[120px]">
+      <span className="mb-0.5 block text-[11px] font-medium text-slate-500">
+        Diskon
+      </span>
+      <div className="flex items-stretch gap-0">
+        <input
+          type="number"
+          min="0"
+          max={mode === "persen" ? 100 : undefined}
+          step={mode === "persen" ? 1 : 100}
+          value={mode === "persen" ? (diskonPersen || "") : rpValue}
+          onChange={mode === "persen" ? onPersenChange : onRupiahChange}
+          placeholder={mode === "persen" ? "0" : "0"}
+          className={`w-full rounded-l-lg border border-r-0 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
+            fieldClass || "border-slate-300"
+          }`}
+        />
+        <button
+          type="button"
+          onClick={toggleMode}
+          className="shrink-0 rounded-r-lg border border-slate-300 bg-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+          title={mode === "persen" ? "Klik untuk input nominal Rp" : "Klik untuk input persen %"}
+        >
+          {mode === "persen" ? "%" : "Rp"}
+        </button>
+      </div>
+    </label>
+  );
+}
+
+// =================================================================
 // Komponen: satu baris item pada tabel validasi
 // =================================================================
+function kodeSimilarity(a, b) {
+  const na = (a || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const nb = (b || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  if (!na || !nb) return 0;
+  if (na === nb) return 1;
+  const maxLen = Math.max(na.length, nb.length);
+  const dp = Array.from({ length: na.length + 1 }, () => Array(nb.length + 1).fill(0));
+  for (let i = 0; i <= na.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= nb.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= na.length; i++)
+    for (let j = 1; j <= nb.length; j++)
+      dp[i][j] = na[i - 1] === nb[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+  return 1 - dp[na.length][nb.length] / maxLen;
+}
+
 function ItemRow({
   index,
   row,
@@ -835,7 +1079,65 @@ function ItemRow({
   onRemove,
   onDecisionChange,
 }) {
-  // Sorot kuning jika confidence field < 70 (khusus tulisan tangan).
+  const [autoFillMsg, setAutoFillMsg] = useState("");
+  const debounceRef = useRef(null);
+  const onPatchRef = useRef(onPatch);
+  const onDecisionRef = useRef(onDecisionChange);
+  onPatchRef.current = onPatch;
+  onDecisionRef.current = onDecisionChange;
+
+  function handleKodeChange(e) {
+    const val = e.target.value;
+    onPatch({ kode_barang: val });
+    setAutoFillMsg("");
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const trimmed = val.trim();
+    if (!trimmed || trimmed.length < 3) {
+      onPatchRef.current({ candidates: [], action: null, product_id: null, picked_label: "" });
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await productsApi.list({ q: trimmed, limit: 5 });
+        const products = res?.data || [];
+        const norm = (k) => (k || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+        const exact = products.find((p) => norm(p.kode_barang) === norm(trimmed));
+        if (exact) {
+          onPatchRef.current({
+            nama_barang: exact.nama_barang || "",
+            harga_beli: exact.harga_beli ?? 0,
+            harga_jual: exact.harga_jual ?? 0,
+            candidates: [{ product_id: exact.id, kode_barang: exact.kode_barang, nama_barang: exact.nama_barang, similarity: 1.0 }],
+          });
+          onDecisionRef.current(`cand:${exact.id}`);
+          setAutoFillMsg(`Kode cocok 100% — data terisi dari "${exact.nama_barang}"`);
+          return;
+        }
+
+        const withSim = products.map((p) => ({
+          product_id: p.id,
+          kode_barang: p.kode_barang,
+          nama_barang: p.nama_barang,
+          similarity: kodeSimilarity(trimmed, p.kode_barang),
+        }));
+        const highMatches = withSim.filter((c) => c.similarity >= 0.8);
+
+        if (highMatches.length > 0) {
+          onPatchRef.current({ candidates: highMatches, action: null, product_id: null, picked_label: "" });
+        } else {
+          onPatchRef.current({ candidates: [], action: "new", product_id: null, picked_label: "" });
+        }
+      } catch {
+        // gagal fetch — diam saja
+      }
+    }, 500);
+  }
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
   function fieldClass(field) {
     if (
       isHandwritten &&
@@ -848,17 +1150,16 @@ function ItemRow({
     return "";
   }
 
-  // Nilai select keputusan produk.
   let decisionValue = "";
   if (row.action === "new") decisionValue = "new";
   else if (row.action === "restock" && row.product_id)
     decisionValue = `cand:${row.product_id}`;
 
-  // Kandidat tambahan bila produk terpilih dari pencarian manual
-  // (tidak ada di daftar kandidat Levenshtein).
-  const candidateInList = row.candidates.some(
+  const highCandidates = row.candidates.filter((c) => c.similarity >= 0.8);
+  const candidateInList = highCandidates.some(
     (c) => c.product_id === row.product_id
   );
+  const showHighMatchAlert = highCandidates.length > 0 && !row.action;
 
   return (
     <div className="rounded-lg border border-slate-200 p-3">
@@ -880,50 +1181,58 @@ function ItemRow({
           onClick={onRemove}
           className="text-xs text-red-500 hover:underline"
         >
-          Hapus baris
+          Delete Row
         </button>
       </div>
 
-      {row.line_text && (
-        <p className="mb-2 truncate rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-400">
-          Teks OCR: {row.line_text}
-        </p>
+      {/* Alert kesamaan tinggi (>= 80% tapi bukan 100%) */}
+      {showHighMatchAlert && (
+        <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
+          <p className="text-xs font-semibold text-amber-800">
+            Ditemukan produk dengan kesamaan cukup tinggi — silakan periksa dropdown di bawah.
+          </p>
+          <p className="mt-0.5 text-[11px] text-amber-700">
+            {highCandidates.map((c) => `${c.kode_barang} — ${c.nama_barang} (${persen(c.similarity)})`).join("; ")}
+          </p>
+        </div>
       )}
 
       {/* Keputusan produk */}
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-slate-600">
-          Cocokkan ke produk (rekomendasi Levenshtein top-3)
+          {highCandidates.length > 0 ? "Cocokkan ke produk yang ada" : "Pilih tindakan"}
         </span>
         <select
           value={decisionValue}
           onChange={(e) => onDecisionChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+          className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
+            showHighMatchAlert ? "border-amber-400" : "border-slate-300"
+          }`}
         >
           <option value="">— Pilih tindakan —</option>
           {row.action === "restock" && !candidateInList && row.product_id && (
             <option value={`cand:${row.product_id}`}>
-              {row.picked_label} (dipilih manual)
+              {row.picked_label} (dipilih)
             </option>
           )}
-          {row.candidates.map((c) => (
+          {highCandidates.map((c) => (
             <option key={c.product_id} value={`cand:${c.product_id}`}>
               {c.nama_barang} — {c.kode_barang} ({persen(c.similarity)})
             </option>
           ))}
-          <option value="new">+ Buat produk baru (pakai kode &amp; nama)</option>
-          <option value="search">🔍 Cari produk lain di katalog...</option>
+          <option value="new">+ Buat produk baru</option>
+          <option value="search">Cari produk lain di master barang...</option>
         </select>
       </label>
 
       {row.action === "restock" && row.picked_label && (
         <p className="mt-1 text-xs text-emerald-600">
-          → Restock: {row.picked_label}
+          Restock: {row.picked_label}
         </p>
       )}
       {row.action === "new" && (
         <p className="mt-1 text-xs text-blue-600">
-          → Produk baru akan dibuat dari kode &amp; nama di bawah.
+          Produk baru akan dibuat dari kode &amp; nama di bawah.
         </p>
       )}
 
@@ -935,11 +1244,15 @@ function ItemRow({
           </span>
           <input
             value={row.kode_barang}
-            onChange={(e) => onPatch({ kode_barang: e.target.value })}
+            onChange={handleKodeChange}
+            placeholder="Ketik kode, otomatis cari..."
             className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
               fieldClass("kode_barang") || "border-slate-300"
             }`}
           />
+          {autoFillMsg && (
+            <span className="mt-0.5 block text-[10px] font-medium text-emerald-600">{autoFillMsg}</span>
+          )}
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
@@ -981,20 +1294,29 @@ function ItemRow({
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Diskon (%)
+            Harga Jual
           </span>
           <input
             type="number"
             min="0"
-            max="100"
-            value={row.diskon_persen}
-            onChange={(e) => onPatch({ diskon_persen: e.target.value })}
-            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              fieldClass("diskon_persen") || "border-slate-300"
-            }`}
+            value={row.harga_jual || ""}
+            onChange={(e) => onPatch({ harga_jual: e.target.value })}
+            placeholder="0"
+            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
           />
         </label>
       </div>
+      {/* Subtotal per item */}
+      {Number(row.harga_beli) > 0 && Number(row.qty) > 0 && (
+        <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">
+          <span>
+            Subtotal: {row.qty} × {rupiah(Number(row.harga_beli))}
+          </span>
+          <span className="font-semibold text-slate-700">
+            {rupiah(Number(row.qty) * Number(row.harga_beli))}
+          </span>
+        </div>
+      )}
 
       {/* Strategi 3: checkbox 'Diperiksa' wajib untuk jalur tulisan tangan */}
       {isHandwritten && (
@@ -1046,12 +1368,12 @@ function DraftsPanel({ drafts, loading, onOpen, onDelete, onRefresh }) {
             )}
           </p>
           <p className="mt-0.5 text-xs text-slate-500">
-            Nota yang sudah ter-OCR di HP — buka di sini untuk dikoreksi &amp;
-            dikonfirmasi.
+            Nota yang sudah di draft sementara, buka di sini untuk diedit kembali &amp;
+            dikonfirmasi untuk disimpan.
           </p>
         </div>
         <Button size="sm" variant="ghost" onClick={onRefresh}>
-          ↻ Muat ulang
+          ↻ Reload
         </Button>
       </div>
 
@@ -1103,13 +1425,13 @@ function DraftsPanel({ drafts, loading, onOpen, onDelete, onRefresh }) {
                     onClick={() => onDelete(d.id)}
                     className="rounded-md px-2 py-1 text-[11px] text-red-600 hover:bg-red-50"
                   >
-                    Hapus
+                    Delete
                   </button>
                   <button
                     onClick={() => onOpen(d.id)}
                     className="rounded-md bg-brand-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-brand-700"
                   >
-                    Lanjutkan →
+                    Continue →
                   </button>
                 </div>
               </div>

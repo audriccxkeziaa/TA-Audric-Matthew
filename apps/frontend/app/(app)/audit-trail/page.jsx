@@ -12,8 +12,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { auditApi, usersApi } from "@/lib/api";
 import { downloadFile } from "@/lib/api-client";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { tanggalJam, isoDate } from "@/lib/format";
+import { tanggalJam, isoDate, rupiah } from "@/lib/format";
 import ProductPicker from "@/components/ProductPicker";
 import {
   PageShell,
@@ -43,7 +44,126 @@ function actionBadge(action) {
   return <Badge tone={tone}>{action}</Badge>;
 }
 
+function humanSource(src) {
+  if (src === "sales") return "Penjualan";
+  if (src === "purchase") return "Stok Masuk";
+  if (src === "manual") return "Manual";
+  return src || "—";
+}
+
+function humanReason(row) {
+  const r = row.reason_detail || "";
+  if (r.includes("trigger R4") && row.source_type === "sales")
+    return "Stok berkurang karena penjualan";
+  if (r.includes("trigger R4") && row.source_type === "purchase")
+    return "Stok bertambah karena stok masuk dari supplier";
+  if (r.includes("Race condition R1"))
+    return "Transaksi ditolak — stok tidak cukup (terdeteksi saat proses)";
+  if (row.rule_triggered === "R1" && row.rule_action === "REJECTED")
+    return `Transaksi ditolak — stok tidak cukup untuk jumlah yang diminta`;
+  if (row.rule_triggered === "R2" && row.rule_action === "REJECTED")
+    return "Stok masuk ditolak — data belum divalidasi oleh kasir";
+  if (row.rule_triggered === "R3")
+    return "Percobaan mengubah stok secara langsung ditolak oleh sistem";
+  return r || "—";
+}
+
+const FIELD_LABELS = {
+  qty: "Jumlah", harga_beli: "Harga Beli", harga_jual: "Harga Jual",
+  diskon_persen: "Diskon", source: "Input Via", kode_transaksi: "Kode Transaksi",
+  kode_barang: "Kode Barang", nama_barang: "Nama Barang", merk: "Merk",
+  stok: "Stok", min_stock: "Min. Stok", status: "Status",
+  changed_by: "Diubah Oleh", alasan: "Alasan", edited_at: "Waktu Edit",
+};
+const SKIP_KEYS = ["sale_id", "sale_item_id", "purchase_id", "purchase_item_id", "id", "created_at", "updated_at"];
+
+function formatField(k, v) {
+  if (v === null || v === undefined) return "—";
+  if ((k === "harga_beli" || k === "harga_jual") && typeof v === "number") return rupiah(v);
+  if (k === "diskon_persen") return `${v}%`;
+  if (k === "source") return v === "ocr" ? "OCR" : v === "manual" ? "Manual" : v;
+  if (k === "edited_at" && typeof v === "string") return tanggalJam(v);
+  return String(v);
+}
+
+function renderPayloadObject(obj, label) {
+  if (!obj || typeof obj !== "object") return null;
+  const entries = Object.entries(obj).filter(([k]) => !SKIP_KEYS.includes(k));
+  if (entries.length === 0) return null;
+  return (
+    <div className="mt-2">
+      {label && <p className="mb-1 text-xs font-medium text-slate-500">{label}</p>}
+      <table className="w-full text-sm">
+        <tbody className="divide-y divide-slate-100">
+          {entries.map(([k, v]) => (
+            <tr key={k}>
+              <td className="py-1 pr-3 text-xs text-slate-500 whitespace-nowrap w-1/3">
+                {FIELD_LABELS[k] || k}
+              </td>
+              <td className="py-1 text-xs font-medium text-slate-800">
+                {typeof v === "object" ? JSON.stringify(v) : formatField(k, v)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ContextPayloadTable({ payload }) {
+  if (!payload || typeof payload !== "object") return null;
+
+  if (payload.before && payload.after) {
+    const beforeEntries = Object.entries(payload.before).filter(([k]) => !SKIP_KEYS.includes(k));
+    const changed = beforeEntries.filter(([k]) => {
+      const bv = payload.before[k];
+      const av = payload.after[k];
+      return String(bv) !== String(av);
+    });
+    return (
+      <div className="mt-2 space-y-2">
+        {payload.alasan && (
+          <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <b>Alasan edit:</b> {payload.alasan}
+          </div>
+        )}
+        {payload.changed_by && (
+          <p className="text-xs text-slate-500">Oleh: <b>{payload.changed_by}</b> · {payload.edited_at ? tanggalJam(payload.edited_at) : ""}</p>
+        )}
+        {changed.length > 0 && (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-slate-400">
+                <th className="py-1 text-left font-medium">Field</th>
+                <th className="py-1 text-left font-medium">Sebelum</th>
+                <th className="py-1 text-left font-medium">Sesudah</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {changed.map(([k]) => (
+                <tr key={k}>
+                  <td className="py-1 text-xs text-slate-500">{FIELD_LABELS[k] || k}</td>
+                  <td className="py-1 text-xs text-red-600">{formatField(k, payload.before[k])}</td>
+                  <td className="py-1 text-xs text-emerald-600 font-medium">{formatField(k, payload.after[k])}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    );
+  }
+
+  const entries = Object.entries(payload).filter(
+    ([k, v]) => !SKIP_KEYS.includes(k) && typeof v !== "object"
+  );
+  if (entries.length === 0) return null;
+  return renderPayloadObject(payload, null);
+}
+
 export default function AuditTrailPage() {
+  const { user } = useAuth();
   const toast = useToast();
 
   const [filters, setFilters] = useState({
@@ -95,7 +215,7 @@ export default function AuditTrailPage() {
     <PageShell>
       <PageHeader
         title="Audit Trail"
-        description="Jejak setiap perubahan & penolakan stok oleh Rule-Based System."
+        description="Berisi detail setiap aksi & perubahan yang dilakukan oleh admin dan kasir."
         actions={
           <Button variant="outline" onClick={exportCsv}>
             Export CSV
@@ -244,7 +364,7 @@ export default function AuditTrailPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 capitalize">{r.source_type}</td>
+                    <td className="px-3 py-2">{humanSource(r.source_type)}</td>
                     <td className="px-3 py-2">{ruleBadge(r.rule_triggered)}</td>
                     <td className="px-3 py-2">{actionBadge(r.rule_action)}</td>
                     <td className="px-3 py-2 text-right font-semibold">
@@ -252,11 +372,19 @@ export default function AuditTrailPage() {
                     </td>
                     <td className="px-3 py-2 max-w-xs">
                       <span className="line-clamp-2 text-xs text-slate-600">
-                        {r.reason_detail || "—"}
+                        {humanReason(r)}
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-xs text-brand-600">Detail →</span>
+                      <button
+                        onClick={() => setDetailRow(r)}
+                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
+                        title="Lihat detail"
+                      >
+                        <svg className="w-4 h-4 text-slate-600 hover:text-brand-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 5C7 5 2.73 8.11 1 12.46c1.73 4.35 6 7.54 11 7.54s9.27-3.19 11-7.54C21.27 8.11 17 5 12 5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -269,7 +397,7 @@ export default function AuditTrailPage() {
       {/* Pagination — selalu terlihat */}
       <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500">
         <span>
-          {total} catatan · halaman {page}/{totalPages}
+          {total} notes · pages {page}/{totalPages}
           {isFetching && " · memuat..."}
         </span>
         <div className="flex gap-1">
@@ -279,7 +407,7 @@ export default function AuditTrailPage() {
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
-            Sebelumnya
+            Previous
           </Button>
           <Button
             size="sm"
@@ -287,7 +415,7 @@ export default function AuditTrailPage() {
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
-            Berikutnya
+            Next
           </Button>
         </div>
       </div>
@@ -328,7 +456,7 @@ export default function AuditTrailPage() {
               </div>
               <div>
                 <p className="text-xs uppercase text-slate-400">Sumber</p>
-                <p className="capitalize">{detailRow.source_type}</p>
+                <p className="capitalize">{humanSource(detailRow.source_type)}</p>
               </div>
               <div>
                 <p className="text-xs uppercase text-slate-400">Rule</p>
@@ -356,18 +484,18 @@ export default function AuditTrailPage() {
             <div>
               <p className="text-xs uppercase text-slate-400">Alasan</p>
               <p className="mt-1 text-slate-700">
-                {detailRow.reason_detail || "—"}
+                {humanReason(detailRow) || "—"}
               </p>
             </div>
 
-            <div>
-              <p className="text-xs uppercase text-slate-400">
-                Context Payload (forensik)
-              </p>
-              <pre className="mt-1 max-h-64 overflow-auto thin-scroll rounded bg-slate-50 p-2 text-[11px] text-slate-600">
-                {JSON.stringify(detailRow.context_payload, null, 2) || "—"}
-              </pre>
-            </div>
+            {user?.role === "admin" && detailRow.context_payload && (
+              <div className="mt-2 border-t border-slate-100 pt-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-red-500">
+                  Detail Forensik (Admin)
+                </span>
+                <ContextPayloadTable payload={detailRow.context_payload} />
+              </div>
+            )}
           </div>
         )}
       </Modal>

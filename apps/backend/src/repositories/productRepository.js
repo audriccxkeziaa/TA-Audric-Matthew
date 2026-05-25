@@ -48,36 +48,40 @@ async function existsByKodeBarang(kodeBarang, excludeId = null) {
 
 // Pencarian produk untuk halaman /kasir & /master-barang
 // q: search term, status: 'aktif'|'nonaktif'|null, stockFilter: 'low'|'out'|'normal'|null
-async function search({ q = "", status = null, stockFilter = null, limit = 20 }) {
+// page: nomor halaman (1-based), limit: per halaman
+async function search({ q = "", status = null, stockFilter = null, limit = 20, page = 1 }) {
+  const offset = (Math.max(1, page) - 1) * limit;
+
   let query = supabase
     .from("products")
     .select(
-      "id, kode_barang, nama_barang, merk, harga_beli, harga_jual, stok, min_stock, status, created_at, updated_at"
+      "id, kode_barang, nama_barang, merk, harga_beli, harga_jual, stok, min_stock, status, created_at, updated_at",
+      { count: "exact" }
     )
     .order("nama_barang", { ascending: true })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
 
   if (status) {
     query = query.eq("status", status);
   } else {
-    // default tanpa filter status: search /kasir butuh hanya 'aktif'
     query = query.eq("status", "aktif");
   }
 
   if (q && q.trim()) {
     const term = q.trim();
-    // ILIKE pada nama_barang ATAU kode_barang (parameterized otomatis oleh supabase-js)
-    query = query.or(`nama_barang.ilike.%${term}%,kode_barang.ilike.%${term}%`);
+    const termNorm = term.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    query = query.or(
+      `nama_barang.ilike.%${term}%,kode_barang.ilike.%${term}%,kode_normalized.ilike.${termNorm}%`
+    );
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) {
     console.error("[POS-PRODREPO] search error:", error.message);
     throw new Error("Gagal mencari produk");
   }
 
   let result = data || [];
-  // stockFilter di-Apply di sisi JS karena Supabase tidak support compare antar kolom (stok vs min_stock)
   if (stockFilter === "out") {
     result = result.filter((p) => p.stok === 0);
   } else if (stockFilter === "low") {
@@ -85,7 +89,7 @@ async function search({ q = "", status = null, stockFilter = null, limit = 20 })
   } else if (stockFilter === "normal") {
     result = result.filter((p) => p.stok > p.min_stock);
   }
-  return result;
+  return { rows: result, total: count || 0, page, limit, total_pages: Math.max(1, Math.ceil((count || 0) / limit)) };
 }
 
 // INSERT produk baru. Stok awal selalu 0 — penambahan stok WAJIB lewat alur
