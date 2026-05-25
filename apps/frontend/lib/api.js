@@ -7,8 +7,8 @@
 import { apiFetch } from "./api-client";
 
 export const authApi = {
-  login: (email, password) =>
-    apiFetch("/auth/login", { method: "POST", body: { email, password } }),
+  login: (username, password) =>
+    apiFetch("/auth/login", { method: "POST", body: { username, password } }),
   logout: () => apiFetch("/auth/logout", { method: "POST" }),
   me: () => apiFetch("/auth/me"),
 };

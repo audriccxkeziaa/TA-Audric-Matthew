@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
-import { tanggal } from "@/lib/format";
+import { tanggal, tanggalJam } from "@/lib/format";
 import {
   PageShell,
   PageHeader,
@@ -22,7 +22,6 @@ import {
   EmptyState,
 } from "@/components/ui";
 
-// Eye icon
 function EyeIcon() {
   return (
     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -32,14 +31,52 @@ function EyeIcon() {
   );
 }
 
-// ---------- Modal detail / edit user (eye button) ----------
+function EyeOpenIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+  );
+}
+
+function EyeSlashIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+    </svg>
+  );
+}
+
+function PasswordInput({ label, value, onChange }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        label={label}
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((p) => !p)}
+        className="absolute right-3 top-[34px] text-slate-400 hover:text-slate-600"
+        tabIndex={-1}
+      >
+        {show ? <EyeOpenIcon /> : <EyeSlashIcon />}
+      </button>
+    </div>
+  );
+}
+
+// ---------- Modal detail / edit user ----------
 function UserDetailModal({ open, onClose, target, isSelf }) {
   const qc = useQueryClient();
   const toast = useToast();
 
   const [form, setForm] = useState(() => ({
     username: target?.username || "",
-    email: target?.email || "",
     password: "",
     role: target?.role || "kasir",
   }));
@@ -55,7 +92,6 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
     mutationFn: async () => {
       if (!form.username.trim()) throw new Error("Username wajib diisi");
       const body = { username: form.username.trim(), role: form.role };
-      if (form.email.trim()) body.email = form.email.trim();
       if (form.password) {
         if (form.password.length < 6) throw new Error("Password minimal 6 karakter");
         body.password = form.password;
@@ -64,7 +100,7 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["users"] });
-      toast.success("User berhasildiperbarui");
+      toast.success("User berhasil diperbarui.");
       onClose();
     },
     onError: (e) => setErr(e.message),
@@ -74,7 +110,7 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
     mutationFn: () => usersApi.setStatus(target.id, !active),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["users"] });
-      toast.success(active ? "User dinonaktifkan" : "User berhasil diaktifkan");
+      toast.success(active ? "User dinonaktifkan" : "User berhasil diaktifkan.");
       onClose();
     },
     onError: (e) => toast.error(e.message),
@@ -83,10 +119,16 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
   return (
     <Modal open={open} onClose={onClose} title={`Detail User — ${target?.username}`}>
       <div className="space-y-3">
-        {/* Status badge */}
-        <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-          <span className="text-sm text-slate-500">Status saat ini:</span>
-          <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">Status:</span>
+            <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
+          </div>
+          {target?.updated_at && (
+            <span className="text-xs text-slate-400">
+              Terakhir diubah: {tanggalJam(target.updated_at)}
+            </span>
+          )}
         </div>
 
         <Input
@@ -94,15 +136,8 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
           value={form.username}
           onChange={(e) => set("username", e.target.value)}
         />
-        <Input
-          label="Email"
-          type="email"
-          value={form.email}
-          onChange={(e) => set("email", e.target.value)}
-        />
-        <Input
+        <PasswordInput
           label="Password baru (kosongkan jika tidak diubah)"
-          type="password"
           value={form.password}
           onChange={(e) => set("password", e.target.value)}
         />
@@ -121,7 +156,6 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
         )}
 
         <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-          {/* Toggle aktif/nonaktif — admin tidak bisa nonaktifkan dirinya sendiri */}
           {!isSelf ? (
             <Button
               variant="ghost"
@@ -160,7 +194,7 @@ function AddUserForm({ open, onClose }) {
   const qc = useQueryClient();
   const toast = useToast();
 
-  const [form, setForm] = useState({ username: "", email: "", password: "", role: "kasir" });
+  const [form, setForm] = useState({ username: "", password: "", role: "kasir" });
   const [err, setErr] = useState("");
 
   function set(f, v) {
@@ -170,11 +204,10 @@ function AddUserForm({ open, onClose }) {
   const mutation = useMutation({
     mutationFn: async () => {
       if (!form.username.trim()) throw new Error("Username wajib diisi");
-      if (!form.email.trim() || !form.password) throw new Error("Email dan password wajib diisi");
+      if (!form.password) throw new Error("Password wajib diisi");
       if (form.password.length < 6) throw new Error("Password minimal 6 karakter");
       return usersApi.create({
         username: form.username.trim(),
-        email: form.email.trim(),
         password: form.password,
         role: form.role,
       });
@@ -191,8 +224,7 @@ function AddUserForm({ open, onClose }) {
     <Modal open={open} onClose={onClose} title="Tambah User Baru">
       <div className="space-y-3">
         <Input label="Username" value={form.username} onChange={(e) => set("username", e.target.value)} />
-        <Input label="Email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
-        <Input label="Password" type="password" value={form.password} onChange={(e) => set("password", e.target.value)} />
+        <PasswordInput label="Password" value={form.password} onChange={(e) => set("password", e.target.value)} />
         <Select label="Role" value={form.role} onChange={(e) => set("role", e.target.value)}>
           <option value="kasir">Kasir</option>
           <option value="admin">Admin</option>
@@ -245,10 +277,10 @@ export default function UsersPage() {
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-2.5">Username</th>
-                  <th className="px-4 py-2.5">Email</th>
                   <th className="px-4 py-2.5">Role</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Dibuat</th>
+                  <th className="px-4 py-2.5">Terakhir Diubah</th>
                   <th className="px-4 py-2.5 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -262,7 +294,6 @@ export default function UsersPage() {
                         {u.username}
                         {isSelf && <span className="ml-1 text-xs text-slate-400">(Anda)</span>}
                       </td>
-                      <td className="px-4 py-2.5 text-slate-500">{u.email || "-"}</td>
                       <td className="px-4 py-2.5">
                         <Badge tone={u.role === "admin" ? "indigo" : "slate"}>{u.role}</Badge>
                       </td>
@@ -270,6 +301,7 @@ export default function UsersPage() {
                         <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
                       </td>
                       <td className="px-4 py-2.5 text-slate-500">{tanggal(u.created_at)}</td>
+                      <td className="px-4 py-2.5 text-slate-500">{tanggalJam(u.updated_at)}</td>
                       <td className="px-4 py-2.5 text-center">
                         <button
                           onClick={() => setViewTarget(u)}

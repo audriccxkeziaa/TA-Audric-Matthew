@@ -1,42 +1,51 @@
 const { createClient } = require("@supabase/supabase-js");
 const supabaseAdmin = require("../config/supabase");
 
-// POST /api/auth/login — verifikasi kredensial via Supabase Auth, kembalikan JWT
+// POST /api/auth/login — login via username + password
+// Supabase Auth membutuhkan email, jadi kita lookup email dari username dulu.
 async function login(req, res) {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email dan password wajib diisi" });
+  if (!username || !password) {
+    return res.status(400).json({ error: "Username dan password wajib diisi" });
   }
 
   try {
+    const { data: profile, error: profileErr } = await supabaseAdmin
+      .from("users")
+      .select("id, username, role")
+      .eq("username", username.trim())
+      .single();
+
+    if (profileErr || !profile) {
+      return res.status(401).json({ error: "Username atau password salah" });
+    }
+
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+    if (!authUser?.user?.email) {
+      return res.status(401).json({ error: "Username atau password salah" });
+    }
+
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_ANON_KEY
     );
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: authUser.user.email,
       password,
     });
 
     if (error) {
-      console.warn("[POS-AUTH] Login gagal untuk", email, "-", error.message);
-      return res.status(401).json({ error: "Email atau password salah" });
+      console.warn("[POS-AUTH] Login gagal untuk", username, "-", error.message);
+      return res.status(401).json({ error: "Username atau password salah" });
     }
-
-    const { data: profile } = await supabaseAdmin
-      .from("users")
-      .select("*")
-      .eq("id", data.user.id)
-      .single();
 
     res.json({
       user: {
         id: data.user.id,
-        email: data.user.email,
-        username: profile?.username,
-        role: profile?.role,
+        username: profile.username,
+        role: profile.role,
       },
       session: {
         access_token: data.session.access_token,
@@ -74,25 +83,31 @@ async function logout(req, res) {
 }
 
 // POST /api/users — admin only, buat user baru (dipanggil dari users router)
+// Email di-auto-generate dari username (username@pos.local) karena Supabase Auth butuh email.
 async function register(req, res) {
-  const { email, password, username, role } = req.body;
+  const { password, username, role } = req.body;
 
-  if (!email || !password || !username || !role) {
-    return res.status(400).json({ error: "Semua field wajib diisi" });
+  if (!password || !username || !role) {
+    return res.status(400).json({ error: "Username, password, dan role wajib diisi" });
   }
   if (!["admin", "kasir"].includes(role)) {
     return res.status(400).json({ error: "Role harus admin atau kasir" });
   }
 
+  const autoEmail = `${username.trim().toLowerCase().replace(/\s+/g, "_")}@pos.local`;
+
   try {
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: autoEmail,
         password,
         email_confirm: true,
       });
 
     if (authError) {
+      if (authError.message?.includes("already been registered")) {
+        return res.status(409).json({ error: "Username sudah dipakai" });
+      }
       return res
         .status(400)
         .json({ error: authError.message || "Gagal membuat user" });
@@ -100,20 +115,22 @@ async function register(req, res) {
 
     const { error: profileError } = await supabaseAdmin.from("users").insert({
       id: authData.user.id,
-      username,
+      username: username.trim(),
       role,
     });
 
     if (profileError) {
-      // Rollback auth user kalau profile insert gagal
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       console.error("[POS-AUTH] Register profile error:", profileError.message);
+      if (profileError.code === "23505") {
+        return res.status(409).json({ error: "Username sudah dipakai" });
+      }
       return res.status(400).json({ error: "Gagal menyimpan profil user" });
     }
 
     res.status(201).json({
       message: "User berhasil dibuat",
-      user: { id: authData.user.id, email, username, role },
+      user: { id: authData.user.id, username: username.trim(), role },
     });
   } catch (err) {
     console.error("[POS-AUTH] Register error:", err.message);
@@ -125,7 +142,6 @@ async function getMe(req, res) {
   res.json({
     user: {
       id: req.user.id,
-      email: req.user.email,
       username: req.user.username,
       role: req.user.role,
       created_at: req.user.created_at,
@@ -133,55 +149,28 @@ async function getMe(req, res) {
   });
 }
 
-// GET /api/users — daftar user, dipakai filter audit-trail dan halaman /admin/users (admin only)
+// GET /api/users — daftar user (admin only)
 async function listUsers(req, res) {
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
-      .select("id, username, role, is_active, created_at")
+      .select("id, username, role, is_active, created_at, updated_at")
       .order("username", { ascending: true });
     if (error) throw error;
 
-    // Email disimpan di auth.users (Supabase) — gabungkan via admin API.
-    // Maks 50 user, jadi 1x listUsers cukup; kalau nanti grow > 50, paginasi.
-    let emailMap = new Map();
-    try {
-      const { data: authPage } = await supabaseAdmin.auth.admin.listUsers({
-        perPage: 200,
-      });
-      for (const u of authPage?.users || []) {
-        emailMap.set(u.id, u.email);
-      }
-    } catch (e) {
-      console.warn("[POS-AUTH] listUsers: gagal ambil email auth:", e.message);
-    }
-
-    const enriched = (data || []).map((u) => ({
-      ...u,
-      email: emailMap.get(u.id) || null,
-    }));
-
-    res.json({ data: enriched });
+    res.json({ data: data || [] });
   } catch (err) {
     console.error("[POS-AUTH] listUsers error:", err.message);
     res.status(500).json({ error: "Gagal memuat daftar user" });
   }
 }
 
-// PUT /api/users/:id — admin only. Update username / role / email / password.
-// Tidak pernah mengubah is_active di sini (pakai endpoint terpisah supaya
-// audit-trail jelas: edit profil vs aktivasi).
+// PUT /api/users/:id — admin only. Update username / role / password.
 async function updateUser(req, res) {
   const { id } = req.params;
-  const { username, role, email, password } = req.body || {};
+  const { username, role, password } = req.body || {};
 
-  // Validasi minimal
-  if (
-    username == null &&
-    role == null &&
-    email == null &&
-    password == null
-  ) {
+  if (username == null && role == null && password == null) {
     return res.status(400).json({ error: "Tidak ada field yang diubah" });
   }
   if (role != null && !["admin", "kasir"].includes(role)) {
@@ -191,8 +180,6 @@ async function updateUser(req, res) {
     return res.status(400).json({ error: "Username tidak valid" });
   }
 
-  // Self-protect: admin tidak boleh menurunkan rolenya sendiri jadi kasir
-  // (mencegah lock-out — tidak ada admin tersisa yang bisa promote balik).
   if (id === req.user.id && role && role !== "admin") {
     return res.status(400).json({
       error: "Admin tidak boleh menurunkan role akunnya sendiri",
@@ -200,7 +187,6 @@ async function updateUser(req, res) {
   }
 
   try {
-    // (1) update profil di tabel users
     const profilePatch = {};
     if (username) profilePatch.username = username.trim();
     if (role) profilePatch.role = role;
@@ -218,9 +204,10 @@ async function updateUser(req, res) {
       }
     }
 
-    // (2) update auth.users (email / password) via admin API
     const authPatch = {};
-    if (email) authPatch.email = email;
+    if (username) {
+      authPatch.email = `${username.trim().toLowerCase().replace(/\s+/g, "_")}@pos.local`;
+    }
     if (password) {
       if (typeof password !== "string" || password.length < 6) {
         return res

@@ -47,8 +47,8 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const res = await authApi.login(email, password);
+  const login = useCallback(async (username, password) => {
+    const res = await authApi.login(username, password);
     setSession({
       access_token: res.session.access_token,
       refresh_token: res.session.refresh_token,
