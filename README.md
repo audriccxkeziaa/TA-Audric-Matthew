@@ -163,8 +163,10 @@ Uji RBAC & JWT otomatis: `node tests/security/rbac-jwt-test.js`
 - **Database & Storage**: Supabase (cukup project gratis untuk skala
   toko kecil).
 
+Untuk deploy ke Railway, lihat `DEPLOY_RAILWAY.md` di root repository.
+
 Untuk produksi:
-1. Update `FRONTEND_URL` di backend dengan domain Vercel.
+1. Update `FRONTEND_URL` di backend dengan domain Vercel atau Railway.
 2. Update `NEXT_PUBLIC_API_URL` di frontend dengan URL backend.
 3. Ganti password user demo.
 4. Aktifkan Supabase Auth email confirmation (saat ini auto-confirm

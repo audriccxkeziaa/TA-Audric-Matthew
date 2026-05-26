@@ -11,6 +11,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import { Spinner } from "@/components/ui";
@@ -31,6 +32,8 @@ export default function AppLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useRealtimeSync();
 
   useEffect(() => {
     if (loading) return;

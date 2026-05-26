@@ -7,23 +7,27 @@ async function login(req, res) {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).json({ error: "Username dan password wajib diisi" });
+    return res.status(400).json({ error: "Username dan password wajib diisi." });
   }
 
   try {
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from("users")
-      .select("id, username, role")
+      .select("id, username, role, is_active")
       .eq("username", username.trim())
       .single();
 
     if (profileErr || !profile) {
-      return res.status(401).json({ error: "Username atau password salah" });
+      return res.status(401).json({ error: "Username atau password salah." });
+    }
+
+    if (profile.is_active === false) {
+      return res.status(403).json({ error: "Akun Anda telah dinonaktifkan. Hubungi admin untuk mengaktifkan kembali." });
     }
 
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profile.id);
     if (!authUser?.user?.email) {
-      return res.status(401).json({ error: "Username atau password salah" });
+      return res.status(401).json({ error: "Username atau password salah." });
     }
 
     const supabase = createClient(

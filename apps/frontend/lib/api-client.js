@@ -11,10 +11,10 @@
 import { supabase } from "./supabase";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-const SESSION_KEY = "pos.session";
+const SESSION_PREFIX = "pos.session.";
+const TAB_USER_KEY = "pos.active_user";
 
 // ---------- Error khusus ----------
-// Membawa `status` HTTP dan `rule` (R1-R5) supaya UI bisa kasih pesan tepat.
 export class ApiError extends Error {
   constructor(message, { status, rule, failures } = {}) {
     super(message);
@@ -25,12 +25,35 @@ export class ApiError extends Error {
   }
 }
 
-// ---------- Manajemen sesi (localStorage) ----------
+// ---------- Manajemen sesi ----------
+// Session data disimpan di localStorage (pos.session.<user_id>) supaya
+// tahan page-refresh. Pointer "user mana yang aktif di tab ini" disimpan
+// di sessionStorage (per-tab) sehingga admin di tab A dan kasir di tab B
+// tidak saling menimpa.
+function activeUid() {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem(TAB_USER_KEY) || null;
+}
+
 export function getSession() {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const uid = activeUid();
+    if (uid) {
+      const raw = window.localStorage.getItem(`${SESSION_PREFIX}${uid}`);
+      return raw ? JSON.parse(raw) : null;
+    }
+    // Migrasi dari format lama (pos.session tunggal)
+    const legacy = window.localStorage.getItem("pos.session");
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      if (parsed?.user?.id) {
+        setSession(parsed);
+        window.localStorage.removeItem("pos.session");
+        return parsed;
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -38,12 +61,17 @@ export function getSession() {
 
 export function setSession(session) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  const uid = session?.user?.id;
+  if (!uid) return;
+  window.sessionStorage.setItem(TAB_USER_KEY, uid);
+  window.localStorage.setItem(`${SESSION_PREFIX}${uid}`, JSON.stringify(session));
 }
 
 export function clearSession() {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(SESSION_KEY);
+  const uid = activeUid();
+  if (uid) window.localStorage.removeItem(`${SESSION_PREFIX}${uid}`);
+  window.sessionStorage.removeItem(TAB_USER_KEY);
 }
 
 // ---------- Refresh token (Lapisan 3) ----------

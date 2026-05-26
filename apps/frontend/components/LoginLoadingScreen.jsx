@@ -54,7 +54,7 @@ export default function LoginLoadingScreen({
 
         {userName && (
           <p className="mt-4 text-sm text-slate-300">
-            Selamat datang,{" "}
+            Welcome,{" "}
             <span className="font-semibold text-white">{userName}</span>
           </p>
         )}
@@ -67,13 +67,7 @@ export default function LoginLoadingScreen({
           />
         </div>
 
-        {/* Step indicator */}
-        <p className="mt-3 text-sm text-slate-400">
-          {STEPS[stepIdx]}
-          <span className="ml-1 inline-block animate-pulse">...</span>
-        </p>
-
-        <p className="mt-1 font-mono text-xs text-slate-500">
+        <p className="mt-3 font-mono text-xs text-slate-500">
           {Math.floor(progress)}%
         </p>
       </div>
