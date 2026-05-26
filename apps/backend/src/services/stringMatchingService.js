@@ -1,8 +1,8 @@
 // =================================================================
 // stringMatchingService.js — Levenshtein top-3 candidate matcher
 // =================================================================
-// Mencocokkan hasil OCR ke produk database. Prioritas: kode_barang (70%)
-// lalu nama_barang (30%). Exact kode match → score 1.0 otomatis.
+// Mencocokkan hasil OCR ke produk database. Prioritas: kode_barang (85%)
+// lalu nama_barang (15%). Exact kode match → score 1.0 otomatis.
 // Formula similarity: 1 - distance / max(len_a, len_b).
 // =================================================================
 
@@ -30,7 +30,7 @@ function similarity(a, b) {
 // tidak akan ditampilkan sebagai sugesti — UI akan menunjukkan slot kosong
 // supaya user pilih manual dari katalog. Ini cegah sugesti random
 // 5–25% yang menyesatkan saat katalog DB tidak punya produk yang dimaksud.
-const MIN_SIMILARITY_FOR_SUGGESTION = 0.4;
+const MIN_SIMILARITY_FOR_SUGGESTION = 0.65;
 
 // Cek substring exact (case-insensitive, ignore separator). Kalau OCR-kode
 // "SVD-E1310-20" dan produk-kode "SVDE131020", kita anggap match karena
@@ -50,7 +50,7 @@ function isCodeExactMatch(ocrKode, prodKode) {
 // Cari top-N kandidat produk (nama + opsional kode).
 // Strategi prioritas:
 //   1. Kalau ocrKode exact match (substring/identik) → score 1.0
-//   2. Kalau ocrKode ada tapi tidak exact → kode 70% + nama 30%
+//   2. Kalau ocrKode ada tapi tidak exact → kode 85% + nama 15%
 //   3. Kalau hanya nama → nama 100%
 //   4. Drop kandidat dengan score < MIN_SIMILARITY_FOR_SUGGESTION
 function findTopCandidates({ ocrName, ocrKode, products, topN = 3 }) {
@@ -65,7 +65,7 @@ function findTopCandidates({ ocrName, ocrKode, products, topN = 3 }) {
     if (exactKode) {
       score = 1.0;
     } else if (ocrKode) {
-      score = simKode * 0.7 + simNama * 0.3;
+      score = simKode * 0.85 + simNama * 0.15;
     } else {
       score = simNama;
     }

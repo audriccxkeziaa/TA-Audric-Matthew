@@ -110,7 +110,7 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
     mutationFn: () => usersApi.setStatus(target.id, !active),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["users"] });
-      toast.success(active ? "User dinonaktifkan" : "User berhasil diaktifkan.");
+      toast.success(active ? "User berhasil dinonaktifkan." : "User berhasil diaktifkan.");
       onClose();
     },
     onError: (e) => toast.error(e.message),
