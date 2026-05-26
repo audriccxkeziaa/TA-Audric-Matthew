@@ -81,13 +81,26 @@ async function list({ from, to, limit = 50 }) {
 
   const { data, error } = await query;
   if (error) throw new Error("Gagal memuat daftar transaksi");
+
+  // Fetch users secara terpisah untuk setiap unique user_id
+  const userIds = [...new Set((data || []).map(r => r.user_id).filter(Boolean))];
+  let userMap = new Map();
+
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
+      .from("users")
+      .select("id, username")
+      .in("id", userIds);
+    userMap = new Map(users?.map(u => [u.id, u.username]) || []);
+  }
+
   return (data || []).map((r) => ({
     id: r.id,
     kode_transaksi: r.kode_transaksi,
     user_id: r.user_id,
     total_harga: r.total_harga,
     created_at: r.created_at,
-    kasir: r.users?.username || null,
+    kasir: userMap.get(r.user_id) || null,
     item_count: r.sale_items?.length || 0,
   }));
 }

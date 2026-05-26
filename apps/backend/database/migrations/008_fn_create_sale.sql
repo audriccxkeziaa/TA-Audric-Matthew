@@ -1,20 +1,6 @@
 -- =================================================================
 -- Migration 008 — RPC fn_create_sale (transaksi atomik penjualan)
 -- =================================================================
--- Dipanggil dari salesRepository.createSaleViaRpc().
--- Param:
---   p_user_id        UUID
---   p_kode_transaksi TEXT
---   p_items          JSONB = [{product_id, qty, harga_satuan}, ...]
--- Return: JSONB { sale_id: UUID, total_harga: NUMERIC }
---
--- Alur:
---   - INSERT header sales (total=0, akan di-update di akhir)
---   - Loop items → INSERT sale_items. Trigger R4 mengurangi stok &
---     menulis stock_logs ACCEPTED. Trigger juga melempar SQLSTATE
---     '45R01' bila stok kurang → seluruh function rollback otomatis.
---   - Update total_harga pada header sales.
--- =================================================================
 
 CREATE OR REPLACE FUNCTION fn_create_sale(
   p_user_id        UUID,
@@ -32,6 +18,7 @@ DECLARE
   v_qty        INTEGER;
   v_harga      NUMERIC(14,2);
   v_subtotal   NUMERIC(14,2);
+  v_stok_check INTEGER;  -- TAMBAH BARIS INI
 BEGIN
   IF p_items IS NULL OR jsonb_array_length(p_items) = 0 THEN
     RAISE EXCEPTION 'Items kosong: minimal 1 item';
@@ -48,6 +35,13 @@ BEGIN
 
     IF v_product_id IS NULL OR v_qty IS NULL OR v_qty <= 0 OR v_harga IS NULL OR v_harga < 0 THEN
       RAISE EXCEPTION 'Item tidak valid: %', v_item;
+    END IF;
+
+    -- TAMBAH 2 BARIS INI (atomic lock + validasi stok)
+    SELECT stok INTO v_stok_check FROM products WHERE id = v_product_id FOR UPDATE;
+    IF v_stok_check < v_qty THEN
+      RAISE EXCEPTION 'Transaksi Gagal: Stok tidak mencukupi untuk produk % (tersedia %, diminta %)',
+        v_product_id, v_stok_check, v_qty USING ERRCODE = '45R01';
     END IF;
 
     v_subtotal := v_qty * v_harga;
