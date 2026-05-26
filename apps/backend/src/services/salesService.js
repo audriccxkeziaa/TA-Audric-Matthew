@@ -232,6 +232,30 @@ async function createSale({ user, items }) {
     throw e;
   }
 
+   // Ambil receipt lengkap untuk response
+  let receipt;
+  try {
+    receipt = await salesRepository.getReceipt(rpcResult.sale_id);
+  } catch (receiptErr) {
+    // getReceipt gagal, tapi transaksi SUDAH COMMIT (stok sudah berkurang)
+    // Return minimal response dengan data dari rpcResult
+    console.warn(
+      `[POS-SALES] getReceipt gagal untuk sale_id=${rpcResult.sale_id}, return minimal response`
+    );
+    receipt = {
+      id: rpcResult.sale_id,
+      kode_transaksi: kodeTransaksi,
+      total_harga: rpcResult.total_harga,
+      kasir: user.username,
+      items: [], // Items kosong karena gagal fetch
+    };
+  }
+
+  console.log(
+    `[POS-SALES] Transaksi ${receipt.kode_transaksi} sukses oleh user=${user.username} total=${receipt.total_harga}`
+  );
+  return receipt;
+
   // Ambil receipt lengkap untuk response
   const receipt = await salesRepository.getReceipt(rpcResult.sale_id);
   console.log(
