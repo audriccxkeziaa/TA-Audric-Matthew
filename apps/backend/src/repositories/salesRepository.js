@@ -21,15 +21,27 @@ async function createSaleViaRpc({ userId, kodeTransaksi, items }) {
   return data;
 }
 
-// Ambil receipt lengkap (header + item + nama produk) untuk respons POST /api/sales
 async function getReceipt(saleId) {
+  // Fetch sale header WITHOUT the join first
   const { data: sale, error: saleErr } = await supabase
     .from("sales")
-    .select("id, kode_transaksi, user_id, total_harga, diskon_persen, potongan_harga, created_at, users(username)")
+    .select("id, kode_transaksi, user_id, total_harga, diskon_persen, potongan_harga, created_at")
     .eq("id", saleId)
     .single();
   if (saleErr) throw new Error("Gagal memuat header transaksi");
 
+  // Fetch user separately if user_id exists
+  let kasir = null;
+  if (sale.user_id) {
+    const { data: user } = await supabase
+      .from("users")
+      .select("username")
+      .eq("id", sale.user_id)
+      .single();
+    kasir = user?.username || null;
+  }
+
+  // Fetch items
   const { data: items, error: itemsErr } = await supabase
     .from("sale_items")
     .select(
@@ -41,7 +53,7 @@ async function getReceipt(saleId) {
 
   return {
     ...sale,
-    kasir: sale.users?.username || null,
+    kasir,
     items: items.map((it) => ({
       id: it.id,
       product_id: it.product_id,
