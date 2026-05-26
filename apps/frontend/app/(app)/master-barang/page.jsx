@@ -8,7 +8,7 @@
 // - "Hapus" = soft delete → status nonaktif.
 // =================================================================
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -203,6 +203,22 @@ export default function MasterBarangPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
+  const barcodeRef = useRef(null);
+  const [barcodeInput, setBarcodeInput] = useState("");
+
+  function normKode(k) {
+    return (k || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  }
+
+  function handleBarcodeSearch(e) {
+    e.preventDefault();
+    const code = barcodeInput.trim();
+    if (!code) return;
+    setQ(normKode(code));
+    setPage(1);
+    setBarcodeInput("");
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ["products", q, stockFilter, page],
     queryFn: () =>
@@ -236,6 +252,30 @@ export default function MasterBarangPage() {
           )
         }
       />
+
+      {/* Barcode scanner input */}
+      <Card className="mb-3 shrink-0 border-2 border-brand-400 p-3">
+        <form onSubmit={handleBarcodeSearch} className="flex gap-2">
+          <div className="flex flex-1 items-center gap-2 rounded-lg bg-slate-50 px-3">
+            <svg className="h-5 w-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 5v14M7 5v14M11 5v14M15 5v14M19 5v14" />
+            </svg>
+            <input
+              ref={barcodeRef}
+              value={barcodeInput}
+              onChange={(e) => setBarcodeInput(e.target.value)}
+              placeholder="Scan barcode atau ketik kode produk lalu Enter…"
+              className="flex-1 bg-transparent py-2 text-sm font-mono outline-none placeholder:text-slate-400"
+            />
+          </div>
+          <Button type="submit" size="sm">Cari</Button>
+          {q && (
+            <Button type="button" size="sm" variant="secondary" onClick={() => { setQ(""); setPage(1); }}>
+              Reset
+            </Button>
+          )}
+        </form>
+      </Card>
 
       {/* Filter — selalu terlihat */}
       <Card className="mb-3 shrink-0 p-3">

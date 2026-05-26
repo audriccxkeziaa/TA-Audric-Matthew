@@ -5,7 +5,7 @@
 // Tabel grouped per transaksi/nota. Klik baris → modal detail items.
 // =================================================================
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { reportsApi, salesApi } from "@/lib/api";
 import { downloadFile } from "@/lib/api-client";
@@ -84,15 +84,22 @@ function groupPurchaseRows(rows) {
   );
 }
 
+const PAGE_SIZE = 20;
+
 export default function LaporanPage() {
   const toast = useToast();
   const [tab, setTab] = useState("penjualan");
   const [from, setFrom] = useState(isoDate(-30));
   const [to, setTo] = useState(isoDate(0));
+  const [kasirFilter, setKasirFilter] = useState("");
+  const [page, setPage] = useState(1);
   const [detailData, setDetailData] = useState(null); // grouped object with items[]
 
   const isSales = tab === "penjualan";
   const query = { from, to };
+
+  // Reset page & kasir filter when tab or date changes
+  useEffect(() => { setPage(1); setKasirFilter(""); }, [tab, from, to]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["laporan", tab, from, to],
@@ -105,6 +112,29 @@ export default function LaporanPage() {
   const grouped = useMemo(
     () => (isSales ? groupSalesRows(rawRows) : groupPurchaseRows(rawRows)),
     [rawRows, isSales]
+  );
+
+  // Unique kasir/user options from data
+  const kasirOptions = useMemo(() => {
+    const names = grouped
+      .map((g) => (isSales ? g.kasir : g.user))
+      .filter(Boolean);
+    return [...new Set(names)].sort();
+  }, [grouped, isSales]);
+
+  // Filter by kasir
+  const filteredGrouped = useMemo(() => {
+    if (!kasirFilter) return grouped;
+    return grouped.filter((g) =>
+      isSales ? g.kasir === kasirFilter : g.user === kasirFilter
+    );
+  }, [grouped, kasirFilter, isSales]);
+
+  // Paginate
+  const totalPages = Math.max(1, Math.ceil(filteredGrouped.length / PAGE_SIZE));
+  const paginatedGrouped = filteredGrouped.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
   );
 
   async function exportCsv() {
@@ -160,9 +190,9 @@ export default function LaporanPage() {
         </button>
       </div>
 
-      {/* Filter tanggal */}
+      {/* Filter tanggal + kasir */}
       <Card className="mb-3 shrink-0 p-3 no-print">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-4">
           <Input
             label="Dari Tanggal"
             type="date"
@@ -175,6 +205,29 @@ export default function LaporanPage() {
             value={to}
             onChange={(e) => setTo(e.target.value)}
           />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              {isSales ? "Kasir" : "Input Oleh"}
+            </label>
+            <select
+              value={kasirFilter}
+              onChange={(e) => { setKasirFilter(e.target.value); setPage(1); }}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option value="">Semua {isSales ? "Kasir" : "User"}</option>
+              {kasirOptions.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => { setKasirFilter(""); setFrom(isoDate(-30)); setTo(isoDate(0)); setPage(1); }}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            >
+              Reset Filter
+            </button>
+          </div>
         </div>
       </Card>
 
@@ -238,7 +291,7 @@ export default function LaporanPage() {
           <div className="p-6">
             <Spinner label="Memuat laporan..." />
           </div>
-        ) : grouped.length === 0 ? (
+        ) : filteredGrouped.length === 0 ? (
           <EmptyState title="Tidak ada data pada periode ini" />
         ) : (
           <div className="min-h-0 flex-1 overflow-auto thin-scroll">
@@ -269,14 +322,14 @@ export default function LaporanPage() {
                 )}
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {grouped.map((g, i) => (
+                {paginatedGrouped.map((g, i) => (
                   <tr
                     key={isSales ? g.sale_id : g.purchase_id}
                     onClick={() => setDetailData(g)}
                     className="cursor-pointer transition-colors hover:bg-brand-50"
                   >
                     <td className="px-3 py-2.5 text-xs text-slate-400">
-                      {i + 1}
+                      {(page - 1) * PAGE_SIZE + i + 1}
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap text-xs">
                       {tanggalJam(g.created_at)}
@@ -318,6 +371,32 @@ export default function LaporanPage() {
           </div>
         )}
       </Card>
+
+      {/* Pagination */}
+      {filteredGrouped.length > PAGE_SIZE && (
+        <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500 no-print">
+          <span>
+            {filteredGrouped.length} baris · halaman {page}/{totalPages}
+            {kasirFilter && ` · filter: ${kasirFilter}`}
+          </span>
+          <div className="flex gap-1">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
+            >
+              ← Sebelumnya
+            </button>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
+            >
+              Berikutnya →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal Detail */}
       <Modal

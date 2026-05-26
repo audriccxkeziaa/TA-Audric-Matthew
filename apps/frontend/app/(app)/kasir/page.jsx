@@ -572,7 +572,7 @@ export default function KasirPage() {
           <div>
             <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
               Transaksi <b>{receipt.kode_transaksi}</b> tersimpan. Stok sudah
-              diperbarui otomatis (trigger R4).
+              diperbarui otomatis.
             </div>
             <table className="mt-3 w-full text-sm">
               <thead className="text-left text-xs uppercase text-slate-400">

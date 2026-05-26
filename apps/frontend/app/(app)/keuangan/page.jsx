@@ -10,7 +10,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { expensesApi, salesApi } from "@/lib/api";
+import { expensesApi, salesApi, purchasesApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { rupiah, angka } from "@/lib/format";
 import {
@@ -322,6 +322,22 @@ export default function KeuanganPage() {
   const [detailTrx, setDetailTrx] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  const [showPurchases, setShowPurchases] = useState(false);
+  const [detailPurchase, setDetailPurchase] = useState(null);
+  const [detailPurchaseLoading, setDetailPurchaseLoading] = useState(false);
+
+  const purchasesList = useQuery({
+    queryKey: ["finance-purchases", from, to],
+    queryFn: () =>
+      purchasesApi.list({
+        ...(from ? { from } : {}),
+        ...(to ? { to: to + "T23:59:59.999Z" } : {}),
+        limit: 500,
+      }),
+    enabled: showPurchases,
+  });
+  const purchasesRows = purchasesList.data?.data || [];
+
   async function openTrxDetail(id) {
     setDetailLoading(true);
     try {
@@ -331,6 +347,18 @@ export default function KeuanganPage() {
       setDetailTrx(null);
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  async function openPurchaseDetail(id) {
+    setDetailPurchaseLoading(true);
+    try {
+      const res = await purchasesApi.get(id);
+      setDetailPurchase(res.data);
+    } catch {
+      setDetailPurchase(null);
+    } finally {
+      setDetailPurchaseLoading(false);
     }
   }
 
@@ -537,6 +565,89 @@ export default function KeuanganPage() {
         )}
       </Card>
 
+      {/* Pembelian Supplier — expandable */}
+      <Card className="mb-3 shrink-0 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Pembelian Supplier
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowPurchases(!showPurchases)}
+            className="inline-flex items-center gap-1 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition"
+            title={showPurchases ? "Sembunyikan detail" : "Lihat detail nota"}
+          >
+            {showPurchases ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12c1.292 4.338 5.31 7.5 10.066 7.5.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+              </svg>
+            )}
+          </button>
+        </div>
+        <p className="mt-1 text-lg font-bold text-amber-700">
+          − {rupiah(s?.total_pembelian || 0)}
+        </p>
+        {showPurchases && (
+          purchasesList.isLoading ? (
+            <Spinner label="Memuat..." />
+          ) : purchasesRows.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-400">Belum ada pembelian supplier pada periode ini.</p>
+          ) : (
+            <div className="mt-2 max-h-60 overflow-auto thin-scroll rounded-lg border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2">Tanggal</th>
+                    <th className="px-3 py-2">No. Nota</th>
+                    <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2 text-right">Total</th>
+                    <th className="px-3 py-2 text-center">Detail</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {purchasesRows.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2 text-xs">{tanggal(r.created_at)}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{r.no_nota_supplier || "-"}</td>
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          r.status_validasi === "tervalidasi"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}>
+                          {r.status_validasi === "tervalidasi" ? "Tervalidasi" : "Draft"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold text-amber-700">
+                        − {rupiah(r.total || 0)}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => openPurchaseDetail(r.id)}
+                          className="inline-flex items-center justify-center rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                          title="Detail nota"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </Card>
+
       {/* Tabel pengeluaran */}
       <Card className="flex min-h-0 flex-1 flex-col p-0">
         {list.isLoading ? (
@@ -630,6 +741,98 @@ export default function KeuanganPage() {
         )}?`}
         confirmLabel="Ya, hapus"
       />
+      {/* Modal detail nota pembelian supplier */}
+      <Modal
+        open={Boolean(detailPurchase) || detailPurchaseLoading}
+        onClose={() => setDetailPurchase(null)}
+        title="Detail Nota Pembelian Supplier"
+        width="max-w-2xl"
+      >
+        {detailPurchaseLoading ? (
+          <Spinner label="Memuat detail nota..." />
+        ) : detailPurchase ? (
+          <div>
+            <dl className="mb-4 grid grid-cols-2 gap-x-6 gap-y-1 rounded-lg bg-slate-50 px-4 py-3 text-sm">
+              <div>
+                <span className="text-xs text-slate-400">No. Nota</span>
+                <p className="font-mono font-medium">{detailPurchase.no_nota_supplier || "-"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-slate-400">Tanggal</span>
+                <p className="font-medium">{detailPurchase.created_at ? new Date(detailPurchase.created_at).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-slate-400">Status</span>
+                <p className="font-medium capitalize">{detailPurchase.status_validasi}</p>
+              </div>
+              <div>
+                <span className="text-xs text-slate-400">Total</span>
+                <p className="font-bold text-amber-700">{rupiah(detailPurchase.total)}</p>
+              </div>
+            </dl>
+            {detailPurchase.items && detailPurchase.items.length > 0 && (
+              <div className="max-h-72 overflow-auto thin-scroll rounded-lg border border-slate-200">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">#</th>
+                      <th className="px-3 py-2">Barang</th>
+                      <th className="px-3 py-2 text-right">Qty</th>
+                      <th className="px-3 py-2 text-right">Harga Beli</th>
+                      <th className="px-3 py-2 text-right">Diskon</th>
+                      <th className="px-3 py-2 text-right">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {detailPurchase.items.map((it, i) => {
+                      const sub = it.qty * it.harga_beli * (1 - (it.diskon_persen || 0) / 100);
+                      return (
+                        <tr key={it.id || i} className="hover:bg-slate-50">
+                          <td className="px-3 py-2 text-xs text-slate-400">{i + 1}</td>
+                          <td className="px-3 py-2">
+                            <span className="text-xs font-medium">{it.nama_barang || "-"}</span>
+                            {it.kode_barang && (
+                              <span className="block font-mono text-[10px] text-slate-400">{it.kode_barang}</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right">{it.qty}</td>
+                          <td className="px-3 py-2 text-right">{rupiah(it.harga_beli)}</td>
+                          <td className="px-3 py-2 text-right text-amber-600">
+                            {Number(it.diskon_persen) > 0 ? `${it.diskon_persen}%` : "-"}
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium">{rupiah(sub)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {(Number(detailPurchase.diskon_persen) > 0 || Number(detailPurchase.potongan_harga) > 0) && (
+              <div className="mt-3 rounded-lg bg-amber-50 px-4 py-2 text-sm">
+                {Number(detailPurchase.diskon_persen) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Diskon Nota ({detailPurchase.diskon_persen}%)</span>
+                    <span className="font-medium text-rose-600">
+                      −{rupiah(Math.round(detailPurchase.total * detailPurchase.diskon_persen / 100))}
+                    </span>
+                  </div>
+                )}
+                {Number(detailPurchase.potongan_harga) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Potongan Harga</span>
+                    <span className="font-medium text-rose-600">−{rupiah(detailPurchase.potongan_harga)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="mt-4 flex justify-end">
+              <Button variant="secondary" onClick={() => setDetailPurchase(null)}>Tutup</Button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
       {/* Modal detail transaksi penjualan */}
       <Modal
         open={Boolean(detailTrx) || detailLoading}
