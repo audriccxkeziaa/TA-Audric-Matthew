@@ -72,7 +72,7 @@ async function getReceipt(saleId) {
 async function list({ from, to, limit = 50 }) {
   let query = supabase
     .from("sales")
-    .select("id, kode_transaksi, user_id, total_harga, created_at, users(username), sale_items(id)")
+    .select("id, kode_transaksi, user_id, total_harga, created_at, sale_items(id)")
     .order("created_at", { ascending: false })
     .limit(limit);
 
