@@ -25,7 +25,7 @@ async function getReceipt(saleId) {
   // Fetch sale header WITHOUT the join first
   const { data: sale, error: saleErr } = await supabase
     .from("sales")
-    .select("id, kode_transaksi, user_id, total_harga, diskon_persen, potongan_harga, created_at")
+    .select("id, kode_transaksi, user_id, total_harga, created_at")
     .eq("id", saleId)
     .single();
   if (saleErr) throw new Error("Gagal memuat header transaksi");
