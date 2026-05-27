@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { reportsApi, salesApi } from "@/lib/api";
+import { reportsApi, salesApi, usersApi } from "@/lib/api";
 import { downloadFile } from "@/lib/api-client";
 import { useToast } from "@/hooks/useToast";
 import { rupiah, angka, tanggalJam, tanggal, isoDate } from "@/lib/format";
@@ -114,13 +114,25 @@ export default function LaporanPage() {
     [rawRows, isSales]
   );
 
-  // Unique kasir/user options from data
+  // Ambil daftar user dari API agar semua kasir tampil meski belum transaksi.
+  const { data: usersData } = useQuery({
+    queryKey: ["users-list"],
+    queryFn: usersApi.list,
+    staleTime: 5 * 60 * 1000,
+  });
   const kasirOptions = useMemo(() => {
-    const names = grouped
+    const allUsers = usersData?.data || [];
+    // Sales tab → filter kasir; Purchase tab → semua user yg pernah input
+    const fromApi = allUsers
+      .filter((u) => (isSales ? u.role === "kasir" : true))
+      .map((u) => u.username)
+      .filter(Boolean);
+    // Gabung dengan yang ada di data (jaga-jaga user sudah dihapus tapi transaksinya masih ada)
+    const fromData = grouped
       .map((g) => (isSales ? g.kasir : g.user))
       .filter(Boolean);
-    return [...new Set(names)].sort();
-  }, [grouped, isSales]);
+    return [...new Set([...fromApi, ...fromData])].sort();
+  }, [usersData, grouped, isSales]);
 
   // Filter by kasir
   const filteredGrouped = useMemo(() => {

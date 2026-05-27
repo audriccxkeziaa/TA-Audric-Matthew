@@ -17,6 +17,7 @@
 // =================================================================
 
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { purchasesApi, productsApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { rupiah, persen } from "@/lib/format";
@@ -91,6 +92,7 @@ function blankManualRow() {
 
 export default function StokMasukPage() {
   const toast = useToast();
+  const qc = useQueryClient();
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -442,6 +444,9 @@ export default function StokMasukPage() {
       });
       setDone(res.data);
       toast.success("Stok masuk berhasil disimpan — stok bertambah (R4)");
+      // Invalidasi cache restock & notif agar tampilan langsung terupdate.
+      qc.invalidateQueries({ queryKey: ["restock"] });
+      qc.invalidateQueries({ queryKey: ["notif-low-stock"] });
       // Bila draft sumber dari resume → bersihkan agar tidak tampil lagi.
       if (currentDraftId) {
         try {

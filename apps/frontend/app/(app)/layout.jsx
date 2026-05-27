@@ -42,7 +42,10 @@ export default function AppLayout({ children }) {
       return;
     }
     // Lapisan 2 (RBAC) sisi klien — backend tetap re-check tiap request.
-    const isAdminRoute = ADMIN_ONLY.some((p) => pathname.startsWith(p));
+    // /dashboard/restock dikecualikan dari ADMIN_ONLY — kasir juga boleh baca.
+    const isAdminRoute =
+      ADMIN_ONLY.some((p) => pathname.startsWith(p)) &&
+      !pathname.startsWith("/dashboard/restock");
     const isKasirRoute = KASIR_ONLY.some((p) => pathname.startsWith(p));
     if (isAdminRoute && user.role !== "admin") {
       router.replace("/kasir");

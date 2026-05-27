@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { restockApi, productsApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { angka } from "@/lib/format";
 import {
@@ -24,6 +25,8 @@ import {
   StatCard,
 } from "@/components/ui";
 
+const PAGE_SIZE = 20;
+
 function urgensiBadge(level) {
   if (level === "HABIS") return <Badge tone="red">HABIS</Badge>;
   if (level === "KRITIS") return <Badge tone="amber">KRITIS</Badge>;
@@ -31,7 +34,7 @@ function urgensiBadge(level) {
 }
 
 // Baris dengan editor min_stock inline.
-function RestockRow({ item }) {
+function RestockRow({ item, isAdmin }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -88,50 +91,59 @@ function RestockRow({ item }) {
           : "—"}
       </td>
       <td className="px-4 py-2.5">{urgensiBadge(item.tingkat_urgensi)}</td>
-      <td className="px-4 py-2.5">
-        <div className="flex justify-end gap-1">
-          {editing ? (
-            <>
+      {isAdmin && (
+        <td className="px-4 py-2.5">
+          <div className="flex justify-end gap-1">
+            {editing ? (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => save.mutate()}
+                  disabled={save.isPending}
+                >
+                  Simpan
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setValue(item.min_stock);
+                    setEditing(false);
+                  }}
+                >
+                  Batal
+                </Button>
+              </>
+            ) : (
               <Button
                 size="sm"
-                onClick={() => save.mutate()}
-                disabled={save.isPending}
+                variant="outline"
+                onClick={() => setEditing(true)}
               >
-                Simpan
+                Ubah Min
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setValue(item.min_stock);
-                  setEditing(false);
-                }}
-              >
-                Batal
-              </Button>
-            </>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setEditing(true)}
-            >
-              Ubah Min
-            </Button>
-          )}
-        </div>
-      </td>
+            )}
+          </div>
+        </td>
+      )}
     </tr>
   );
 }
 
 export default function RestockPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const [page, setPage] = useState(1);
+
   const { data, isLoading } = useQuery({
     queryKey: ["restock"],
     queryFn: restockApi.list,
   });
   const items = data?.data || [];
   const summary = data?.summary || { total: 0, habis: 0, kritis: 0, menipis: 0 };
+
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const paginatedItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <PageShell>
@@ -170,12 +182,12 @@ export default function RestockPage() {
                   <th className="px-4 py-2.5 text-right">Rata2/hari (30h)</th>
                   <th className="px-4 py-2.5 text-right">Estimasi Habis</th>
                   <th className="px-4 py-2.5">Urgensi</th>
-                  <th className="px-4 py-2.5 text-right">Aksi</th>
+                  {isAdmin && <th className="px-4 py-2.5 text-right">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map((it) => (
-                  <RestockRow key={it.id} item={it} />
+                {paginatedItems.map((it) => (
+                  <RestockRow key={it.id} item={it} isAdmin={isAdmin} />
                 ))}
               </tbody>
             </table>
@@ -183,9 +195,34 @@ export default function RestockPage() {
         )}
       </Card>
 
+      {items.length > PAGE_SIZE && (
+        <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500">
+          <span>
+            {items.length} barang · halaman {page}/{totalPages}
+          </span>
+          <div className="flex gap-1">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
+            >
+              ← Sebelumnya
+            </button>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
+            >
+              Berikutnya →
+            </button>
+          </div>
+        </div>
+      )}
+
       <p className="mt-2 shrink-0 text-xs text-slate-400">
         Kolom &quot;Rata2/hari&quot; &amp; &quot;Estimasi Habis&quot; dihitung
-        dari penjualan 30 hari terakhir sebagai bahan pertimbangan admin.
+        dari penjualan 30 hari terakhir sebagai bahan pertimbangan.
+        {!isAdmin && " Min. stok hanya bisa diubah oleh admin."}
       </p>
     </PageShell>
   );

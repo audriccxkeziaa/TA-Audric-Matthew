@@ -25,7 +25,7 @@ const NAV = [
   {
     href: "/dashboard/restock",
     label: "Rekomendasi Restock",
-    roles: ["admin"],
+    roles: ["admin", "kasir"],
     icon: "alert",
   },
   { href: "/keuangan", label: "Keuangan", roles: ["admin"], icon: "money" },
