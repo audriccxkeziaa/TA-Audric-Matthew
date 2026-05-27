@@ -11,6 +11,7 @@ const {
   listDrafts,
   getDraft,
   deleteDraft,
+  deleteNotaFileCtrl,
 } = require("../controllers/purchasesController");
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
@@ -62,7 +63,10 @@ router.post("/drafts", express.json({ limit: "5mb" }), saveDraft);
 router.get("/drafts/:id", getDraft);
 router.delete("/drafts/:id", deleteDraft);
 
-// Must come after /drafts to avoid catching "drafts" as :id
+// Hapus file nota dari Storage (cancel flow — harus sebelum /:id)
+router.delete("/file", express.json(), deleteNotaFileCtrl);
+
+// Must come after /drafts and /file to avoid catching them as :id
 router.get("/:id", getPurchaseDetailCtrl);
 
 module.exports = router;

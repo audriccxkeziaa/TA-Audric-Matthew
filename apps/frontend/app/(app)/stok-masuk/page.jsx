@@ -52,6 +52,7 @@ function ocrItemToRow(item) {
     source: "ocr",
     kode_barang: raw.kode_barang || "",
     nama_barang: raw.nama_barang || "",
+    merk: raw.merk || "",
     qty: raw.qty || 1,
     harga_beli: raw.harga_beli || 0,
     harga_jual: 0,
@@ -74,6 +75,7 @@ function blankManualRow() {
     source: "manual",
     kode_barang: "",
     nama_barang: "",
+    merk: "",
     qty: 1,
     harga_beli: 0,
     harga_jual: 0,
@@ -235,6 +237,7 @@ export default function StokMasukPage() {
       source: r.source,
       kode_barang: r.kode_barang || "",
       nama_barang: r.nama_barang || "",
+      merk: r.merk || "",
       qty: Number(r.qty) || 0,
       harga_beli: Number(r.harga_beli) || 0,
       diskon_persen: Number(r.diskon_persen) || 0,
@@ -257,6 +260,7 @@ export default function StokMasukPage() {
       source: it.source || "ocr",
       kode_barang: it.kode_barang || "",
       nama_barang: it.nama_barang || "",
+      merk: it.merk || "",
       qty: it.qty || 1,
       harga_beli: it.harga_beli || 0,
       diskon_persen: it.diskon_persen || 0,
@@ -382,12 +386,14 @@ export default function StokMasukPage() {
     if (rows.length === 0) return false;
     return rows.every((r) => {
       const qtyOk = Number(r.qty) > 0;
-      const hargaOk = Number(r.harga_beli) >= 0;
+      const hargaOk = Number(r.harga_beli) > 0; // wajib > 0
       if (!qtyOk || !hargaOk) return false;
       if (r.action === "restock") {
         if (!r.product_id) return false;
       } else if (r.action === "new") {
+        // kode, nama, merk wajib untuk produk baru
         if (!r.kode_barang.trim() || !r.nama_barang.trim()) return false;
+        if (!r.merk?.trim()) return false;
       } else {
         return false; // belum ada keputusan
       }
@@ -427,6 +433,7 @@ export default function StokMasukPage() {
             action: "new",
             kode_barang: r.kode_barang.trim(),
             nama_barang: r.nama_barang.trim(),
+            merk: r.merk?.trim() || null,
           };
           if (Number(r.harga_jual) > 0) obj.harga_jual = Number(r.harga_jual);
           return obj;
@@ -467,6 +474,10 @@ export default function StokMasukPage() {
   }
 
   function resetAll() {
+    // Hapus file nota dari Storage bila ada tapi belum disimpan ke draft
+    if (ocr?.file_nota_url && !currentDraftId) {
+      purchasesApi.deleteFile(ocr.file_nota_url).catch(() => {});
+    }
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setStep("upload");
     setInputMode(null);
@@ -812,7 +823,7 @@ export default function StokMasukPage() {
             )}
 
             {/* Tabel validasi */}
-            <Card className={`flex flex-col p-3 md:min-h-0 ${inputMode === "ocr" ? "md:col-span-2" : ""}`}>
+            <Card className={`flex flex-col p-3 md:min-h-0 md:flex-1 ${inputMode === "ocr" ? "md:col-span-2" : ""}`}>
               <div className="mb-2 flex shrink-0 items-center justify-between">
                 <p className="text-sm font-semibold text-slate-700">
                   Item Stok Masuk ({rows.length})
@@ -1317,7 +1328,7 @@ function ItemRow({
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Kode Barang
+            Kode Barang{row.action !== "restock" && <span className="ml-0.5 text-red-500">*</span>}
           </span>
           <input
             value={row.kode_barang}
@@ -1333,7 +1344,7 @@ function ItemRow({
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Nama Barang
+            Nama Barang{row.action !== "restock" && <span className="ml-0.5 text-red-500">*</span>}
           </span>
           <input
             value={row.nama_barang}
@@ -1343,8 +1354,26 @@ function ItemRow({
             }`}
           />
         </label>
+        {/* Merk — wajib untuk produk baru, tersembunyi untuk restock */}
+        {row.action !== "restock" && (
+          <label className="block">
+            <span className="mb-1 block text-xs text-slate-500">
+              Merk{row.action === "new" && <span className="ml-0.5 text-red-500">*</span>}
+            </span>
+            <input
+              value={row.merk || ""}
+              onChange={(e) => onPatch({ merk: e.target.value })}
+              placeholder="mis. Aspira"
+              className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
+                fieldClass("merk") || "border-slate-300"
+              }`}
+            />
+          </label>
+        )}
         <label className="block">
-          <span className="mb-1 block text-xs text-slate-500">Qty</span>
+          <span className="mb-1 block text-xs text-slate-500">
+            Qty <span className="ml-0.5 text-red-500">*</span>
+          </span>
           <input
             type="number"
             min="1"
@@ -1357,7 +1386,7 @@ function ItemRow({
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Harga Beli
+            Harga Beli <span className="ml-0.5 text-red-500">*</span>
           </span>
           <input
             type="number"

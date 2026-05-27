@@ -41,6 +41,8 @@ export const purchasesApi = {
     get: (id) => apiFetch(`/purchases/drafts/${id}`),
     remove: (id) => apiFetch(`/purchases/drafts/${id}`, { method: "DELETE" }),
   },
+  deleteFile: (fileUrl) =>
+    apiFetch("/purchases/file", { method: "DELETE", body: { file_url: fileUrl } }),
 };
 
 export const restockApi = {

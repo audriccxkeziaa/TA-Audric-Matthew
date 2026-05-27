@@ -29,5 +29,8 @@
   },
   "optionalDependencies": {
     "@u4/opencv4nodejs": "^6.1.4"
+  },
+  "devDependencies": {
+    "pg": "^8.21.0"
   }
 }

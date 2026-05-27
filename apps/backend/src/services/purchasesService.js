@@ -351,6 +351,7 @@ async function commitPurchase({ user, payload }) {
     if (action === "new") {
       base.kode_barang = String(it.kode_barang || "").trim();
       base.nama_barang = String(it.nama_barang || "").trim();
+      if (it.merk) base.merk = String(it.merk).trim();
       if (it.harga_jual) base.harga_jual = Number(it.harga_jual);
     } else {
       base.product_id = it.product_id;
@@ -390,13 +391,16 @@ async function commitPurchase({ user, payload }) {
   }
 
   const detail = await purchaseRepository.getPurchaseDetail(rpcResult.purchase_id);
-  // products_created: jumlah produk yang otomatis dibuat dari item action='new'
-  // (Pertemuan 12). Ditampilkan di toast frontend supaya user tahu master barang
-  // bertambah berapa.
   detail.products_created = Number(rpcResult.products_created || 0);
   console.log(
     `[POS-PURCHASES] Commit purchase_id=${rpcResult.purchase_id} oleh user=${user.username} total=${rpcResult.total} (${normalizedItems.length} item, ${detail.products_created} produk baru)`
   );
+  // Auto-hapus nota dari Storage setelah commit berhasil (R4 sudah memproses data)
+  if (file_nota_url) {
+    purchaseRepository.deleteNotaFile(file_nota_url).catch((e) =>
+      console.warn("[POS-PURCHASES] post-commit file delete:", e.message)
+    );
+  }
   return detail;
 }
 
@@ -443,7 +447,28 @@ async function getDraft({ user, draftId }) {
 }
 
 async function deleteDraft({ user, draftId }) {
-  return purchaseRepository.deleteDraft({ draftId, userId: user.id });
+  // Ambil file_nota_url sebelum hapus record DB
+  let fileUrl;
+  try {
+    const draft = await purchaseRepository.getDraft({ draftId, userId: user.id });
+    fileUrl = draft?.file_nota_url;
+  } catch {
+    // abaikan — tetap lanjut hapus record
+  }
+  await purchaseRepository.deleteDraft({ draftId, userId: user.id });
+  // Hapus nota dari Storage (fire-and-forget)
+  if (fileUrl) {
+    purchaseRepository.deleteNotaFile(fileUrl).catch((e) =>
+      console.warn("[POS-PURCHASES] draft file delete:", e.message)
+    );
+  }
+  return true;
+}
+
+// Hapus file nota dari Storage secara eksplisit (dipanggil frontend saat cancel)
+async function deleteFile({ fileUrl }) {
+  if (!fileUrl) return;
+  await purchaseRepository.deleteNotaFile(fileUrl);
 }
 
 module.exports = {
@@ -454,4 +479,5 @@ module.exports = {
   listDrafts,
   getDraft,
   deleteDraft,
+  deleteFile,
 };

@@ -86,19 +86,8 @@ export default function KasirPage() {
   }
 
   // ----- Operasi keranjang -----
-  async function addToCart(p, qty = 1) {
+  function addToCart(p, qty = 1) {
     if (!p) return;
-    // Try to fetch latest product data so `stok` is accurate
-    try {
-      if (p && p.id) {
-        const fresh = await productsApi.get(p.id);
-        if (fresh && fresh.data) p = fresh.data;
-      }
-    } catch (err) {
-      // ignore — we'll fall back to the provided product
-      console.warn("addToCart: failed to fetch fresh product", err.message || err);
-    }
-
     setCart((c) => {
       const idx = c.findIndex((x) => x.id === p.id);
       if (idx >= 0) {

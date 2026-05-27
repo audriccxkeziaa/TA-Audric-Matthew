@@ -145,6 +145,20 @@ async function deleteDraft(req, res) {
   }
 }
 
+// DELETE /api/purchases/file  { file_url: "..." }
+// Dipanggil frontend saat cancel stok masuk (file sudah terupload tapi tidak jadi diproses)
+async function deleteNotaFileCtrl(req, res) {
+  try {
+    const { file_url } = req.body || {};
+    if (!file_url) return res.status(400).json({ error: "file_url wajib diisi" });
+    await purchasesService.deleteFile({ fileUrl: file_url });
+    return res.json({ message: "File berhasil dihapus" });
+  } catch (err) {
+    console.warn("[POS-PURCHASES] deleteFile:", err.message);
+    return res.status(500).json({ error: "Gagal menghapus file" });
+  }
+}
+
 module.exports = {
   processOcr,
   commitPurchase,
@@ -154,4 +168,5 @@ module.exports = {
   listDrafts,
   getDraft,
   deleteDraft,
+  deleteNotaFileCtrl,
 };

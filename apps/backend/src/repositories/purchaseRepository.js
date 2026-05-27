@@ -239,6 +239,18 @@ async function deleteDraft({ draftId, userId }) {
   return true;
 }
 
+// Hapus file nota dari Supabase Storage (dipanggil setelah commit berhasil
+// atau ketika draft dihapus agar bucket tidak penuh).
+async function deleteNotaFile(filePath) {
+  if (!filePath) return;
+  const { error } = await supabase.storage
+    .from(NOTA_BUCKET)
+    .remove([filePath]);
+  if (error) {
+    console.warn("[POS-PURREPO] deleteNotaFile:", error.message);
+  }
+}
+
 module.exports = {
   uploadNota,
   createNotaSignedUrl,
@@ -250,5 +262,6 @@ module.exports = {
   listDrafts,
   getDraft,
   deleteDraft,
+  deleteNotaFile,
   NOTA_BUCKET,
 };
