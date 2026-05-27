@@ -78,6 +78,16 @@ export const notificationsApi = {
   lowStock: () => apiFetch("/notifications/low-stock"),
 };
 
+export const adjustmentsApi = {
+  create: (body) => apiFetch("/adjustments", { method: "POST", body }),
+  list: (params) => apiFetch("/adjustments", { query: params }),
+  get: (id) => apiFetch(`/adjustments/${id}`),
+  lookupSale: (kode) =>
+    apiFetch("/adjustments/lookup/sale", { query: { kode } }),
+  lookupPurchase: (nota) =>
+    apiFetch("/adjustments/lookup/purchase", { query: { nota } }),
+};
+
 export const expensesApi = {
   list: (params) => apiFetch("/expenses", { query: params }),
   create: (body) => apiFetch("/expenses", { method: "POST", body }),

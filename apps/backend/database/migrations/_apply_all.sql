@@ -20,7 +20,17 @@
 \i 010_purchase_drafts.sql
 \i 011_view_R5_avg_sales.sql
 \i 012_users_is_active.sql
+\i 013_expenses.sql
+\i 014_sale_items_diskon.sql
+\i 015_expenses_rename_jenis.sql
+\i 016_purchase_diskon_nota.sql
+\i 017_kode_normalized.sql
+\i 018_users_updated_at.sql
+\i 019_update_existing_users_email.sql
+\i 020_enable_realtime.sql
+\i 021_fn_commit_purchase_add_merk.sql
+\i 022_stock_adjustments.sql
 
 -- Catatan: \i hanya bekerja di psql, BUKAN di Supabase SQL Editor web.
--- Untuk Supabase SQL Editor, paste isi tiap file 001..012 secara berurutan,
+-- Untuk Supabase SQL Editor, paste isi tiap file secara berurutan,
 -- ATAU pakai file gabungan 'combined.sql' (jika sudah dibuat oleh script).

@@ -2,7 +2,7 @@ const supabase = require("../config/supabase");
 
 const ALLOWED_RULES = ["R1", "R2", "R3", "R4", "R5"];
 const ALLOWED_ACTIONS = ["TRIGGERED", "REJECTED", "ACCEPTED"];
-const ALLOWED_SOURCES = ["sales", "purchase", "manual"];
+const ALLOWED_SOURCES = ["sales", "purchase", "manual", "adjustment"];
 
 function applyFilters(query, filters) {
   const { from, to, user_id, product_id, rule, action, source_type } = filters;

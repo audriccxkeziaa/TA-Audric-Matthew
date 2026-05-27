@@ -48,6 +48,7 @@ function humanSource(src) {
   if (src === "sales") return "Penjualan";
   if (src === "purchase") return "Stok Masuk";
   if (src === "manual") return "Manual";
+  if (src === "adjustment") return "Retur/Penyesuaian";
   return src || "—";
 }
 
@@ -281,6 +282,7 @@ export default function AuditTrailPage() {
             <option value="sales">Penjualan</option>
             <option value="purchase">Stok Masuk</option>
             <option value="manual">Manual</option>
+            <option value="adjustment">Retur/Penyesuaian</option>
           </Select>
           <div>
             <span className="mb-1 block text-sm font-medium text-slate-700">

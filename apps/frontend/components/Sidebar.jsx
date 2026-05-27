@@ -23,6 +23,12 @@ const NAV = [
     icon: "scan",
   },
   {
+    href: "/retur-stok",
+    label: "Retur & Penyesuaian",
+    roles: ["kasir", "admin"],
+    icon: "undo",
+  },
+  {
     href: "/dashboard/restock",
     label: "Rekomendasi Restock",
     roles: ["admin", "kasir"],
@@ -49,6 +55,7 @@ function Icon({ name }) {
     doc: "M6 2h9l5 5v15H6zM14 2v6h6",
     money: "M12 1v22M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6",
     shield: "M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6z",
+    undo: "M3 10h10a5 5 0 010 10H9M3 10l4-4M3 10l4 4",
     users: "M9 11a4 4 0 100-8 4 4 0 000 8zM3 21v-1a6 6 0 0112 0v1M16 11a4 4 0 000-8",
   };
   return (
