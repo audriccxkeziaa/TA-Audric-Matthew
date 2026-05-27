@@ -325,6 +325,7 @@ export default function AuditTrailPage() {
             <table className="w-full min-w-[700px] text-sm">
               <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
+                  <th className="px-3 py-2.5 w-8">No</th>
                   <th className="px-3 py-2.5">Waktu</th>
                   <th className="px-3 py-2.5">User</th>
                   <th className="px-3 py-2.5">Barang</th>
@@ -333,16 +334,21 @@ export default function AuditTrailPage() {
                   <th className="px-3 py-2.5">Aksi</th>
                   <th className="px-3 py-2.5 text-right">Δ Qty</th>
                   <th className="px-3 py-2.5">Alasan</th>
+                  <th className="px-3 py-2.5 text-center">Aksi</th>
                   <th className="px-3 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rows.map((r) => (
+                {rows.map((r, index) => (
                   <tr
                     key={r.id}
                     onClick={() => setDetailRow(r)}
                     className="cursor-pointer hover:bg-slate-50"
                   >
+                    {/* TAMBAHKAN BARIS INI */}
+                    <td className="px-3 py-2 text-xs text-slate-400">
+                      {(page - 1) * pageSize + index + 1}
+                    </td> 
                     <td className="px-3 py-2 whitespace-nowrap text-xs">
                       {tanggalJam(r.created_at)}
                     </td>
@@ -397,7 +403,7 @@ export default function AuditTrailPage() {
       {/* Pagination — selalu terlihat */}
       <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500">
         <span>
-          {total} notes · pages {page}/{totalPages}
+          {total} items · page {page}/{totalPages}
           {isFetching && " · memuat..."}
         </span>
         <div className="flex gap-1">

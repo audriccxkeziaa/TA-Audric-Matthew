@@ -34,7 +34,7 @@ function urgensiBadge(level) {
 }
 
 // Baris dengan editor min_stock inline.
-function RestockRow({ item, isAdmin }) {
+function RestockRow({ item, isAdmin, index }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -56,6 +56,7 @@ function RestockRow({ item, isAdmin }) {
 
   return (
     <tr className="hover:bg-slate-50">
+      <td className="px-4 py-2.5 text-xs text-slate-400">{index}</td> 
       <td className="px-4 py-2.5 font-mono text-xs">{item.kode_barang}</td>
       <td className="px-4 py-2.5">
         {item.nama_barang}
@@ -120,7 +121,8 @@ function RestockRow({ item, isAdmin }) {
                 title="Ubah min. stok"
               >
                 <svg className="w-4 h-4 text-slate-600 hover:text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
                 </svg>
               </button>
             )}
@@ -175,6 +177,7 @@ export default function RestockPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
+                  <th className="px-4 py-2.5 w-8">No</th>
                   <th className="px-4 py-2.5">Kode Barang</th>
                   <th className="px-4 py-2.5">Nama Barang</th>
                   <th className="px-4 py-2.5 text-right">Stok</th>
@@ -187,8 +190,13 @@ export default function RestockPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginatedItems.map((it) => (
-                  <RestockRow key={it.id} item={it} isAdmin={isAdmin} />
+                {paginatedItems.map((it, index) => (
+                  <RestockRow 
+                  key={it.id} 
+                  item={it} 
+                  isAdmin={isAdmin}
+                  index={(page - 1) * PAGE_SIZE + index + 1}
+                />
                 ))}
               </tbody>
             </table>
@@ -199,7 +207,7 @@ export default function RestockPage() {
       {items.length > PAGE_SIZE && (
         <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500">
           <span>
-            {items.length} barang · halaman {page}/{totalPages}
+            {items.length} items · page {page}/{totalPages}
           </span>
           <div className="flex gap-1">
             <button

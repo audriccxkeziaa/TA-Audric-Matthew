@@ -323,20 +323,24 @@ export default function MasterBarangPage() {
             <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
+                  <th className="px-4 py-2.5 w-8">No</th>
                   <th className="px-4 py-2.5">Kode</th>
                   <th className="px-4 py-2.5">Nama Barang</th>
                   <th className="px-4 py-2.5">Merk</th>
                   <th className="px-4 py-2.5 text-right">Harga Beli</th>
                   <th className="px-4 py-2.5 text-right">Harga Jual</th>
                   <th className="px-4 py-2.5 text-right">Stok</th>
-                  <th className="px-4 py-2.5 text-right">Min</th>
+                  <th className="px-4 py-2.5 text-right">Min Stok</th>
                   <th className="px-4 py-2.5">Kondisi</th>
                   {isAdmin && <th className="px-4 py-2.5 text-center">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {products.map((p) => (
+                {products.map((p, index) => (
                   <tr key={p.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-2.5 text-xs text-slate-400">
+                      {(page - 1) * 20 + index + 1}
+                    </td>
                     <td className="px-4 py-2.5 font-mono text-xs">
                       {p.kode_barang}
                     </td>
@@ -377,7 +381,8 @@ export default function MasterBarangPage() {
                           title="Edit barang"
                         >
                           <svg className="w-4 h-4 text-slate-600 hover:text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                            <circle cx="12" cy="12" r="3" />
                           </svg>
                         </button>
                       </td>

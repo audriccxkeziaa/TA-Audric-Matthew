@@ -84,7 +84,7 @@ function groupPurchaseRows(rows) {
   );
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default function LaporanPage() {
   const toast = useToast();
@@ -311,7 +311,7 @@ export default function LaporanPage() {
               <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs uppercase text-slate-500">
                 {isSales ? (
                   <tr>
-                    <th className="px-3 py-2.5 w-8">#</th>
+                    <th className="px-3 py-2.5 w-8">No</th>
                     <th className="px-3 py-2.5">Tanggal</th>
                     <th className="px-3 py-2.5">Kode Transaksi</th>
                     <th className="px-3 py-2.5">Kasir</th>
@@ -322,7 +322,7 @@ export default function LaporanPage() {
                   </tr>
                 ) : (
                   <tr>
-                    <th className="px-3 py-2.5 w-8">#</th>
+                    <th className="px-3 py-2.5 w-8">No</th>
                     <th className="px-3 py-2.5">Tanggal</th>
                     <th className="px-3 py-2.5">No. Nota</th>
                     <th className="px-3 py-2.5">Input Oleh</th>
@@ -388,7 +388,7 @@ export default function LaporanPage() {
       {filteredGrouped.length > PAGE_SIZE && (
         <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500 no-print">
           <span>
-            {filteredGrouped.length} baris · halaman {page}/{totalPages}
+            {filteredGrouped.length} rows · pages {page}/{totalPages}
             {kasirFilter && ` · filter: ${kasirFilter}`}
           </span>
           <div className="flex gap-1">
@@ -397,14 +397,14 @@ export default function LaporanPage() {
               onClick={() => setPage((p) => p - 1)}
               className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
             >
-              ← Sebelumnya
+              ← Previous
             </button>
             <button
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
               className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
             >
-              Berikutnya →
+              Next →
             </button>
           </div>
         </div>
@@ -453,7 +453,7 @@ export default function LaporanPage() {
                 <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
                   {isSales ? (
                     <tr>
-                      <th className="px-3 py-2">#</th>
+                      <th className="px-3 py-2">No</th>
                       <th className="px-3 py-2">Barang</th>
                       <th className="px-3 py-2 text-right">Qty</th>
                       <th className="px-3 py-2 text-right">Harga</th>
@@ -462,7 +462,7 @@ export default function LaporanPage() {
                     </tr>
                   ) : (
                     <tr>
-                      <th className="px-3 py-2">#</th>
+                      <th className="px-3 py-2">No</th>
                       <th className="px-3 py-2">Barang</th>
                       <th className="px-3 py-2 text-right">Qty</th>
                       <th className="px-3 py-2 text-right">Harga Beli</th>
