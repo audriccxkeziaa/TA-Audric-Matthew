@@ -755,7 +755,9 @@ export default function StokMasukPage() {
 
       {/* ============ STEP 2: VALIDASI ============ */}
       {step === "validate" && (
-        <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">
+        /* Wrapper ini scroll sendiri di desktop sehingga konten tidak pernah
+           terpotong meski jendela browser sangat kecil. */
+        <div className="flex flex-col gap-3 md:min-h-0 md:flex-1 md:overflow-auto thin-scroll">
           {/* Info klasifikasi & kualitas — hanya untuk OCR */}
           {inputMode === "ocr" && (
             <Card className="flex flex-wrap items-center gap-3 p-3 text-sm">
@@ -785,14 +787,15 @@ export default function StokMasukPage() {
             </Card>
           )}
 
-          <div className={`flex flex-col gap-4 md:min-h-0 md:flex-1 ${inputMode === "ocr" ? "md:grid md:grid-cols-3" : ""}`}>
+          {/* Grid: preview (OCR) + tabel item */}
+          <div className={`flex flex-col gap-4 ${inputMode === "ocr" ? "md:grid md:grid-cols-3" : ""}`}>
             {/* Preview nota — hanya untuk OCR */}
             {inputMode === "ocr" && (
-              <Card className="flex flex-col p-3 md:min-h-0 md:col-span-1">
+              <Card className="flex flex-col p-3 md:col-span-1">
                 <p className="mb-2 shrink-0 text-sm font-semibold text-slate-700">
                   Pratinjau Nota
                 </p>
-                <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
+                <div className="overflow-auto thin-scroll">
                 {ocr?.file_nota_signed_url ? (
                   <img
                     src={ocr.file_nota_signed_url}
@@ -822,8 +825,8 @@ export default function StokMasukPage() {
               </Card>
             )}
 
-            {/* Tabel validasi */}
-            <Card className={`flex flex-col p-3 md:min-h-0 md:flex-1 ${inputMode === "ocr" ? "md:col-span-2" : ""}`}>
+            {/* Tabel validasi — tinggi natural, tidak perlu flex-1 karena wrapper scroll */}
+            <Card className={`flex flex-col p-3 ${inputMode === "ocr" ? "md:col-span-2" : ""}`}>
               <div className="mb-2 flex shrink-0 items-center justify-between">
                 <p className="text-sm font-semibold text-slate-700">
                   Item Stok Masuk ({rows.length})
@@ -833,7 +836,7 @@ export default function StokMasukPage() {
                 </Button>
               </div>
 
-              <div ref={rowsContainerRef} className="space-y-3 overflow-auto thin-scroll pr-1 md:min-h-0 md:flex-1">
+              <div ref={rowsContainerRef} className="space-y-3 pr-1">
                 {rows.map((row, idx) => (
                   <ItemRow
                     key={row.uid}
@@ -856,7 +859,7 @@ export default function StokMasukPage() {
 
           {/* Ringkasan & Diskon Nota */}
           {rows.length > 0 && (
-            <Card className="shrink-0 p-4">
+            <Card className="p-4">
               <div className="flex flex-wrap items-end gap-4">
                 <div className="flex-1 min-w-[200px]">
                   <span className="block text-xs font-medium text-slate-500 mb-1">
@@ -909,8 +912,8 @@ export default function StokMasukPage() {
             </Card>
           )}
 
-          {/* Aksi — selalu terlihat */}
-          <Card className="flex shrink-0 flex-wrap items-center justify-between gap-3 p-3">
+          {/* Aksi — sticky di bawah area scroll agar tombol Save selalu terlihat */}
+          <Card className="flex flex-wrap items-center justify-between gap-3 p-3 sticky bottom-0 z-10 shadow-[0_-2px_8px_rgba(0,0,0,0.08)]">
             <div className="text-sm text-slate-500">
               {canCommit ? (
                 <span className="text-emerald-600">
@@ -945,7 +948,7 @@ export default function StokMasukPage() {
                     ? "Menyimpan..."
                     : currentDraftId
                     ? "Perbarui Draft"
-                    : "Simpan sebagai Draft"}
+                    : "Save as Draft"}
                 </Button>
               )}
               <Button
