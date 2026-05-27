@@ -278,7 +278,7 @@ export default function MasterBarangPage() {
               className="flex-1 bg-transparent py-2 text-sm font-mono outline-none placeholder:text-slate-400"
             />
           </div>
-          <Button type="submit" size="sm">Cari</Button>
+          <Button type="submit" size="sm">Browse</Button>
           {searchInput && (
             <Button type="button" size="sm" variant="secondary" onClick={() => { setSearchInput(""); setQ(""); setPage(1); }}>
               Reset
