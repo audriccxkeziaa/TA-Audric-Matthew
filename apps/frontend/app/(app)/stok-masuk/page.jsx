@@ -1179,6 +1179,47 @@ function ItemRow({
   onPatchRef.current = onPatch;
   onDecisionRef.current = onDecisionChange;
 
+  // Lookup kode ke database — dipakai oleh debounce (onChange) dan Enter (scanner)
+  async function lookupKode(trimmed) {
+    if (!trimmed || trimmed.length < 3) return;
+    try {
+      const res = await productsApi.list({ q: trimmed, limit: 5 });
+      const products = res?.data || [];
+      const norm = (k) => (k || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+      const exact = products.find((p) => norm(p.kode_barang) === norm(trimmed));
+      if (exact) {
+        onPatchRef.current({
+          nama_barang: exact.nama_barang || "",
+          harga_beli: exact.harga_beli ?? 0,
+          harga_jual: exact.harga_jual ?? 0,
+          merk: exact.merk || "",
+          candidates: [{ product_id: exact.id, kode_barang: exact.kode_barang, nama_barang: exact.nama_barang, merk: exact.merk, similarity: 1.0 }],
+        });
+        onDecisionRef.current(`cand:${exact.id}`);
+        setAutoFillMsg(`Kode cocok 100% — data terisi dari "${exact.nama_barang}"`);
+        return;
+      }
+
+      const withSim = products.map((p) => ({
+        product_id: p.id,
+        kode_barang: p.kode_barang,
+        nama_barang: p.nama_barang,
+        merk: p.merk,
+        similarity: kodeSimilarity(trimmed, p.kode_barang),
+      }));
+      const highMatches = withSim.filter((c) => c.similarity >= 0.8);
+
+      if (highMatches.length > 0) {
+        onPatchRef.current({ candidates: highMatches, action: null, product_id: null, picked_label: "" });
+      } else {
+        onPatchRef.current({ candidates: [], action: "new", product_id: null, picked_label: "" });
+      }
+    } catch {
+      // gagal fetch — diam saja
+    }
+  }
+
   function handleKodeChange(e) {
     const val = e.target.value;
     onPatch({ kode_barang: val });
@@ -1190,43 +1231,15 @@ function ItemRow({
       onPatchRef.current({ candidates: [], action: null, product_id: null, picked_label: "" });
       return;
     }
+    debounceRef.current = setTimeout(() => lookupKode(trimmed), 500);
+  }
 
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await productsApi.list({ q: trimmed, limit: 5 });
-        const products = res?.data || [];
-        const norm = (k) => (k || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-
-        const exact = products.find((p) => norm(p.kode_barang) === norm(trimmed));
-        if (exact) {
-          onPatchRef.current({
-            nama_barang: exact.nama_barang || "",
-            harga_beli: exact.harga_beli ?? 0,
-            harga_jual: exact.harga_jual ?? 0,
-            candidates: [{ product_id: exact.id, kode_barang: exact.kode_barang, nama_barang: exact.nama_barang, similarity: 1.0 }],
-          });
-          onDecisionRef.current(`cand:${exact.id}`);
-          setAutoFillMsg(`Kode cocok 100% — data terisi dari "${exact.nama_barang}"`);
-          return;
-        }
-
-        const withSim = products.map((p) => ({
-          product_id: p.id,
-          kode_barang: p.kode_barang,
-          nama_barang: p.nama_barang,
-          similarity: kodeSimilarity(trimmed, p.kode_barang),
-        }));
-        const highMatches = withSim.filter((c) => c.similarity >= 0.8);
-
-        if (highMatches.length > 0) {
-          onPatchRef.current({ candidates: highMatches, action: null, product_id: null, picked_label: "" });
-        } else {
-          onPatchRef.current({ candidates: [], action: "new", product_id: null, picked_label: "" });
-        }
-      } catch {
-        // gagal fetch — diam saja
-      }
-    }, 500);
+  // Enter dari barcode scanner → langsung lookup tanpa tunggu debounce
+  function handleKodeKeyDown(e) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    lookupKode(row.kode_barang.trim());
   }
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
@@ -1338,7 +1351,8 @@ function ItemRow({
           <input
             value={row.kode_barang}
             onChange={handleKodeChange}
-            placeholder="Ketik kode, otomatis cari..."
+            onKeyDown={handleKodeKeyDown}
+            placeholder="Ketik / scan barcode → Enter"
             className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
               fieldClass("kode_barang") || "border-slate-300"
             }`}
