@@ -42,15 +42,15 @@ export function printReceipt(receipt) {
 <style>
   @page {
     size: 80mm auto;
-    margin: 0;
+    margin: 3mm 5mm;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Courier New', 'Consolas', monospace;
-    width: 80mm;
-    max-width: 80mm;
+    width: 70mm;
+    max-width: 70mm;
     margin: 0 auto;
-    padding: 3mm 4mm;
+    padding: 0;
     color: #000;
     font-size: 9pt;
     line-height: 1.3;
@@ -77,7 +77,7 @@ export function printReceipt(receipt) {
   .totals .grand { font-size: 11pt; font-weight: bold; border-top: 1px solid #000; padding-top: 1mm; }
   .footer { text-align: center; font-size: 7.5pt; margin-top: 3mm; color: #333; }
   @media screen {
-    body { border: 1px solid #ccc; background: #fff; margin-top: 10px; }
+    body { width: 80mm; max-width: 80mm; padding: 3mm 4mm; border: 1px solid #ccc; background: #fff; margin-top: 10px; }
   }
 </style></head><body>
 
@@ -118,7 +118,7 @@ export function printReceipt(receipt) {
   <script>window.onload = function(){ window.print(); }</script>
 </body></html>`;
 
-  const w = window.open("", "_blank", "width=340,height=600");
+  const w = window.open("", "_blank", "width=400,height=650");
   if (!w) return;
   w.document.write(html);
   w.document.close();

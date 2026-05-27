@@ -52,7 +52,7 @@ function ocrItemToRow(item) {
     source: "ocr",
     kode_barang: raw.kode_barang || "",
     nama_barang: raw.nama_barang || "",
-    merk: raw.merk || "",
+    merk: exactMatch ? (top?.merk || "") : (raw.merk || ""),
     qty: raw.qty || 1,
     harga_beli: raw.harga_beli || 0,
     harga_jual: 0,
@@ -377,6 +377,7 @@ export default function StokMasukPage() {
         action: "restock",
         product_id: pid,
         picked_label: c ? c.nama_barang : row.picked_label,
+        merk: c?.merk || row.merk || "",
       });
     }
   }
@@ -1015,6 +1016,7 @@ export default function StokMasukPage() {
             action: "restock",
             product_id: p.id,
             picked_label: p.nama_barang,
+            merk: p.merk || "",
           });
         }}
       />
@@ -1357,22 +1359,23 @@ function ItemRow({
             }`}
           />
         </label>
-        {/* Merk — wajib untuk produk baru, tersembunyi untuk restock */}
-        {row.action !== "restock" && (
-          <label className="block">
-            <span className="mb-1 block text-xs text-slate-500">
-              Merk{row.action === "new" && <span className="ml-0.5 text-red-500">*</span>}
-            </span>
-            <input
-              value={row.merk || ""}
-              onChange={(e) => onPatch({ merk: e.target.value })}
-              placeholder="mis. Aspira"
-              className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-                fieldClass("merk") || "border-slate-300"
-              }`}
-            />
-          </label>
-        )}
+        {/* Merk — wajib untuk produk baru, readonly untuk restock */}
+        <label className="block">
+          <span className="mb-1 block text-xs text-slate-500">
+            Merk{row.action === "new" && <span className="ml-0.5 text-red-500">*</span>}
+          </span>
+          <input
+            value={row.merk || ""}
+            onChange={(e) => onPatch({ merk: e.target.value })}
+            placeholder={row.action === "restock" ? "—" : "mis. Aspira"}
+            disabled={row.action === "restock"}
+            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
+              row.action === "restock"
+                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                : fieldClass("merk") || "border-slate-300"
+            }`}
+          />
+        </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
             Qty <span className="ml-0.5 text-red-500">*</span>

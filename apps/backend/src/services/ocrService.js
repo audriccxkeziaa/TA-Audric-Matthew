@@ -381,7 +381,13 @@ function extractPriceFromZone(zoneText) {
 
 function extractItemNameFromZone(zoneText) {
   if (!zoneText) return "";
-  return String(zoneText).replace(/[^a-zA-Z0-9\s/.\-]/g, " ").replace(/\s+/g, " ").trim();
+  let name = String(zoneText).replace(/[^a-zA-Z0-9\s/.\-]/g, " ").replace(/\s+/g, " ").trim();
+  // Strip trailing artifacts from price/qty zone bleed-over (e.g. "dobel stater 0 00 k")
+  // Pattern: 2+ consecutive pure-numeric tokens (± trailing short unit letter)
+  name = name.replace(/(\s+\d+){2,}(\s+[a-zA-Z]{1,3})?$/, "").trim();
+  // Also strip a single numeric token followed by 1-char unit at the very end
+  name = name.replace(/\s+\d+\s+[a-zA-Z]$/, "").trim();
+  return name;
 }
 
 function extractDiscountFromRow(rowText) {
