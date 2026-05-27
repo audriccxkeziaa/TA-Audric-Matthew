@@ -60,7 +60,7 @@ export default function Topbar({ onToggleSidebar }) {
           </button>
 
           {openNotif && (
-            <div className="absolute right-0 mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg">
               <div className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700">
                 Stok Menipis ({count})
               </div>

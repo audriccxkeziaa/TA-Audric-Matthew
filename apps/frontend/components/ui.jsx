@@ -156,7 +156,7 @@ export function EmptyState({ title = "Tidak ada data", description }) {
 // Membuat halaman mengisi <main> dan mengatur area scroll sendiri,
 // sehingga bagian penting (header/filter/ringkasan) tidak ikut ter-scroll.
 export function PageShell({ children }) {
-  return <div className="flex h-full flex-col">{children}</div>;
+  return <div className="flex flex-col md:h-full">{children}</div>;
 }
 
 // ---------- Header halaman ----------

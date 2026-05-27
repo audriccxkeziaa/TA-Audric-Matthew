@@ -260,7 +260,7 @@ export default function KasirPage() {
 
       {/* Barcode/Kode input — primary entry */}
       <Card className="shrink-0 border-2 border-brand-500 p-3">
-        <form onSubmit={handleBarcodeSubmit} className="flex gap-2">
+        <form onSubmit={handleBarcodeSubmit} className="flex flex-wrap gap-2">
           <div className="flex flex-1 items-center gap-2 rounded-lg bg-slate-50 px-3">
             <svg
               className="h-5 w-5 shrink-0 text-slate-400"
@@ -295,7 +295,8 @@ export default function KasirPage() {
               setTimeout(() => searchRef.current?.focus(), 50);
             }}
           >
-            Browse (F2)
+            <span className="hidden sm:inline">Browse (F2)</span>
+            <span className="sm:hidden">Browse</span>
           </Button>
         </form>
       </Card>
@@ -372,9 +373,9 @@ export default function KasirPage() {
       )}
 
       {/* Tabel keranjang */}
-      <Card className="mt-3 flex min-h-0 flex-1 flex-col p-0">
-        <div className="min-h-0 flex-1 overflow-auto thin-scroll">
-          <table className="w-full text-sm">
+      <Card className="mt-3 flex flex-col p-0 md:min-h-0 md:flex-1">
+        <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="sticky top-0 bg-slate-100 text-left text-xs uppercase text-slate-600">
               <tr>
                 <th className="px-3 py-2.5 text-center">No</th>
@@ -528,7 +529,7 @@ export default function KasirPage() {
                   </>
                 )}
                 <p className="text-xs text-slate-500">TOTAL</p>
-                <p className="text-3xl font-extrabold text-slate-900">
+                <p className="text-xl font-extrabold text-slate-900 sm:text-3xl">
                   {rupiah(total)}
                 </p>
               </div>

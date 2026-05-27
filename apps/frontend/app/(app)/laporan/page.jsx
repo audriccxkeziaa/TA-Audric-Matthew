@@ -204,7 +204,7 @@ export default function LaporanPage() {
 
       {/* Filter tanggal + kasir */}
       <Card className="mb-3 shrink-0 p-3 no-print">
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
           <Input
             label="Dari Tanggal"
             type="date"
@@ -254,7 +254,7 @@ export default function LaporanPage() {
       </div>
 
       {/* Ringkasan */}
-      <div className="mb-3 grid shrink-0 gap-3 sm:grid-cols-4">
+      <div className="mb-3 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
         {isSales ? (
           <>
             <StatCard
@@ -298,7 +298,7 @@ export default function LaporanPage() {
       </div>
 
       {/* Tabel Grouped */}
-      <Card className="flex min-h-0 flex-1 flex-col p-0">
+      <Card className="flex flex-col p-0 md:min-h-0 md:flex-1">
         {isLoading ? (
           <div className="p-6">
             <Spinner label="Memuat laporan..." />
@@ -306,8 +306,8 @@ export default function LaporanPage() {
         ) : filteredGrouped.length === 0 ? (
           <EmptyState title="Tidak ada data pada periode ini" />
         ) : (
-          <div className="min-h-0 flex-1 overflow-auto thin-scroll">
-            <table className="w-full text-sm">
+          <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
+            <table className="w-full min-w-[600px] text-sm">
               <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs uppercase text-slate-500">
                 {isSales ? (
                   <tr>

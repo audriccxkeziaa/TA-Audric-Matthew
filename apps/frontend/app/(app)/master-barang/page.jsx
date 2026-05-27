@@ -256,7 +256,8 @@ export default function MasterBarangPage() {
                 setShowForm(true);
               }}
             >
-              + Add Items
+              <span className="hidden sm:inline">+ Add Items</span>
+              <span className="sm:hidden">+ Add</span>
             </Button>
           )
         }
@@ -307,7 +308,7 @@ export default function MasterBarangPage() {
       </Card>
 
       {/* Tabel — isi-nya yang scroll, kartu mengisi sisa tinggi */}
-      <Card className="flex min-h-0 flex-1 flex-col p-0">
+      <Card className="flex flex-col p-0 md:min-h-0 md:flex-1">
         {isLoading ? (
           <div className="p-4">
             <Skeleton rows={6} />
@@ -318,8 +319,8 @@ export default function MasterBarangPage() {
             description="Tambahkan barang atau ubah filter pencarian."
           />
         ) : (
-          <div className="min-h-0 flex-1 overflow-auto thin-scroll">
-            <table className="w-full text-sm">
+          <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-2.5">Kode</th>

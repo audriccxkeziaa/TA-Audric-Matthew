@@ -225,7 +225,7 @@ export default function AuditTrailPage() {
 
       {/* Filter — selalu terlihat */}
       <Card className="mb-3 shrink-0 p-3">
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           <Input
             label="Dari Tanggal"
             type="date"
@@ -313,7 +313,7 @@ export default function AuditTrailPage() {
       </Card>
 
       {/* Tabel — mengisi sisa tinggi */}
-      <Card className="flex min-h-0 flex-1 flex-col p-0">
+      <Card className="flex flex-col p-0 md:min-h-0 md:flex-1">
         {isLoading ? (
           <div className="p-6">
             <Spinner label="Memuat audit log..." />
@@ -321,8 +321,8 @@ export default function AuditTrailPage() {
         ) : rows.length === 0 ? (
           <EmptyState title="Tidak ada catatan audit untuk filter ini" />
         ) : (
-          <div className="min-h-0 flex-1 overflow-auto thin-scroll">
-            <table className="w-full text-sm">
+          <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
+            <table className="w-full min-w-[700px] text-sm">
               <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-3 py-2.5">Waktu</th>

@@ -73,7 +73,7 @@ export default function AppLayout({ children }) {
       />
       <div className="flex h-full flex-col md:ml-60">
         <Topbar onToggleSidebar={() => setSidebarOpen((v) => !v)} />
-        <main className="min-h-0 flex-1 overflow-hidden p-4 md:p-6">
+        <main className="min-h-0 flex-1 overflow-auto p-4 md:overflow-hidden md:p-6">
           {children}
         </main>
       </div>

@@ -531,7 +531,7 @@ export default function StokMasukPage() {
 
       {/* ============ STEP 1: UPLOAD / MODE SELECT ============ */}
       {step === "upload" && (
-        <div className="min-h-0 flex-1 space-y-4 overflow-auto thin-scroll">
+        <div className="space-y-4 thin-scroll md:min-h-0 md:flex-1 md:overflow-auto">
         {/* Daftar Draft (Cross-device Resume) */}
         <DraftsPanel
           drafts={drafts}
@@ -744,7 +744,7 @@ export default function StokMasukPage() {
 
       {/* ============ STEP 2: VALIDASI ============ */}
       {step === "validate" && (
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex flex-col gap-3 md:min-h-0 md:flex-1">
           {/* Info klasifikasi & kualitas — hanya untuk OCR */}
           {inputMode === "ocr" && (
             <Card className="flex flex-wrap items-center gap-3 p-3 text-sm">
@@ -774,14 +774,14 @@ export default function StokMasukPage() {
             </Card>
           )}
 
-          <div className={`grid min-h-0 flex-1 gap-4 ${inputMode === "ocr" ? "lg:grid-cols-3" : ""}`}>
+          <div className={`flex flex-col gap-4 md:min-h-0 md:flex-1 ${inputMode === "ocr" ? "md:grid md:grid-cols-3" : ""}`}>
             {/* Preview nota — hanya untuk OCR */}
             {inputMode === "ocr" && (
-              <Card className="flex min-h-0 flex-col p-3 lg:col-span-1">
+              <Card className="flex flex-col p-3 md:min-h-0 md:col-span-1">
                 <p className="mb-2 shrink-0 text-sm font-semibold text-slate-700">
                   Pratinjau Nota
                 </p>
-                <div className="min-h-0 flex-1 overflow-auto thin-scroll">
+                <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
                 {ocr?.file_nota_signed_url ? (
                   <img
                     src={ocr.file_nota_signed_url}
@@ -812,7 +812,7 @@ export default function StokMasukPage() {
             )}
 
             {/* Tabel validasi */}
-            <Card className={`flex min-h-0 flex-col p-3 ${inputMode === "ocr" ? "lg:col-span-2" : ""}`}>
+            <Card className={`flex flex-col p-3 md:min-h-0 ${inputMode === "ocr" ? "md:col-span-2" : ""}`}>
               <div className="mb-2 flex shrink-0 items-center justify-between">
                 <p className="text-sm font-semibold text-slate-700">
                   Item Stok Masuk ({rows.length})
@@ -822,7 +822,7 @@ export default function StokMasukPage() {
                 </Button>
               </div>
 
-              <div ref={rowsContainerRef} className="min-h-0 flex-1 space-y-3 overflow-auto thin-scroll pr-1">
+              <div ref={rowsContainerRef} className="space-y-3 overflow-auto thin-scroll pr-1 md:min-h-0 md:flex-1">
                 {rows.map((row, idx) => (
                   <ItemRow
                     key={row.uid}
@@ -1314,7 +1314,7 @@ function ItemRow({
       )}
 
       {/* Field editable */}
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
             Kode Barang
