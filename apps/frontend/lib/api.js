@@ -86,6 +86,19 @@ export const adjustmentsApi = {
     apiFetch("/adjustments/lookup/sale", { query: { kode } }),
   lookupPurchase: (nota) =>
     apiFetch("/adjustments/lookup/purchase", { query: { nota } }),
+  pendingCount: () => apiFetch("/adjustments/pending/count"),
+  approve: (id) =>
+    apiFetch(`/adjustments/${id}/approve`, { method: "POST" }),
+  approvePin: (id, { username, password }) =>
+    apiFetch(`/adjustments/${id}/approve-pin`, {
+      method: "POST",
+      body: { username, password },
+    }),
+  reject: (id, reason) =>
+    apiFetch(`/adjustments/${id}/reject`, {
+      method: "POST",
+      body: { reason },
+    }),
 };
 
 export const expensesApi = {

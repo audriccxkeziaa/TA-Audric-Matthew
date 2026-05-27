@@ -248,19 +248,6 @@ export default function MasterBarangPage() {
       <PageHeader
         title="Master Barang"
         description="Halaman untuk mengelola data spareparts. Stok tidak dapat diubah manual."
-        actions={
-          isAdmin && (
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setShowForm(true);
-              }}
-            >
-              <span className="hidden sm:inline">+ Add Items</span>
-              <span className="sm:hidden">+ Add</span>
-            </Button>
-          )
-        }
       />
 
       {/* Barcode scanner input */}

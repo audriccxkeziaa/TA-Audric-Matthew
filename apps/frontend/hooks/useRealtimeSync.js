@@ -21,6 +21,8 @@ const TABLE_TO_QUERY_KEYS = {
   users: [["users"]],
   stock_logs: [["audit-logs"]],
   expenses: [["expenses"]],
+  stock_adjustments: [["adjustments"], ["adjustments-pending"], ["notif-pending-approval"]],
+  stock_adjustment_items: [["adjustments"]],
 };
 
 const WATCHED_TABLES = Object.keys(TABLE_TO_QUERY_KEYS);

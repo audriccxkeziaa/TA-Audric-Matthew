@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { adjustmentsApi } from "@/lib/api";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
@@ -18,22 +20,36 @@ import {
 } from "@/components/ui";
 import ProductPicker from "@/components/ProductPicker";
 
-const TABS = [
-  { id: "return_supplier", label: "Retur ke Supplier" },
-  { id: "sales_return", label: "Retur Pelanggan" },
-  { id: "stock_adjustment", label: "Penyesuaian Stok" },
-  { id: "history", label: "Riwayat" },
-];
-
 const TYPE_BADGES = {
   return_supplier: { label: "Retur Supplier", tone: "amber" },
   sales_return: { label: "Retur Pelanggan", tone: "blue" },
   stock_adjustment: { label: "Penyesuaian Stok", tone: "red" },
 };
 
+const STATUS_BADGES = {
+  pending: { label: "Menunggu", tone: "amber" },
+  approved: { label: "Disetujui", tone: "green" },
+  rejected: { label: "Ditolak", tone: "red" },
+};
+
 // ======================== MAIN PAGE ========================
 
 export default function ReturStokPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const TABS = [
+    { id: "return_supplier", label: "Retur ke Supplier" },
+    { id: "sales_return", label: "Retur Pelanggan" },
+    ...(isAdmin
+      ? [{ id: "stock_adjustment", label: "Penyesuaian Stok" }]
+      : []),
+    ...(isAdmin
+      ? [{ id: "pending_approval", label: "Persetujuan Pending" }]
+      : []),
+    { id: "history", label: "Riwayat" },
+  ];
+
   const [tab, setTab] = useState("return_supplier");
 
   return (
@@ -44,27 +60,46 @@ export default function ReturStokPage() {
       />
 
       {/* Tab bar */}
-      <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1">
+      <div className="mb-4 flex gap-1 rounded-lg bg-slate-100 p-1 overflow-x-auto">
         {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition ${
-              tab === t.id
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {t.label}
-          </button>
+          <TabButton key={t.id} id={t.id} label={t.label} active={tab} onClick={setTab} />
         ))}
       </div>
 
       {tab === "return_supplier" && <ReturSupplierForm />}
       {tab === "sales_return" && <ReturPelangganForm />}
-      {tab === "stock_adjustment" && <PenyesuaianStokForm />}
+      {tab === "stock_adjustment" && isAdmin && <PenyesuaianStokForm />}
+      {tab === "pending_approval" && isAdmin && <PendingApprovalTab />}
       {tab === "history" && <HistoryTab />}
     </PageShell>
+  );
+}
+
+function TabButton({ id, label, active, onClick }) {
+  const { data: pendingData } = useQuery({
+    queryKey: ["notif-pending-approval"],
+    queryFn: adjustmentsApi.pendingCount,
+    refetchInterval: 30_000,
+    enabled: id === "pending_approval",
+  });
+  const pendingCount = id === "pending_approval" ? pendingData?.count || 0 : 0;
+
+  return (
+    <button
+      onClick={() => onClick(id)}
+      className={`relative flex-shrink-0 rounded-md px-3 py-2 text-sm font-medium transition whitespace-nowrap ${
+        active === id
+          ? "bg-white text-slate-900 shadow-sm"
+          : "text-slate-500 hover:text-slate-700"
+      }`}
+    >
+      {label}
+      {pendingCount > 0 && (
+        <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+          {pendingCount}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -308,10 +343,12 @@ function ReturSupplierForm() {
   );
 }
 
-// ======================== RETUR PELANGGAN ========================
+// ======================== RETUR PELANGGAN + MANAGER OVERRIDE ========================
 
 function ReturPelangganForm() {
+  const { user } = useAuth();
   const toast = useToast();
+  const qc = useQueryClient();
   const [kodeQ, setKodeQ] = useState("");
   const [sales, setSales] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -321,6 +358,53 @@ function ReturPelangganForm() {
   const [catatan, setCatatan] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Manager Override state
+  const [overrideData, setOverrideData] = useState(null); // { adjustmentId, kode }
+  const [pinUsername, setPinUsername] = useState("");
+  const [pinPassword, setPinPassword] = useState("");
+  const [pinSubmitting, setPinSubmitting] = useState(false);
+  const [pinError, setPinError] = useState("");
+
+  // Realtime: watch for approval status changes on the pending adjustment
+  const { data: pendingDetail } = useQuery({
+    queryKey: ["adjustments", overrideData?.adjustmentId],
+    queryFn: () => adjustmentsApi.get(overrideData.adjustmentId),
+    enabled: !!overrideData?.adjustmentId,
+    refetchInterval: 3000,
+  });
+
+  // Auto-close override modal if approved remotely (Opsi B sync)
+  useEffect(() => {
+    if (
+      pendingDetail?.data?.status === "approved" &&
+      overrideData
+    ) {
+      toast.success("Retur pelanggan telah disetujui oleh admin!");
+      setOverrideData(null);
+      resetForm();
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+    } else if (
+      pendingDetail?.data?.status === "rejected" &&
+      overrideData
+    ) {
+      toast.error("Retur pelanggan ditolak oleh admin.");
+      setOverrideData(null);
+      resetForm();
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+    }
+  }, [pendingDetail?.data?.status]);
+
+  function resetForm() {
+    setSelected(null);
+    setReturnItems([]);
+    setAlasan("");
+    setCatatan("");
+    setSales([]);
+    setKodeQ("");
+  }
 
   async function searchSales() {
     if (!kodeQ.trim()) {
@@ -395,13 +479,25 @@ function ReturPelangganForm() {
           harga_satuan: it.harga_satuan,
         })),
       });
-      toast.success(res.message || "Retur pelanggan berhasil");
-      setSelected(null);
-      setReturnItems([]);
-      setAlasan("");
-      setCatatan("");
-      setSales([]);
-      setKodeQ("");
+
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+
+      if (res.data?.status === "pending") {
+        // Kasir flow: show Manager Override popup
+        toast.info("Retur dibuat — menunggu persetujuan admin");
+        setOverrideData({
+          adjustmentId: res.data.id,
+          kode: res.data.kode_adjustment,
+        });
+        setPinUsername("");
+        setPinPassword("");
+        setPinError("");
+      } else {
+        // Admin flow: auto-approved
+        toast.success(res.message || "Retur pelanggan berhasil");
+        resetForm();
+      }
     } catch (err) {
       toast.error(err.message || "Gagal menyimpan retur");
     } finally {
@@ -409,12 +505,46 @@ function ReturPelangganForm() {
     }
   }
 
-  if (!selected) {
+  // Opsi A: verifikasi PIN admin di layar kasir
+  async function handlePinApprove() {
+    if (!pinUsername.trim() || !pinPassword.trim()) {
+      setPinError("Username dan password admin wajib diisi");
+      return;
+    }
+    setPinSubmitting(true);
+    setPinError("");
+    try {
+      const res = await adjustmentsApi.approvePin(overrideData.adjustmentId, {
+        username: pinUsername.trim(),
+        password: pinPassword,
+      });
+      toast.success(res.message || "Retur disetujui!");
+      setOverrideData(null);
+      resetForm();
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+    } catch (err) {
+      setPinError(err.message || "Gagal memverifikasi");
+    } finally {
+      setPinSubmitting(false);
+    }
+  }
+
+  if (!selected && !overrideData) {
     return (
       <Card className="p-5">
         <h3 className="mb-3 font-semibold text-slate-800">
           Cari Transaksi Penjualan
         </h3>
+
+        {user?.role === "kasir" && (
+          <div className="mb-3 rounded-lg bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
+            <strong>Info:</strong> Retur pelanggan membutuhkan persetujuan admin
+            (Manager Override). Setelah submit, admin bisa menyetujui via PIN
+            langsung di layar ini atau dari Dashboard Admin.
+          </div>
+        )}
+
         <div className="flex gap-2">
           <input
             placeholder="Kode transaksi (misal: INV-20260528-...)..."
@@ -452,6 +582,107 @@ function ReturPelangganForm() {
             ))}
           </div>
         )}
+      </Card>
+    );
+  }
+
+  // Manager Override modal (Opsi A on-site + Opsi B remote waiting)
+  if (overrideData) {
+    return (
+      <Card className="p-5">
+        <div className="mx-auto max-w-md text-center">
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+          </div>
+
+          <h3 className="mb-1 text-lg font-semibold text-slate-800">
+            Menunggu Persetujuan Admin
+          </h3>
+          <p className="mb-1 text-sm text-slate-500">
+            Retur <span className="font-mono font-medium">{overrideData.kode}</span> telah
+            dibuat dan sedang menunggu persetujuan.
+          </p>
+          <p className="mb-6 text-xs text-slate-400">
+            Notifikasi sudah terkirim ke Dashboard Admin secara real-time.
+          </p>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-left">
+            <h4 className="mb-3 text-sm font-semibold text-slate-700">
+              Opsi A: Admin di Toko (Input Password)
+            </h4>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Username Admin
+                </label>
+                <input
+                  type="text"
+                  value={pinUsername}
+                  onChange={(e) => setPinUsername(e.target.value)}
+                  placeholder="Username admin..."
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                  autoComplete="off"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Password Admin
+                </label>
+                <input
+                  type="password"
+                  value={pinPassword}
+                  onChange={(e) => setPinPassword(e.target.value)}
+                  placeholder="Password admin..."
+                  onKeyDown={(e) => e.key === "Enter" && handlePinApprove()}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                  autoComplete="off"
+                />
+              </div>
+              {pinError && (
+                <p className="text-xs font-medium text-red-600">{pinError}</p>
+              )}
+              <Button
+                onClick={handlePinApprove}
+                disabled={pinSubmitting}
+                className="w-full"
+              >
+                {pinSubmitting ? "Memverifikasi..." : "Verifikasi & Setujui"}
+              </Button>
+            </div>
+
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-xs text-slate-400">atau</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <div className="text-center">
+              <h4 className="mb-2 text-sm font-semibold text-slate-700">
+                Opsi B: Admin di Luar (Remote)
+              </h4>
+              <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                Menunggu persetujuan remote dari admin...
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                Halaman ini akan otomatis terupdate saat admin menyetujui.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setOverrideData(null);
+              resetForm();
+            }}
+            className="mt-4 text-xs text-slate-400 hover:text-slate-600"
+          >
+            Tutup (retur tetap pending)
+          </button>
+        </div>
       </Card>
     );
   }
@@ -567,7 +798,7 @@ function ReturPelangganForm() {
           <p>
             {checkedItems.length} item dipilih
             {goodCount > 0 && (
-              <Badge tone="green">{goodCount} bagus (stok +)</Badge>
+              <>{" "}<Badge tone="green">{goodCount} bagus (stok +)</Badge></>
             )}{" "}
             {badCount > 0 && (
               <Badge tone="red">{badCount} rusak (stok tetap)</Badge>
@@ -588,13 +819,17 @@ function ReturPelangganForm() {
         onClose={() => setConfirm(false)}
         onConfirm={handleSubmit}
         title="Konfirmasi Retur Pelanggan"
-        message={`${goodCount} barang kondisi bagus (stok bertambah), ${badCount} barang kondisi rusak (stok tidak bertambah). Lanjutkan?`}
+        message={
+          user?.role === "kasir"
+            ? `${goodCount} barang kondisi bagus, ${badCount} barang kondisi rusak. Retur akan menunggu persetujuan admin. Lanjutkan?`
+            : `${goodCount} barang kondisi bagus (stok bertambah), ${badCount} barang kondisi rusak (stok tidak bertambah). Lanjutkan?`
+        }
       />
     </Card>
   );
 }
 
-// ======================== PENYESUAIAN STOK ========================
+// ======================== PENYESUAIAN STOK (ADMIN ONLY) ========================
 
 function PenyesuaianStokForm() {
   const toast = useToast();
@@ -669,6 +904,9 @@ function PenyesuaianStokForm() {
         <strong>Penyesuaian Stok (Penyusutan):</strong> Gunakan fitur ini untuk
         mencatat barang yang rusak, pecah, hilang, atau penyusutan stok di toko.
         Stok akan <strong>berkurang</strong> sesuai jumlah yang diinput.
+        <br />
+        <strong>Hanya admin</strong> yang berhak melakukan penyesuaian stok untuk
+        mencegah penyalahgunaan.
       </div>
 
       <div className="mb-4 flex items-center justify-between">
@@ -785,6 +1023,279 @@ function PenyesuaianStokForm() {
   );
 }
 
+// ======================== PENDING APPROVAL (ADMIN) ========================
+
+function PendingApprovalTab() {
+  const toast = useToast();
+  const qc = useQueryClient();
+
+  const { data: listData, isLoading } = useQuery({
+    queryKey: ["adjustments-pending"],
+    queryFn: () => adjustmentsApi.list({ status: "pending", limit: 50 }),
+    refetchInterval: 5000,
+  });
+  const pendingItems = listData?.data || [];
+
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [rejectId, setRejectId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [processing, setProcessing] = useState(null);
+
+  async function openDetail(id) {
+    setDetailLoading(true);
+    try {
+      const res = await adjustmentsApi.get(id);
+      setDetail(res.data);
+    } catch {
+      toast.error("Gagal memuat detail");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function handleApprove(id) {
+    setProcessing(id);
+    try {
+      await adjustmentsApi.approve(id);
+      toast.success("Retur pelanggan berhasil disetujui");
+      qc.invalidateQueries({ queryKey: ["adjustments-pending"] });
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+      if (detail?.id === id) setDetail(null);
+    } catch (err) {
+      toast.error(err.message || "Gagal menyetujui");
+    } finally {
+      setProcessing(null);
+    }
+  }
+
+  async function handleReject() {
+    if (!rejectId) return;
+    setProcessing(rejectId);
+    try {
+      await adjustmentsApi.reject(rejectId, rejectReason);
+      toast.success("Retur pelanggan ditolak");
+      qc.invalidateQueries({ queryKey: ["adjustments-pending"] });
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+      setRejectId(null);
+      setRejectReason("");
+      if (detail?.id === rejectId) setDetail(null);
+    } catch (err) {
+      toast.error(err.message || "Gagal menolak");
+    } finally {
+      setProcessing(null);
+    }
+  }
+
+  return (
+    <>
+      <Card className="p-5">
+        <div className="mb-4">
+          <h3 className="font-semibold text-slate-800">
+            Retur Pelanggan Menunggu Persetujuan
+          </h3>
+          <p className="text-xs text-slate-400">
+            Retur dari kasir yang membutuhkan otorisasi admin sebelum stok diproses.
+            Data diperbarui secara real-time.
+          </p>
+        </div>
+
+        {isLoading && <Spinner label="Memuat..." />}
+
+        {!isLoading && pendingItems.length === 0 && (
+          <EmptyState
+            title="Tidak ada retur pending"
+            description="Semua retur pelanggan sudah diproses"
+          />
+        )}
+
+        {!isLoading && pendingItems.length > 0 && (
+          <div className="space-y-3">
+            {pendingItems.map((row) => (
+              <div
+                key={row.id}
+                className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-sm font-medium text-slate-800">
+                      {row.kode_adjustment}
+                    </p>
+                    <Badge tone="amber">Pending</Badge>
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Oleh: {row.username || "-"} · {tanggalJam(row.created_at)} · {angka(row.total_qty)} item
+                  </p>
+                  <p className="mt-0.5 max-w-md truncate text-xs text-slate-400">
+                    {row.alasan}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 ml-3">
+                  <button
+                    onClick={() => openDetail(row.id)}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    Detail
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => {
+                      setRejectId(row.id);
+                      setRejectReason("");
+                    }}
+                    disabled={processing === row.id}
+                  >
+                    Tolak
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleApprove(row.id)}
+                    disabled={processing === row.id}
+                  >
+                    {processing === row.id ? "..." : "Setujui"}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Detail Modal */}
+      <Modal
+        open={!!detail || detailLoading}
+        onClose={() => setDetail(null)}
+        title={detail ? `Detail ${detail.kode_adjustment}` : "Memuat..."}
+        width="max-w-2xl"
+      >
+        {detailLoading && <Spinner label="Memuat detail..." />}
+        {detail && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-slate-400">Tipe:</span>{" "}
+                <Badge tone="blue">Retur Pelanggan</Badge>
+              </div>
+              <div>
+                <span className="text-slate-400">Status:</span>{" "}
+                <Badge tone={STATUS_BADGES[detail.status]?.tone || "slate"}>
+                  {STATUS_BADGES[detail.status]?.label || detail.status}
+                </Badge>
+              </div>
+              <div>
+                <span className="text-slate-400">Dibuat oleh:</span>{" "}
+                {detail.username || "-"}
+              </div>
+              <div>
+                <span className="text-slate-400">Tanggal:</span>{" "}
+                {tanggalJam(detail.created_at)}
+              </div>
+              <div className="col-span-2">
+                <span className="text-slate-400">Alasan:</span>{" "}
+                {detail.alasan}
+              </div>
+              {detail.catatan && (
+                <div className="col-span-2">
+                  <span className="text-slate-400">Catatan:</span>{" "}
+                  {detail.catatan}
+                </div>
+              )}
+            </div>
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                  <th className="py-2 pr-2">Barang</th>
+                  <th className="py-2 pr-2 text-right">Qty</th>
+                  <th className="py-2 pr-2">Kondisi</th>
+                  <th className="py-2 text-right">Harga</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detail.items?.map((it) => (
+                  <tr key={it.id} className="border-b border-slate-100">
+                    <td className="py-2 pr-2">
+                      <p className="font-medium text-slate-800">{it.nama_barang}</p>
+                      <p className="text-xs text-slate-400">{it.kode_barang}</p>
+                    </td>
+                    <td className="py-2 pr-2 text-right">{angka(it.qty)}</td>
+                    <td className="py-2 pr-2">
+                      <Badge tone={it.kondisi === "bagus" ? "green" : "red"}>
+                        {it.kondisi === "bagus" ? "Bagus" : "Rusak"}
+                      </Badge>
+                    </td>
+                    <td className="py-2 text-right">{rupiah(it.harga_satuan)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {detail.status === "pending" && (
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    setDetail(null);
+                    setRejectId(detail.id);
+                    setRejectReason("");
+                  }}
+                >
+                  Tolak
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handleApprove(detail.id)}
+                  disabled={processing === detail.id}
+                >
+                  {processing === detail.id ? "Memproses..." : "Setujui Retur"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Reject confirmation */}
+      <Modal
+        open={!!rejectId}
+        onClose={() => setRejectId(null)}
+        title="Tolak Retur Pelanggan"
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Retur ini akan ditolak dan stok tidak akan berubah. Berikan alasan
+            penolakan:
+          </p>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Alasan penolakan (opsional)..."
+            rows={3}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setRejectId(null)}>
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleReject}
+              disabled={processing === rejectId}
+            >
+              {processing === rejectId ? "Memproses..." : "Konfirmasi Tolak"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 // ======================== RIWAYAT ========================
 
 function HistoryTab() {
@@ -801,7 +1312,7 @@ function HistoryTab() {
     try {
       const res = await adjustmentsApi.list({ type: type || undefined, limit: 100 });
       setData(res.data || []);
-    } catch (err) {
+    } catch {
       toast.error("Gagal memuat riwayat");
     } finally {
       setLoading(false);
@@ -809,7 +1320,6 @@ function HistoryTab() {
     }
   }, [toast]);
 
-  // Auto-load on first render
   if (!loaded && !loading) {
     load(filterType);
   }
@@ -819,7 +1329,7 @@ function HistoryTab() {
     try {
       const res = await adjustmentsApi.get(id);
       setDetail(res.data);
-    } catch (err) {
+    } catch {
       toast.error("Gagal memuat detail");
     } finally {
       setDetailLoading(false);
@@ -864,6 +1374,7 @@ function HistoryTab() {
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                   <th className="py-2 pr-2">Kode</th>
                   <th className="py-2 pr-2">Tipe</th>
+                  <th className="py-2 pr-2">Status</th>
                   <th className="py-2 pr-2">User</th>
                   <th className="py-2 pr-2">Alasan</th>
                   <th className="py-2 pr-2 text-right">Total Qty</th>
@@ -873,14 +1384,27 @@ function HistoryTab() {
               </thead>
               <tbody>
                 {data.map((row) => {
-                  const b = TYPE_BADGES[row.type] || { label: row.type, tone: "slate" };
+                  const tb = TYPE_BADGES[row.type] || { label: row.type, tone: "slate" };
+                  const sb = STATUS_BADGES[row.status] || { label: row.status, tone: "slate" };
                   return (
                     <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="py-2 pr-2 font-mono text-xs">{row.kode_adjustment}</td>
                       <td className="py-2 pr-2">
-                        <Badge tone={b.tone}>{b.label}</Badge>
+                        <Badge tone={tb.tone}>{tb.label}</Badge>
                       </td>
-                      <td className="py-2 pr-2">{row.username || "-"}</td>
+                      <td className="py-2 pr-2">
+                        <Badge tone={sb.tone}>{sb.label}</Badge>
+                      </td>
+                      <td className="py-2 pr-2">
+                        <div>
+                          <p className="text-xs">{row.username || "-"}</p>
+                          {row.approved_by_username && row.approved_by_username !== row.username && (
+                            <p className="text-xs text-slate-400">
+                              {row.status === "approved" ? "Disetujui" : "Ditolak"}: {row.approved_by_username}
+                            </p>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-2 pr-2 max-w-[200px] truncate" title={row.alasan}>
                         {row.alasan}
                       </td>
@@ -921,14 +1445,34 @@ function HistoryTab() {
                 </Badge>
               </div>
               <div>
-                <span className="text-slate-400">User:</span>{" "}
+                <span className="text-slate-400">Status:</span>{" "}
+                <Badge tone={STATUS_BADGES[detail.status]?.tone || "slate"}>
+                  {STATUS_BADGES[detail.status]?.label || detail.status}
+                </Badge>
+              </div>
+              <div>
+                <span className="text-slate-400">Dibuat oleh:</span>{" "}
                 {detail.username || "-"}
               </div>
               <div>
                 <span className="text-slate-400">Tanggal:</span>{" "}
                 {tanggalJam(detail.created_at)}
               </div>
-              <div>
+              {detail.approved_by_username && (
+                <div>
+                  <span className="text-slate-400">
+                    {detail.status === "approved" ? "Disetujui" : "Ditolak"} oleh:
+                  </span>{" "}
+                  {detail.approved_by_username}
+                </div>
+              )}
+              {detail.approved_at && (
+                <div>
+                  <span className="text-slate-400">Tanggal keputusan:</span>{" "}
+                  {tanggalJam(detail.approved_at)}
+                </div>
+              )}
+              <div className="col-span-2">
                 <span className="text-slate-400">Total Qty:</span>{" "}
                 {angka(detail.total_qty)}
               </div>

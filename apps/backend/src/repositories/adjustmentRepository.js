@@ -9,6 +9,7 @@ async function createViaRpc({
   alasan,
   catatan,
   items,
+  status = "approved",
 }) {
   const { data, error } = await supabase.rpc("fn_create_stock_adjustment", {
     p_user_id: userId,
@@ -19,6 +20,7 @@ async function createViaRpc({
     p_alasan: alasan,
     p_catatan: catatan || null,
     p_items: items,
+    p_status: status,
   });
 
   if (error) {
@@ -31,24 +33,55 @@ async function createViaRpc({
   return data;
 }
 
+async function approveViaRpc({ adjustmentId, adminId }) {
+  const { data, error } = await supabase.rpc("fn_approve_stock_adjustment", {
+    p_adjustment_id: adjustmentId,
+    p_admin_id: adminId,
+  });
+
+  if (error) {
+    const err = new Error(error.message);
+    err.code = error.code;
+    err.details = error.details;
+    throw err;
+  }
+  return data;
+}
+
+async function rejectViaRpc({ adjustmentId, adminId, reason }) {
+  const { data, error } = await supabase.rpc("fn_reject_stock_adjustment", {
+    p_adjustment_id: adjustmentId,
+    p_admin_id: adminId,
+    p_reason: reason || "",
+  });
+
+  if (error) {
+    const err = new Error(error.message);
+    err.code = error.code;
+    err.details = error.details;
+    throw err;
+  }
+  return data;
+}
+
 async function getDetail(adjustmentId) {
   const { data: adj, error: adjErr } = await supabase
     .from("stock_adjustments")
     .select(
-      "id, kode_adjustment, type, user_id, reference_sale_id, reference_purchase_id, alasan, catatan, total_qty, created_at"
+      "id, kode_adjustment, type, user_id, reference_sale_id, reference_purchase_id, alasan, catatan, total_qty, status, approved_by, approved_at, created_at"
     )
     .eq("id", adjustmentId)
     .single();
   if (adjErr) throw new Error("Gagal memuat detail penyesuaian stok");
 
-  let username = null;
-  if (adj.user_id) {
-    const { data: u } = await supabase
+  const userIds = [adj.user_id, adj.approved_by].filter(Boolean);
+  let userMap = new Map();
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
       .from("users")
-      .select("username")
-      .eq("id", adj.user_id)
-      .single();
-    username = u?.username || null;
+      .select("id, username")
+      .in("id", [...new Set(userIds)]);
+    userMap = new Map(users?.map((u) => [u.id, u.username]) || []);
   }
 
   const { data: items, error: itemsErr } = await supabase
@@ -62,7 +95,8 @@ async function getDetail(adjustmentId) {
 
   return {
     ...adj,
-    username,
+    username: userMap.get(adj.user_id) || null,
+    approved_by_username: userMap.get(adj.approved_by) || null,
     items: (items || []).map((it) => ({
       id: it.id,
       product_id: it.product_id,
@@ -76,21 +110,30 @@ async function getDetail(adjustmentId) {
   };
 }
 
-async function list({ type, from, to, limit = 50 }) {
+async function list({ type, from, to, limit = 50, status }) {
   let query = supabase
     .from("stock_adjustments")
-    .select("id, kode_adjustment, type, user_id, alasan, total_qty, created_at")
+    .select(
+      "id, kode_adjustment, type, user_id, alasan, total_qty, status, approved_by, approved_at, created_at"
+    )
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (type) query = query.eq("type", type);
+  if (status) query = query.eq("status", status);
   if (from) query = query.gte("created_at", from);
   if (to) query = query.lte("created_at", to);
 
   const { data, error } = await query;
   if (error) throw new Error("Gagal memuat daftar penyesuaian stok");
 
-  const userIds = [...new Set((data || []).map((r) => r.user_id).filter(Boolean))];
+  const userIds = [
+    ...new Set(
+      (data || [])
+        .flatMap((r) => [r.user_id, r.approved_by])
+        .filter(Boolean)
+    ),
+  ];
   let userMap = new Map();
   if (userIds.length > 0) {
     const { data: users } = await supabase
@@ -103,7 +146,17 @@ async function list({ type, from, to, limit = 50 }) {
   return (data || []).map((r) => ({
     ...r,
     username: userMap.get(r.user_id) || null,
+    approved_by_username: userMap.get(r.approved_by) || null,
   }));
+}
+
+async function countPending() {
+  const { count, error } = await supabase
+    .from("stock_adjustments")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  if (error) return 0;
+  return count || 0;
 }
 
 async function lookupSaleByKode(kode) {
@@ -189,8 +242,11 @@ async function lookupPurchaseByNota(nota) {
 
 module.exports = {
   createViaRpc,
+  approveViaRpc,
+  rejectViaRpc,
   getDetail,
   list,
+  countPending,
   lookupSaleByKode,
   lookupPurchaseByNota,
 };

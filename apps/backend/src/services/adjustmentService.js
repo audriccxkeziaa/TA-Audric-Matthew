@@ -1,3 +1,5 @@
+const { createClient } = require("@supabase/supabase-js");
+const supabaseAdmin = require("../config/supabase");
 const adjustmentRepository = require("../repositories/adjustmentRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
 const ruleEngine = require("./ruleEngine");
@@ -63,6 +65,13 @@ async function createAdjustment({ user, payload }) {
     items,
   } = payload || {};
 
+  // RBAC: stock_adjustment hanya admin
+  if (type === "stock_adjustment" && user.role !== "admin") {
+    const e = new Error("Hanya admin yang dapat melakukan penyesuaian stok");
+    e.status = 403;
+    throw e;
+  }
+
   const validationError = validatePayload({
     type,
     alasan,
@@ -85,6 +94,14 @@ async function createAdjustment({ user, payload }) {
 
   const kode = generateKode(type);
 
+  // Manager Override: sales_return dibuat kasir → pending
+  // sales_return dibuat admin → langsung approved (auto-approve)
+  // Tipe lain → langsung approved
+  let status = "approved";
+  if (type === "sales_return" && user.role !== "admin") {
+    status = "pending";
+  }
+
   let rpcResult;
   try {
     rpcResult = await adjustmentRepository.createViaRpc({
@@ -96,6 +113,7 @@ async function createAdjustment({ user, payload }) {
       alasan: alasan.trim(),
       catatan: catatan?.trim() || null,
       items: normalizedItems,
+      status,
     });
   } catch (err) {
     const mapped = ruleEngine.mapDbErrorToHttp(err);
@@ -120,7 +138,138 @@ async function createAdjustment({ user, payload }) {
 
   const detail = await adjustmentRepository.getDetail(rpcResult.adjustment_id);
   console.log(
-    `[POS-ADJ] ${type} kode=${kode} oleh user=${user.username} total_qty=${rpcResult.total_qty}`
+    `[POS-ADJ] ${type} kode=${kode} status=${status} oleh user=${user.username} total_qty=${rpcResult.total_qty}`
+  );
+  return detail;
+}
+
+async function approveAdjustment({ adminUser, adjustmentId }) {
+  if (adminUser.role !== "admin") {
+    const e = new Error("Hanya admin yang dapat menyetujui retur");
+    e.status = 403;
+    throw e;
+  }
+
+  let rpcResult;
+  try {
+    rpcResult = await adjustmentRepository.approveViaRpc({
+      adjustmentId,
+      adminId: adminUser.id,
+    });
+  } catch (err) {
+    const mapped = ruleEngine.mapDbErrorToHttp(err);
+    const e = new Error(mapped.message || err.message);
+    e.status = mapped.status || 400;
+    e.rule = mapped.rule;
+    throw e;
+  }
+
+  const detail = await adjustmentRepository.getDetail(adjustmentId);
+  console.log(
+    `[POS-ADJ] APPROVED adjustment=${adjustmentId} oleh admin=${adminUser.username}`
+  );
+  return detail;
+}
+
+async function rejectAdjustment({ adminUser, adjustmentId, reason }) {
+  if (adminUser.role !== "admin") {
+    const e = new Error("Hanya admin yang dapat menolak retur");
+    e.status = 403;
+    throw e;
+  }
+
+  try {
+    await adjustmentRepository.rejectViaRpc({
+      adjustmentId,
+      adminId: adminUser.id,
+      reason: reason || "",
+    });
+  } catch (err) {
+    const e = new Error(err.message);
+    e.status = 400;
+    throw e;
+  }
+
+  const detail = await adjustmentRepository.getDetail(adjustmentId);
+  console.log(
+    `[POS-ADJ] REJECTED adjustment=${adjustmentId} oleh admin=${adminUser.username}`
+  );
+  return detail;
+}
+
+// Manager Override Opsi A: verifikasi PIN (password admin) di layar kasir
+async function verifyAdminAndApprove({ adjustmentId, username, password }) {
+  // 1. Cari admin user di database
+  const { data: profile, error: profileErr } = await supabaseAdmin
+    .from("users")
+    .select("id, username, role, is_active")
+    .eq("username", username.trim())
+    .single();
+
+  if (profileErr || !profile) {
+    const e = new Error("Username admin tidak ditemukan");
+    e.status = 401;
+    throw e;
+  }
+
+  if (profile.role !== "admin") {
+    const e = new Error("User bukan admin — tidak berhak menyetujui");
+    e.status = 403;
+    throw e;
+  }
+
+  if (profile.is_active === false) {
+    const e = new Error("Akun admin tidak aktif");
+    e.status = 403;
+    throw e;
+  }
+
+  // 2. Verifikasi password via Supabase Auth
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(
+    profile.id
+  );
+  if (!authUser?.user?.email) {
+    const e = new Error("Gagal memverifikasi kredensial admin");
+    e.status = 401;
+    throw e;
+  }
+
+  const tempClient = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+  );
+  const { error: signInErr } = await tempClient.auth.signInWithPassword({
+    email: authUser.user.email,
+    password,
+  });
+
+  if (signInErr) {
+    const e = new Error("Password admin salah");
+    e.status = 401;
+    throw e;
+  }
+
+  // Sign out the temp session immediately
+  await tempClient.auth.signOut();
+
+  // 3. Approve via RPC
+  let rpcResult;
+  try {
+    rpcResult = await adjustmentRepository.approveViaRpc({
+      adjustmentId,
+      adminId: profile.id,
+    });
+  } catch (err) {
+    const mapped = ruleEngine.mapDbErrorToHttp(err);
+    const e = new Error(mapped.message || err.message);
+    e.status = mapped.status || 400;
+    e.rule = mapped.rule;
+    throw e;
+  }
+
+  const detail = await adjustmentRepository.getDetail(adjustmentId);
+  console.log(
+    `[POS-ADJ] PIN-APPROVED adjustment=${adjustmentId} oleh admin=${profile.username} (on-site)`
   );
   return detail;
 }
@@ -133,6 +282,10 @@ async function getAdjustmentDetail(id) {
   return adjustmentRepository.getDetail(id);
 }
 
+async function countPending() {
+  return adjustmentRepository.countPending();
+}
+
 async function lookupSale(kode) {
   return adjustmentRepository.lookupSaleByKode(kode);
 }
@@ -143,8 +296,12 @@ async function lookupPurchase(nota) {
 
 module.exports = {
   createAdjustment,
+  approveAdjustment,
+  rejectAdjustment,
+  verifyAdminAndApprove,
   listAdjustments,
   getAdjustmentDetail,
+  countPending,
   lookupSale,
   lookupPurchase,
 };
