@@ -171,7 +171,7 @@ function ExpenseForm({ open, onClose, editing, onDelete }) {
                 }}
                 className="text-red-600 hover:bg-red-50"
               >
-                Hapus
+                Delete
               </Button>
             )}
           </div>
@@ -189,7 +189,7 @@ function ExpenseForm({ open, onClose, editing, onDelete }) {
               {mut.isPending
                 ? "Menyimpan..."
                 : isEdit
-                  ? "Simpan Perubahan"
+                  ? "Save changes"
                   : "Save"}
             </Button>
           </div>
@@ -790,7 +790,7 @@ export default function KeuanganPage() {
         message={`Apakah anda yakin akan menghapus "${confirmDel?.deskripsi}" senilai ${rupiah(
           confirmDel?.nominal || 0
         )}?`}
-        confirmLabel="Ya, hapus"
+        confirmLabel="Yes, delete"
       />
       {/* Modal detail nota pembelian supplier */}
       <Modal

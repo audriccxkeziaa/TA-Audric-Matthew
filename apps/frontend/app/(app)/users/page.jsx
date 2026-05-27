@@ -148,7 +148,7 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
           disabled={isSelf}
         >
           <option value="kasir">Kasir</option>
-          <option value="admin">Admin</option>
+          <option value="superadmin">Superadmin</option>
         </Select>
 
         {err && (
@@ -227,7 +227,7 @@ function AddUserForm({ open, onClose }) {
         <PasswordInput label="Password" value={form.password} onChange={(e) => set("password", e.target.value)} />
         <Select label="Role" value={form.role} onChange={(e) => set("role", e.target.value)}>
           <option value="kasir">Kasir</option>
-          <option value="admin">Admin</option>
+          <option value="superadmin">Superadmin</option>
         </Select>
 
         {err && (
@@ -260,7 +260,7 @@ export default function UsersPage() {
     <PageShell>
       <PageHeader
         title="Manajemen User"
-        description="Halaman untuk mengelola role admin dan kasir."
+        description="Halaman untuk mengelola role superadmin dan kasir."
         actions={
           <Button onClick={() => setShowAdd(true)}>+ Add User</Button>
         }
@@ -295,7 +295,7 @@ export default function UsersPage() {
                         {isSelf && <span className="ml-1 text-xs text-slate-400">(Anda)</span>}
                       </td>
                       <td className="px-4 py-2.5">
-                        <Badge tone={u.role === "admin" ? "indigo" : "slate"}>{u.role}</Badge>
+                        <Badge tone={u.role === "superadmin" ? "indigo" : "slate"}>{u.role}</Badge>
                       </td>
                       <td className="px-4 py-2.5">
                         <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>

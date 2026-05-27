@@ -39,24 +39,33 @@ function RestockRow({ item, isAdmin, index }) {
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(item.min_stock);
+  const [alasan, setAlasan] = useState("");
 
   const save = useMutation({
     mutationFn: () =>
       productsApi.update(item.id, {
         min_stock: parseInt(value, 10) || 0,
+        alasan,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["restock"] });
       qc.invalidateQueries({ queryKey: ["notif-low-stock"] });
       toast.success(`Min. stok "${item.nama_barang}" diperbarui`);
       setEditing(false);
+      setAlasan("");
     },
     onError: (e) => toast.error(e.message),
   });
 
+  function handleCancel() {
+    setValue(item.min_stock);
+    setAlasan("");
+    setEditing(false);
+  }
+
   return (
     <tr className="hover:bg-slate-50">
-      <td className="px-4 py-2.5 text-xs text-slate-400">{index}</td> 
+      <td className="px-4 py-2.5 text-xs text-slate-400">{index}</td>
       <td className="px-4 py-2.5 font-mono text-xs">{item.kode_barang}</td>
       <td className="px-4 py-2.5">
         {item.nama_barang}
@@ -104,17 +113,30 @@ function RestockRow({ item, isAdmin, index }) {
       <td className="px-4 py-2.5">{urgensiBadge(item.tingkat_urgensi)}</td>
       {isAdmin && (
         <td className="px-4 py-2.5">
-          <div className="flex justify-end gap-1">
-            {editing ? (
-              <>
-                <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+          {editing ? (
+            <div className="flex flex-col items-end gap-1.5 min-w-[200px]">
+              <input
+                type="text"
+                placeholder="Alasan perubahan (wajib)"
+                value={alasan}
+                onChange={(e) => setAlasan(e.target.value)}
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm placeholder:text-slate-400"
+              />
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => save.mutate()}
+                  disabled={save.isPending || !alasan.trim()}
+                >
                   Simpan
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => { setValue(item.min_stock); setEditing(false); }}>
+                <Button size="sm" variant="ghost" onClick={handleCancel}>
                   Batal
                 </Button>
-              </>
-            ) : (
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-end">
               <button
                 onClick={() => setEditing(true)}
                 className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
@@ -125,8 +147,8 @@ function RestockRow({ item, isAdmin, index }) {
                   <circle cx="12" cy="12" r="3" />
                 </svg>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </td>
       )}
     </tr>
