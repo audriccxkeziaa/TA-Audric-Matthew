@@ -80,15 +80,25 @@ function RestockRow({ item, isAdmin }) {
         )}
       </td>
       <td className="px-4 py-2.5 text-right font-semibold text-red-600">
-        {angka(item.kekurangan)}
+        {angka(item.kekurangan)} unit
       </td>
       <td className="px-4 py-2.5 text-right">
-        {Number(item.avg_sales_30d || 0).toFixed(2)}
+        {Number(item.avg_sales_30d || 0) === 0 ? (
+          <span className="text-slate-400 text-xs">Belum ada data</span>
+        ) : (
+          <span>{Number(item.avg_sales_30d).toFixed(2)}<span className="text-slate-400 text-xs"> unit/hr</span></span>
+        )}
       </td>
       <td className="px-4 py-2.5 text-right">
-        {item.estimasi_hari_habis != null
-          ? `${item.estimasi_hari_habis} hari`
-          : "—"}
+        {item.estimasi_hari_habis == null ? (
+          <span className="text-slate-400 text-xs">Belum terjual 30h</span>
+        ) : Number(item.estimasi_hari_habis) <= 7 ? (
+          <span className="font-semibold text-red-600">{item.estimasi_hari_habis} hari</span>
+        ) : Number(item.estimasi_hari_habis) <= 14 ? (
+          <span className="font-semibold text-amber-600">{item.estimasi_hari_habis} hari</span>
+        ) : (
+          <span className="text-slate-700">{item.estimasi_hari_habis} hari</span>
+        )}
       </td>
       <td className="px-4 py-2.5">{urgensiBadge(item.tingkat_urgensi)}</td>
       {isAdmin && (
@@ -165,14 +175,14 @@ export default function RestockPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="px-4 py-2.5">Kode</th>
+                  <th className="px-4 py-2.5">Kode Barang</th>
                   <th className="px-4 py-2.5">Nama Barang</th>
                   <th className="px-4 py-2.5 text-right">Stok</th>
-                  <th className="px-4 py-2.5 text-right">Min</th>
-                  <th className="px-4 py-2.5 text-right">Kekurangan</th>
-                  <th className="px-4 py-2.5 text-right">Rata2/hari (30h)</th>
-                  <th className="px-4 py-2.5 text-right">Estimasi Habis</th>
-                  <th className="px-4 py-2.5">Urgensi</th>
+                  <th className="px-4 py-2.5 text-right" title="Batas minimum stok yang ditetapkan admin. Jika stok ≤ nilai ini, barang masuk radar restock.">Min Stok ⓘ</th>
+                  <th className="px-4 py-2.5 text-right" title="Jumlah unit minimum yang perlu dibeli agar stok kembali ke batas minimum (= Min Stok − Stok Sekarang).">Perlu Beli ⓘ</th>
+                  <th className="px-4 py-2.5 text-right" title="Rata-rata unit terjual per hari, dihitung dari total penjualan 30 hari terakhir dibagi 30.">Laju Jual/Hari ⓘ</th>
+                  <th className="px-4 py-2.5 text-right" title="Prediksi berapa hari lagi stok akan habis jika laju jual tetap sama (= Stok ÷ Laju Jual/Hari). Merah &lt;7 hari, kuning &lt;14 hari.">Estimasi Habis ⓘ</th>
+                  <th className="px-4 py-2.5">Status</th>
                   {isAdmin && <th className="px-4 py-2.5 text-right">Aksi</th>}
                 </tr>
               </thead>
@@ -197,24 +207,35 @@ export default function RestockPage() {
               onClick={() => setPage((p) => p - 1)}
               className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
             >
-              ← Sebelumnya
+              ← Previous
             </button>
             <button
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
               className="rounded border border-slate-200 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-40"
             >
-              Berikutnya →
+              Next →
             </button>
           </div>
         </div>
       )}
 
-      <p className="mt-2 shrink-0 text-xs text-slate-400">
-        Kolom &quot;Rata2/hari&quot; &amp; &quot;Estimasi Habis&quot; dihitung
-        dari penjualan 30 hari terakhir sebagai bahan pertimbangan.
-        {!isAdmin && " Min. stok hanya bisa diubah oleh admin."}
-      </p>
+      <div className="mt-2 shrink-0 space-y-0.5 text-xs text-slate-400">
+        <p>
+          <span className="font-medium text-slate-500">Perlu Beli</span> = Min Stok − Stok Sekarang (jumlah minimum yang harus dipesan).
+        </p>
+        <p>
+          <span className="font-medium text-slate-500">Laju Jual/Hari</span> = total terjual 30 hari terakhir ÷ 30. &quot;Belum ada data&quot; = belum ada penjualan bulan ini.
+        </p>
+        <p>
+          <span className="font-medium text-slate-500">Estimasi Habis</span> = Stok ÷ Laju Jual/Hari. Prediksi kapan stok menyentuh 0 jika pola jual tidak berubah.{" "}
+          <span className="text-red-500 font-medium">Merah</span> = &lt;7 hari, <span className="text-amber-500 font-medium">kuning</span> = &lt;14 hari.
+        </p>
+        <p>
+          <span className="font-medium text-slate-500">Min Stok</span> = batas alarm restock, idealnya = laju jual × estimasi hari tiba kiriman supplier.
+          {!isAdmin && " (Hanya admin yang dapat mengubah min. stok.)"}
+        </p>
+      </div>
     </PageShell>
   );
 }
