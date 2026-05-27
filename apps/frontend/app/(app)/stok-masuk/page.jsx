@@ -92,6 +92,15 @@ function blankManualRow() {
 export default function StokMasukPage() {
   const toast = useToast();
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
+  // Deteksi perangkat: true jika HP/tablet (touch + mobile UA)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const touch = navigator.maxTouchPoints > 0;
+    const mobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    setIsMobile(touch && mobileUA);
+  }, []);
 
   const [step, setStep] = useState("upload"); // upload | validate
   const [inputMode, setInputMode] = useState(null); // null | "ocr" | "manual"
@@ -592,58 +601,121 @@ export default function StokMasukPage() {
               </Select>
             </div>
 
-            {/* Drop zone */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={onDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition ${
-                dragOver
-                  ? "border-brand-500 bg-brand-50"
-                  : "border-slate-300 hover:border-brand-400"
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,application/pdf"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => pickFile(e.target.files?.[0])}
-              />
-              {file ? (
-                <div className="flex flex-col items-center gap-2">
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
-                      alt="Pratinjau nota"
-                      className="max-h-56 rounded-lg border border-slate-200"
-                    />
-                  ) : (
-                    <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
-                      {file.name}
-                    </div>
-                  )}
-                  <p className="text-xs text-slate-500">
-                    {file.name} — klik untuk ganti file
-                  </p>
+            {/* Upload area — tampilan berbeda untuk PC vs HP */}
+            {isMobile ? (
+              /* ===== HP / Tablet ===== */
+              <div className="mt-4 space-y-3">
+                {/* Preview file yang sudah dipilih */}
+                {file && (
+                  <div className="flex flex-col items-center gap-2 rounded-xl border border-slate-200 p-4">
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Pratinjau nota"
+                        className="max-h-56 rounded-lg border border-slate-200"
+                      />
+                    ) : (
+                      <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
+                        {file.name}
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-500">{file.name}</p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Tombol kamera — buka kamera belakang langsung */}
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-400 bg-brand-50 p-5 text-brand-700 transition hover:bg-brand-100"
+                  >
+                    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                    </svg>
+                    <span className="text-sm font-medium">Foto dengan Kamera</span>
+                  </button>
+                  {/* Tombol pilih file dari galeri/storage */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-5 text-slate-600 transition hover:border-slate-400 hover:bg-slate-100"
+                  >
+                    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                    </svg>
+                    <span className="text-sm font-medium">Pilih dari File</span>
+                  </button>
                 </div>
-              ) : (
-                <>
-                  <p className="text-sm font-medium text-slate-600">
-                    Drag &amp; drop file nota di sini, atau klik untuk pilih
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Format: JPG / PNG / WebP / PDF — maks 10 MB. Di HP, kamera
-                    akan terbuka langsung.
-                  </p>
-                </>
-              )}
-            </div>
+                {/* Hidden inputs HP */}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => pickFile(e.target.files?.[0])}
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => pickFile(e.target.files?.[0])}
+                />
+              </div>
+            ) : (
+              /* ===== PC / Laptop — Drag & Drop ===== */
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={onDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition ${
+                  dragOver
+                    ? "border-brand-500 bg-brand-50"
+                    : "border-slate-300 hover:border-brand-400"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => pickFile(e.target.files?.[0])}
+                />
+                {file ? (
+                  <div className="flex flex-col items-center gap-2">
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Pratinjau nota"
+                        className="max-h-56 rounded-lg border border-slate-200"
+                      />
+                    ) : (
+                      <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
+                        {file.name}
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      {file.name} — klik untuk ganti file
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-slate-600">
+                      Drag &amp; drop file nota di sini, atau klik untuk pilih
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Format: JPG / PNG / WebP / PDF — maks 10 MB
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="mt-4 flex justify-end">
               <Button

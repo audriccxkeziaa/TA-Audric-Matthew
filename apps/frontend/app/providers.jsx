@@ -14,7 +14,8 @@ export default function Providers({ children }) {
           queries: {
             retry: 1,
             refetchOnWindowFocus: false,
-            staleTime: 30 * 1000,
+            staleTime: 60 * 1000,
+            gcTime: 5 * 60 * 1000,
           },
         },
       })

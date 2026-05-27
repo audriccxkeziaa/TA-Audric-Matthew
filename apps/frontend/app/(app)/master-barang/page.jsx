@@ -8,7 +8,7 @@
 // - "Hapus" = soft delete → status nonaktif.
 // =================================================================
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -197,9 +197,16 @@ export default function MasterBarangPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
+  const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [page, setPage] = useState(1);
+
+  // Debounce: hanya kirim query ke backend 300ms setelah user berhenti mengetik
+  useEffect(() => {
+    const t = setTimeout(() => setQ(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -214,7 +221,9 @@ export default function MasterBarangPage() {
     e.preventDefault();
     const code = barcodeInput.trim();
     if (!code) return;
-    setQ(normKode(code));
+    const norm = normKode(code);
+    setSearchInput(norm);
+    setQ(norm); // langsung set tanpa debounce untuk barcode
     setPage(1);
     setBarcodeInput("");
   }
@@ -269,8 +278,8 @@ export default function MasterBarangPage() {
             />
           </div>
           <Button type="submit" size="sm">Cari</Button>
-          {q && (
-            <Button type="button" size="sm" variant="secondary" onClick={() => { setQ(""); setPage(1); }}>
+          {searchInput && (
+            <Button type="button" size="sm" variant="secondary" onClick={() => { setSearchInput(""); setQ(""); setPage(1); }}>
               Reset
             </Button>
           )}
@@ -282,8 +291,8 @@ export default function MasterBarangPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
             placeholder="Cari nama / kode barang..."
-            value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(1); }}
+            value={searchInput}
+            onChange={(e) => { setSearchInput(e.target.value); setPage(1); }}
           />
           <Select
             value={stockFilter}

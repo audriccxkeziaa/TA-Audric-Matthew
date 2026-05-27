@@ -16,7 +16,6 @@
     "@anthropic-ai/sdk": "^0.98.0",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.104.0",
-    "@u4/opencv4nodejs": "^6.1.4",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -27,5 +26,8 @@
     "pdf-parse": "^2.4.5",
     "sharp": "^0.34.5",
     "tesseract.js": "^7.0.0"
+  },
+  "optionalDependencies": {
+    "@u4/opencv4nodejs": "^6.1.4"
   }
 }
