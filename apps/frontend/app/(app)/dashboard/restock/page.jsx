@@ -96,32 +96,23 @@ function RestockRow({ item, isAdmin }) {
           <div className="flex justify-end gap-1">
             {editing ? (
               <>
-                <Button
-                  size="sm"
-                  onClick={() => save.mutate()}
-                  disabled={save.isPending}
-                >
+                <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
                   Simpan
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setValue(item.min_stock);
-                    setEditing(false);
-                  }}
-                >
+                <Button size="sm" variant="ghost" onClick={() => { setValue(item.min_stock); setEditing(false); }}>
                   Batal
                 </Button>
               </>
             ) : (
-              <Button
-                size="sm"
-                variant="outline"
+              <button
                 onClick={() => setEditing(true)}
+                className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
+                title="Ubah min. stok"
               >
-                Ubah Min
-              </Button>
+                <svg className="w-4 h-4 text-slate-600 hover:text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+              </button>
             )}
           </div>
         </td>
