@@ -233,6 +233,80 @@ function isDecorativeLine(text) {
   return false;
 }
 
+// Deteksi baris JUDUL/HEADER kolom — mis. baris transaksi
+// "No Transaksi Tanggal Dept Kode Pel Nama Pelanggan Alamat" atau judul kolom
+// "No Kd Item Nama Item Jml Satuan Harga Pot Total". Strategi: bila satu baris
+// memuat >=2 kata kunci header, dianggap header dan dilewati. Ambang 2 mencegah
+// false-positive pada nama barang biasa.
+const HEADER_KEYWORDS = [
+  "transaksi", "tanggal", "dept", "kode pel", "nama pelanggan", "pelanggan",
+  "alamat", "nama item", "nama barang", "kd item", "kditem", "kdltem", "no kd",
+  "satuan", "jml", "pot %", "pot%", "subtotal", "potongan", "terbilang",
+];
+function isHeaderRow(text) {
+  const t = String(text || "").toLowerCase();
+  let hits = 0;
+  for (const kw of HEADER_KEYWORDS) {
+    if (t.includes(kw) && ++hits >= 2) return true;
+  }
+  return false;
+}
+
+// Bersihkan nama barang hasil parser: buang kode barang yang ikut terbaca,
+// nomor urut/noise di awal, serta angka "0 00" dan tanda verifikasi "v" di akhir.
+function cleanItemName(rawName, kodeBarang) {
+  let s = String(rawName || "")
+    .replace(/[^a-zA-Z0-9\s/().\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!s) return "";
+
+  const esc = (v) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (kodeBarang) {
+    const kb = String(kodeBarang).trim();
+    // kode penuh (berstrip) & tanpa pemisah, sebagai substring
+    for (const v of [kb, kb.replace(/[^A-Za-z0-9]/g, "")]) {
+      if (v.length >= 4) s = s.replace(new RegExp(esc(v), "ig"), " ");
+    }
+    // tiap segmen kode (>=3 char & mengandung angka), sebagai kata utuh
+    for (const seg of kb.split(/[^A-Za-z0-9]+/)) {
+      if (seg.length >= 3 && /\d/.test(seg)) {
+        s = s.replace(new RegExp("\\b" + esc(seg) + "\\b", "ig"), " ");
+      }
+    }
+  }
+  s = s.replace(/\s+/g, " ").trim();
+
+  let tokens = s.split(" ").filter(Boolean);
+  // buang tanda verifikasi 'v'/'V' di mana saja
+  tokens = tokens.filter((t) => !/^[vV]$/.test(t));
+  // noise di awal: nomor urut (1-3 digit) atau 1-2 huruf, maks 2 token
+  let g = 0;
+  while (
+    tokens.length > 1 && g < 2 &&
+    (/^\d{1,3}$/.test(tokens[0]) || /^[A-Za-z]{1,2}$/.test(tokens[0]))
+  ) {
+    tokens.shift();
+    g++;
+  }
+  // noise di akhir: token angka (0 00), tanda verifikasi (v, V4, v10, V/),
+  // sisa huruf tunggal (W), atau garis kolom (/ \ |)
+  while (tokens.length > 1) {
+    const last = tokens[tokens.length - 1];
+    if (
+      /^\d+$/.test(last) ||
+      /^[vV]\d{0,3}\/?$/.test(last) ||
+      /^[A-Za-z]$/.test(last) ||
+      /^[\/\\|]+$/.test(last)
+    ) {
+      tokens.pop();
+    } else break;
+  }
+
+  const out = tokens.join(" ").replace(/\s+/g, " ").trim();
+  return out || String(rawName || "").trim();
+}
+
 function parseAmount(str) {
   const cleaned = String(str).replace(/[^\d.,]/g, "");
   if (!cleaned) return 0;
@@ -428,7 +502,7 @@ function parseWordsToRows(data, imageWidth) {
       continue;
     }
 
-    if (rowText.length < 6 || SKIP_LINE_RE.test(rowText) || isDecorativeLine(rowText)) continue;
+    if (rowText.length < 6 || SKIP_LINE_RE.test(rowText) || isDecorativeLine(rowText) || isHeaderRow(rowText)) continue;
 
     const codeWords = wordsInZone(rowWords, ZONE_CODE_MIN, ZONE_CODE_MAX, imageWidth);
     const nameWords = wordsInZone(rowWords, ZONE_NAME_MIN, ZONE_NAME_MAX, imageWidth);
@@ -467,6 +541,7 @@ function parseWordsToRows(data, imageWidth) {
       const between = rowWords.filter((w) => w.bbox.x0 > codeMaxX && w.bbox.x1 < priceMinX);
       nama_barang = extractItemNameFromZone(joinWordTexts(between));
     }
+    nama_barang = cleanItemName(nama_barang, kode_barang);
     if (!nama_barang) nama_barang = "(tidak terbaca)";
 
     const diskon_persen = extractDiscountFromRow(rowText);
@@ -485,7 +560,7 @@ function parseWordsToRows(data, imageWidth) {
 
 function parseLineToItemTextOnly(line) {
   const text = (line.text || "").trim();
-  if (text.length < 6 || SKIP_LINE_RE.test(text) || TRANSACTION_HEADER_RE.test(text) || isDecorativeLine(text) || !/[a-zA-Z]/.test(text)) return null;
+  if (text.length < 6 || SKIP_LINE_RE.test(text) || TRANSACTION_HEADER_RE.test(text) || isDecorativeLine(text) || isHeaderRow(text) || !/[a-zA-Z]/.test(text)) return null;
 
   let kode_barang = "";
   const tokens = text.toUpperCase().replace(/[^A-Z0-9\s-]/g, " ").split(/\s+/);
@@ -524,7 +599,8 @@ function parseLineToItemTextOnly(line) {
   leftover = leftover.replace(/(?:rp\.?|idr)\s*[\d.,]+/gi, " ").replace(/\b\d{1,3}(?:[.,]\d{3}){1,3}(?:[.,]\d{2})?\b/g, " ");
   if (diskMatch) leftover = leftover.replace(diskMatch[0], " ");
   leftover = leftover.replace(kode_barang, " ");
-  const nama_barang = leftover.replace(/[^a-zA-Z0-9\s/]/g, " ").replace(/\s+/g, " ").trim();
+  let nama_barang = leftover.replace(/[^a-zA-Z0-9\s/]/g, " ").replace(/\s+/g, " ").trim();
+  nama_barang = cleanItemName(nama_barang, kode_barang);
 
   if (!nama_barang || nama_barang.length < 3) return null;
 
@@ -673,7 +749,7 @@ async function recognizePrintedReceipt(inputBuffer) {
   // ==========================================
   let finalItems = [];
 
-  const aiParsedItems = await parseWithGroqVision(inputBuffer, rawOcrText);
+  const aiParsedItems = await parseWithGroqVision(inputBuffer, rawOcrText, chosen.items.length);
 
   if (aiParsedItems && aiParsedItems.length > 0) {
     console.log(`[POS-OCR] Groq Vision meningkatkan hasil: ${aiParsedItems.length} produk.`);
@@ -782,7 +858,7 @@ async function recognizeHandwrittenReceipt(inputBuffer) {
 
   // Tingkatkan akurasi tulisan tangan dengan Groq Vision (gambar ASLI + teks
   // Tesseract sebagai referensi). Bila gagal, tetap pakai hasil baseline Tesseract.
-  const aiItems = await parseWithGroqVision(inputBuffer, rawText);
+  const aiItems = await parseWithGroqVision(inputBuffer, rawText, items.length);
   let pipeline = "opencv/handwritten";
   if (aiItems && aiItems.length > 0) {
     items = aiItems;
@@ -799,10 +875,12 @@ Tugas Anda: mem-parsing nota pembelian supplier menjadi array JSON yang valid.
 
 <rules>
 1. BACA DENGAN TELITI: Nota dot-matrix sering punya noise, typo, kolom bergeser, dan karakter ambigu.
-2. SANITASI KODE: Perbaiki OCR typo pada kode barang (misal '5VT' → 'SVT', '0' → 'O' jika konteks huruf, 'l' → '1' jika konteks angka).
-3. PENALARAN ANGKA: Jika angka terpotong, ingat bahwa [Harga Total ≈ Qty × Harga Beli]. Gunakan logika ini untuk mengoreksi angka yang salah baca.
-4. ABAIKAN: header toko, alamat, tanggal, nomor nota, footer, total, subtotal, pajak/PPN, potongan keseluruhan, dan nomor urut. Fokus HANYA pada baris item barang.
-5. STRICT OUTPUT: Respons Anda HANYA boleh berupa array JSON murni. Tanpa markdown, tanpa penjelasan, tanpa blockquote.
+2. EKSTRAK SEMUA BARIS: Ekstrak SETIAP baris barang yang diorder, dari baris pertama sampai baris terakhir. JANGAN melewatkan, menggabungkan, atau meringkas baris. Lebih baik menebak baris yang buram daripada menghilangkannya. Periksa ulang: jumlah objek JSON harus sama dengan jumlah baris barang pada nota.
+3. SANITASI KODE: Perbaiki OCR typo pada kode barang (misal '5VT' → 'SVT', '0' → 'O' jika konteks huruf, 'l' → '1' jika konteks angka). Pertahankan format dengan tanda hubung bila ada.
+4. NAMA BARANG BERSIH: Field "nama_barang" HANYA berisi nama produk. JANGAN sertakan: kode barang, nomor urut baris, qty, harga, persen diskon, angka "0 00" di akhir, tanda centang/verifikasi seperti "v" atau "V", atau potongan kolom lain. Contoh: dari baris "3 54P-E7611-00 54P E7611 KIPAS VBEL 10 PCS 49.000 0,00" → nama_barang HARUS "KIPAS VBEL" (tanpa kode, tanpa angka).
+5. PENALARAN ANGKA: Jika angka terpotong, ingat bahwa [Harga Total ≈ Qty × Harga Beli]. Gunakan logika ini untuk mengoreksi angka yang salah baca. "harga_beli" adalah HARGA SATUAN, bukan total.
+6. ABAIKAN BARIS NON-ITEM: header toko, alamat, tanggal, nomor nota/transaksi, baris judul kolom (No, Kode, Nama Item, Jml, Satuan, Harga, Pot, Total), footer, total, subtotal, pajak/PPN, dan potongan keseluruhan. JANGAN pernah menjadikan baris judul/header sebagai item.
+7. STRICT OUTPUT: Respons Anda HANYA boleh berupa array JSON murni. Tanpa markdown, tanpa penjelasan, tanpa blockquote.
 </rules>
 
 <schema>
@@ -810,9 +888,9 @@ Keluarkan TEPAT array JSON dengan struktur:
 [
   {
     "kode_barang": "string (kode produk, wajib jika terlihat di nota)",
-    "nama_barang": "string (nama produk lengkap, wajib)",
+    "nama_barang": "string (HANYA nama produk, tanpa kode/angka/nomor urut)",
     "qty": number (jumlah barang, integer, wajib),
-    "harga_beli": number (harga satuan Rupiah, integer tanpa titik/koma, wajib),
+    "harga_beli": number (harga SATUAN Rupiah, integer tanpa titik/koma, wajib),
     "diskon_persen": number (persentase diskon, default 0),
     "transaction_code": "string|null (kode transaksi misal S1-25120493 jika ada)"
   }
@@ -849,7 +927,7 @@ function extractJsonArray(text) {
   }
 }
 
-async function parseWithGroqVision(imageBuffer, rawText) {
+async function parseWithGroqVision(imageBuffer, rawText, expectedRows = 0) {
   if (!process.env.GROQ_API_KEY) return null;
 
   try {
@@ -857,22 +935,36 @@ async function parseWithGroqVision(imageBuffer, rawText) {
     const Groq = require("groq-sdk");
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+    // Resolusi lebih tinggi (2048) + kualitas 90: nota padat banyak baris perlu
+    // detail agar tiap baris terbaca dan tidak ada yang terlewat.
     const resizedImage = await sharp(imageBuffer)
-      .resize({ width: 1600, withoutEnlargement: true })
-      .jpeg({ quality: 85 })
+      .resize({ width: 2048, withoutEnlargement: true })
+      .sharpen()
+      .jpeg({ quality: 90 })
       .toBuffer();
     const dataUrl = `data:image/jpeg;base64,${resizedImage.toString("base64")}`;
 
+    const rowHint =
+      expectedRows > 0
+        ? `OCR mendeteksi sekitar ${expectedRows} baris barang. Pastikan kamu mengekstrak SEMUA baris (jangan kurang dari itu kecuali memang baris non-item).\n\n`
+        : "";
+    // Referensi teks Tesseract jangan dipotong terlalu pendek — baris akhir
+    // nota sering hilang bila dipotong, menyebabkan item terlewat.
+    const refText = rawText
+      ? `Sebagai referensi tambahan (boleh salah, perbaiki dari gambar), berikut teks kasar OCR Tesseract:\n<ocr_text>\n${rawText.slice(0, 9000)}\n</ocr_text>\n\n`
+      : "";
+
     const userText =
-      (rawText
-        ? `Sebagai referensi tambahan, berikut teks kasar hasil OCR Tesseract:\n<ocr_text>\n${rawText.slice(0, 3000)}\n</ocr_text>\n\n`
-        : "") +
-      "Ekstrak semua item barang dari gambar nota ini menjadi array JSON sesuai schema. Keluarkan HANYA array JSON.";
+      rowHint +
+      refText +
+      "Ekstrak SEMUA baris item barang dari gambar nota ini menjadi array JSON sesuai schema. " +
+      "Ingat: field nama_barang HANYA nama produk (tanpa kode, tanpa nomor urut, tanpa angka/0 di akhir). " +
+      "Keluarkan HANYA array JSON.";
 
     const result = await groq.chat.completions.create({
       model: GROQ_VISION_MODEL,
       temperature: 0,
-      max_tokens: 4096,
+      max_tokens: 8000,
       messages: [
         { role: "system", content: AI_SYSTEM_PROMPT },
         {
