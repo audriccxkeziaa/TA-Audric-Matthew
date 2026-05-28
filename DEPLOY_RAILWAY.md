@@ -32,6 +32,15 @@ Karena project ini adalah monorepo dengan dua aplikasi terpisah, buat:
 - `SUPABASE_SERVICE_ROLE_KEY=<service-role-key>`
 - `SUPABASE_ANON_KEY=<anon-key>`
 - `FRONTEND_URL=https://<frontend-domain>.railway.app`
+- `GROQ_API_KEY=<groq-api-key>`
+- `GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct` (opsional, override jika ID model Groq berubah)
+
+> **PENTING — modul OCR.** `GROQ_API_KEY` mengaktifkan ekstraksi nota berbasis
+> Vision-Language (Groq) yang akurasinya tinggi. Tanpa key ini sistem TIDAK
+> error — OCR tetap jalan memakai fallback Tesseract + regex, tetapi hasilnya
+> kurang akurat. Jadi WAJIB diisi di service **backend** agar Groq Vision aktif
+> di produksi. Key ini rahasia: **jangan** pernah ditaruh di env frontend
+> (variabel `NEXT_PUBLIC_*` ikut terkirim ke browser).
 
 Jika frontend juga ingin diakses dari local saat backend berjalan di Railway, bisa tambahkan origin tambahan:
 
