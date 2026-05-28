@@ -160,50 +160,51 @@ async function countPending() {
 }
 
 async function lookupSaleByKode(kode) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("sales")
-    .select("id, kode_transaksi, user_id, total_harga, created_at")
-    .ilike("kode_transaksi", `%${kode}%`)
+    .select(
+      "id, kode_transaksi, user_id, total_harga, created_at, sale_items(id, product_id, qty, harga_satuan, diskon_persen, subtotal, products(kode_barang, nama_barang, merk))"
+    )
     .order("created_at", { ascending: false })
-    .limit(10);
-  if (error) throw new Error("Gagal mencari transaksi penjualan");
+    .limit(30);
 
+  if (kode) {
+    query = query.ilike("kode_transaksi", `%${kode}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error("Gagal mencari transaksi penjualan");
   if (!data || data.length === 0) return [];
 
-  const results = [];
-  for (const sale of data) {
-    const { data: items } = await supabase
-      .from("sale_items")
-      .select(
-        "id, product_id, qty, harga_satuan, diskon_persen, subtotal, products(kode_barang, nama_barang, merk)"
-      )
-      .eq("sale_id", sale.id);
-
-    results.push({
-      ...sale,
-      items: (items || []).map((it) => ({
-        id: it.id,
-        product_id: it.product_id,
-        kode_barang: it.products?.kode_barang,
-        nama_barang: it.products?.nama_barang,
-        merk: it.products?.merk,
-        qty: it.qty,
-        harga_satuan: Number(it.harga_satuan),
-        diskon_persen: Number(it.diskon_persen || 0),
-        subtotal: Number(it.subtotal),
-      })),
-    });
-  }
-  return results;
+  return data.map((sale) => ({
+    id: sale.id,
+    kode_transaksi: sale.kode_transaksi,
+    user_id: sale.user_id,
+    total_harga: sale.total_harga,
+    created_at: sale.created_at,
+    items: (sale.sale_items || []).map((it) => ({
+      id: it.id,
+      product_id: it.product_id,
+      kode_barang: it.products?.kode_barang,
+      nama_barang: it.products?.nama_barang,
+      merk: it.products?.merk,
+      qty: it.qty,
+      harga_satuan: Number(it.harga_satuan),
+      diskon_persen: Number(it.diskon_persen || 0),
+      subtotal: Number(it.subtotal),
+    })),
+  }));
 }
 
 async function lookupPurchaseByNota(nota) {
   let query = supabase
     .from("purchases")
-    .select("id, no_nota_supplier, user_id, total, status_validasi, created_at")
+    .select(
+      "id, no_nota_supplier, user_id, total, status_validasi, created_at, purchase_items(id, product_id, qty, harga_beli, diskon_persen, source, products(kode_barang, nama_barang, merk))"
+    )
     .eq("status_validasi", "tervalidasi")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(30);
 
   if (nota) {
     query = query.ilike("no_nota_supplier", `%${nota}%`);
@@ -211,33 +212,26 @@ async function lookupPurchaseByNota(nota) {
 
   const { data, error } = await query;
   if (error) throw new Error("Gagal mencari pembelian supplier");
-
   if (!data || data.length === 0) return [];
 
-  const results = [];
-  for (const purchase of data) {
-    const { data: items } = await supabase
-      .from("purchase_items")
-      .select(
-        "id, product_id, qty, harga_beli, diskon_persen, source, products(kode_barang, nama_barang, merk)"
-      )
-      .eq("purchase_id", purchase.id);
-
-    results.push({
-      ...purchase,
-      items: (items || []).map((it) => ({
-        id: it.id,
-        product_id: it.product_id,
-        kode_barang: it.products?.kode_barang,
-        nama_barang: it.products?.nama_barang,
-        merk: it.products?.merk,
-        qty: it.qty,
-        harga_beli: Number(it.harga_beli),
-        diskon_persen: Number(it.diskon_persen || 0),
-      })),
-    });
-  }
-  return results;
+  return data.map((purchase) => ({
+    id: purchase.id,
+    no_nota_supplier: purchase.no_nota_supplier,
+    user_id: purchase.user_id,
+    total: purchase.total,
+    status_validasi: purchase.status_validasi,
+    created_at: purchase.created_at,
+    items: (purchase.purchase_items || []).map((it) => ({
+      id: it.id,
+      product_id: it.product_id,
+      kode_barang: it.products?.kode_barang,
+      nama_barang: it.products?.nama_barang,
+      merk: it.products?.merk,
+      qty: it.qty,
+      harga_beli: Number(it.harga_beli),
+      diskon_persen: Number(it.diskon_persen || 0),
+    })),
+  }));
 }
 
 module.exports = {

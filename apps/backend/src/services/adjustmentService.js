@@ -208,7 +208,7 @@ async function verifyAdminAndApprove({ adjustmentId, username, password }) {
 
   if (profileErr || !profile) {
     const e = new Error("Username admin tidak ditemukan");
-    e.status = 401;
+    e.status = 422;
     throw e;
   }
 
@@ -230,7 +230,7 @@ async function verifyAdminAndApprove({ adjustmentId, username, password }) {
   );
   if (!authUser?.user?.email) {
     const e = new Error("Gagal memverifikasi kredensial admin");
-    e.status = 401;
+    e.status = 422;
     throw e;
   }
 
@@ -245,7 +245,7 @@ async function verifyAdminAndApprove({ adjustmentId, username, password }) {
 
   if (signInErr) {
     const e = new Error("Password admin salah");
-    e.status = 401;
+    e.status = 422;
     throw e;
   }
 

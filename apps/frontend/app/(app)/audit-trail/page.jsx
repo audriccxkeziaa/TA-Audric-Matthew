@@ -178,7 +178,7 @@ export default function AuditTrailPage() {
   const [openPicker, setOpenPicker] = useState(false);
   const [detailRow, setDetailRow] = useState(null);
 
-  const pageSize = 50;
+  const pageSize = 20;
 
   const usersQ = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
   const users = usersQ.data?.data || [];
