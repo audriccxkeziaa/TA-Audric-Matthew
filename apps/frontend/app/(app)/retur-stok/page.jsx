@@ -337,7 +337,7 @@ function ReturSupplierForm() {
           disabled={checkedItems.length === 0 || !alasan.trim() || submitting}
           variant="danger"
         >
-          {submitting ? "Processing..." : "Process Return "}
+          {submitting ? "Loading.." : "Confirm Return "}
         </Button>
       </div>
 
@@ -824,7 +824,7 @@ function ReturPelangganForm() {
           disabled={checkedItems.length === 0 || !alasan.trim() || submitting}
           variant="primary"
         >
-          {submitting ? "Processing..." : "Process Return"}
+          {submitting ? "Loading..." : "Confirm Return"}
         </Button>
       </div>
 
@@ -1435,9 +1435,13 @@ function HistoryTab() {
                         <td className="py-2">
                           <button
                             onClick={() => openDetail(row.id)}
-                            className="text-xs text-brand-600 hover:underline"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
+                            title="Lihat detail"
                           >
-                            Detail
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
                           </button>
                         </td>
                       </tr>

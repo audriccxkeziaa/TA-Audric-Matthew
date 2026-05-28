@@ -1,9 +1,4 @@
 ﻿"use client";
-// /dashboard/restock — R5 Rekomendasi Restock (admin)
-// Menampilkan barang aktif dengan stok <= min_stock dari view
-// v_restock_recommendation. Admin dapat menyesuaikan min_stock
-// langsung dari halaman ini (PATCH /api/products/:id).
-// min_stock ditetapkan MANUAL — bukan Min-Max/EOQ/AI.
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +12,7 @@ import {
   Card,
   Button,
   Badge,
+  Modal,
   Spinner,
   EmptyState,
   StatCard,
@@ -30,11 +26,69 @@ function urgensiBadge(level) {
   return <Badge tone="blue">MENIPIS</Badge>;
 }
 
-// Baris dengan editor min_stock inline.
-function RestockRow({ item, isAdmin, index }) {
+function EyeIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function RestockRow({ item, isAdmin, index, onEdit }) {
+  return (
+    <tr className="hover:bg-slate-50">
+      <td className="px-4 py-2.5 text-xs text-slate-400">{index}</td>
+      <td className="px-4 py-2.5 font-mono text-xs">{item.kode_barang}</td>
+      <td className="px-4 py-2.5">
+        {item.nama_barang}
+        <span className="block text-xs text-slate-400">{item.merk || "-"}</span>
+      </td>
+      <td className="px-4 py-2.5 text-right font-semibold">{angka(item.stok)}</td>
+      <td className="px-4 py-2.5 text-right">{angka(item.min_stock)}</td>
+      <td className="px-4 py-2.5 text-right font-semibold text-red-600">
+        {angka(item.kekurangan)} unit
+      </td>
+      <td className="px-4 py-2.5 text-right">
+        {Number(item.avg_sales_30d || 0) === 0 ? (
+          <span className="text-xs text-slate-400">Belum ada data</span>
+        ) : (
+          <span>
+            {Number(item.avg_sales_30d).toFixed(2)}
+            <span className="text-xs text-slate-400"> unit/hr</span>
+          </span>
+        )}
+      </td>
+      <td className="px-4 py-2.5 text-right">
+        {item.estimasi_hari_habis == null ? (
+          <span className="text-xs text-slate-400">Belum terjual 30h</span>
+        ) : Number(item.estimasi_hari_habis) <= 7 ? (
+          <span className="font-semibold text-red-600">{item.estimasi_hari_habis} hari</span>
+        ) : Number(item.estimasi_hari_habis) <= 14 ? (
+          <span className="font-semibold text-amber-600">{item.estimasi_hari_habis} hari</span>
+        ) : (
+          <span className="text-slate-700">{item.estimasi_hari_habis} hari</span>
+        )}
+      </td>
+      <td className="px-4 py-2.5">{urgensiBadge(item.tingkat_urgensi)}</td>
+      {isAdmin && (
+        <td className="px-4 py-2.5 text-right">
+          <button
+            onClick={() => onEdit(item)}
+            className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
+            title="Ubah min. stok"
+          >
+            <EyeIcon />
+          </button>
+        </td>
+      )}
+    </tr>
+  );
+}
+
+function EditMinStokModal({ item, onClose }) {
   const qc = useQueryClient();
   const toast = useToast();
-  const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(item.min_stock);
   const [alasan, setAlasan] = useState("");
 
@@ -48,107 +102,71 @@ function RestockRow({ item, isAdmin, index }) {
       qc.invalidateQueries({ queryKey: ["restock"] });
       qc.invalidateQueries({ queryKey: ["notif-low-stock"] });
       toast.success(`Min. stok "${item.nama_barang}" diperbarui`);
-      setEditing(false);
-      setAlasan("");
+      onClose();
     },
     onError: (e) => toast.error(e.message),
   });
 
-  function handleCancel() {
-    setValue(item.min_stock);
-    setAlasan("");
-    setEditing(false);
-  }
-
   return (
-    <tr className="hover:bg-slate-50">
-      <td className="px-4 py-2.5 text-xs text-slate-400">{index}</td>
-      <td className="px-4 py-2.5 font-mono text-xs">{item.kode_barang}</td>
-      <td className="px-4 py-2.5">
-        {item.nama_barang}
-        <span className="block text-xs text-slate-400">
-          {item.merk || "-"}
-        </span>
-      </td>
-      <td className="px-4 py-2.5 text-right font-semibold">
-        {angka(item.stok)}
-      </td>
-      <td className="px-4 py-2.5 text-right">
-        {editing ? (
+    <Modal open onClose={onClose} title="Ubah Min. Stok">
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-medium text-slate-800">{item.nama_barang}</p>
+          <p className="text-xs text-slate-400">{item.kode_barang} · {item.merk || "-"}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm">
+          <div>
+            <span className="text-slate-400">Stok saat ini:</span>{" "}
+            <span className="font-semibold">{angka(item.stok)}</span>
+          </div>
+          <div>
+            <span className="text-slate-400">Min. stok sekarang:</span>{" "}
+            <span className="font-semibold">{angka(item.min_stock)}</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Min. Stok Baru
+          </label>
           <input
             type="number"
             min="0"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+            autoFocus
           />
-        ) : (
-          angka(item.min_stock)
-        )}
-      </td>
-      <td className="px-4 py-2.5 text-right font-semibold text-red-600">
-        {angka(item.kekurangan)} unit
-      </td>
-      <td className="px-4 py-2.5 text-right">
-        {Number(item.avg_sales_30d || 0) === 0 ? (
-          <span className="text-slate-400 text-xs">Belum ada data</span>
-        ) : (
-          <span>{Number(item.avg_sales_30d).toFixed(2)}<span className="text-slate-400 text-xs"> unit/hr</span></span>
-        )}
-      </td>
-      <td className="px-4 py-2.5 text-right">
-        {item.estimasi_hari_habis == null ? (
-          <span className="text-slate-400 text-xs">Belum terjual 30h</span>
-        ) : Number(item.estimasi_hari_habis) <= 7 ? (
-          <span className="font-semibold text-red-600">{item.estimasi_hari_habis} hari</span>
-        ) : Number(item.estimasi_hari_habis) <= 14 ? (
-          <span className="font-semibold text-amber-600">{item.estimasi_hari_habis} hari</span>
-        ) : (
-          <span className="text-slate-700">{item.estimasi_hari_habis} hari</span>
-        )}
-      </td>
-      <td className="px-4 py-2.5">{urgensiBadge(item.tingkat_urgensi)}</td>
-      {isAdmin && (
-        <td className="px-4 py-2.5">
-          {editing ? (
-            <div className="flex flex-col items-end gap-1.5 min-w-[200px]">
-              <input
-                type="text"
-                placeholder="Alasan perubahan (wajib)"
-                value={alasan}
-                onChange={(e) => setAlasan(e.target.value)}
-                className="w-full rounded border border-slate-300 px-2 py-1 text-sm placeholder:text-slate-400"
-              />
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  onClick={() => save.mutate()}
-                  disabled={save.isPending || !alasan.trim()}
-                >
-                  Simpan
-                </Button>
-                <Button size="sm" variant="ghost" onClick={handleCancel}>
-                  Batal
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-end">
-              <button
-                onClick={() => setEditing(true)}
-                className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
-                title="Ubah min. stok"
-              >
-                <svg className="w-4 h-4 text-slate-600 hover:text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
-            </div>
-          )}
-        </td>
-      )}
-    </tr>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Alasan Perubahan <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            value={alasan}
+            onChange={(e) => setAlasan(e.target.value)}
+            placeholder="Contoh: Penyesuaian berdasarkan permintaan musiman..."
+            rows={2}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Batal
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => save.mutate()}
+            disabled={save.isPending || !alasan.trim()}
+          >
+            {save.isPending ? "Menyimpan..." : "Simpan"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -156,6 +174,7 @@ export default function RestockPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const [page, setPage] = useState(1);
+  const [editItem, setEditItem] = useState(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["restock"],
@@ -210,18 +229,23 @@ export default function RestockPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {paginatedItems.map((it, index) => (
-                  <RestockRow 
-                  key={it.id} 
-                  item={it} 
-                  isAdmin={isAdmin}
-                  index={(page - 1) * PAGE_SIZE + index + 1}
-                />
+                  <RestockRow
+                    key={it.id}
+                    item={it}
+                    isAdmin={isAdmin}
+                    index={(page - 1) * PAGE_SIZE + index + 1}
+                    onEdit={setEditItem}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </Card>
+
+      {editItem && (
+        <EditMinStokModal item={editItem} onClose={() => setEditItem(null)} />
+      )}
 
       {items.length > PAGE_SIZE && (
         <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500">
