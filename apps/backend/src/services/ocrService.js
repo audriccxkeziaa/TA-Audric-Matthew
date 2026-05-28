@@ -2,7 +2,6 @@
 
 const sharp = require("sharp");
 const { createWorker } = require("tesseract.js");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 let _cv = null;
 let _cvLoadError = null;
@@ -667,23 +666,21 @@ async function recognizePrintedReceipt(inputBuffer) {
   const rawOcrText = chosen.data?.text || "";
 
   // ==========================================
-  // HYBRID CASCADE: Gemini Vision → Claude Vision → Groq → Regex
-  // Tier 1 & 3 gratis, Tier 2 opsional (berbayar)
+  // PIPELINE HIBRIDA: Tesseract (baseline OCR) → Groq Vision (peningkatan akurasi).
+  // Teks Tesseract di atas dikirim sebagai referensi (grounding) ke Groq Vision.
+  // Jika Groq gagal / tidak ada API key, fallback ke hasil parser regex
+  // (tetap berbasis baseline Tesseract). Hanya satu provider AI: Groq.
   // ==========================================
   let finalItems = [];
 
-  const aiParsedItems = await parseWithGeminiVision(inputBuffer, rawOcrText)
-    || await parseWithClaudeVision(inputBuffer, rawOcrText)
-    || await parseWithGroq(rawOcrText);
+  const aiParsedItems = await parseWithGroqVision(inputBuffer, rawOcrText);
 
   if (aiParsedItems && aiParsedItems.length > 0) {
-    const lineText = aiParsedItems[0]?.line_text || "";
-    const src = lineText.match(/\(([^)]+)\)/)?.[1] || "Unknown";
-    console.log(`[POS-OCR] AI (${src}) berhasil mengekstrak ${aiParsedItems.length} produk.`);
+    console.log(`[POS-OCR] Groq Vision meningkatkan hasil: ${aiParsedItems.length} produk.`);
     finalItems = aiParsedItems;
-    pipelineUsed += ` + AI-${src}`;
+    pipelineUsed += " + GroqVision";
   } else {
-    console.log("[POS-OCR] Semua AI gagal. Fallback ke parser Regex tradisional.");
+    console.log("[POS-OCR] Groq Vision gagal/tidak tersedia. Fallback ke parser Regex (baseline Tesseract).");
     finalItems = chosen.items;
   }
 
@@ -780,13 +777,23 @@ async function recognizeHandwrittenReceipt(inputBuffer) {
   const worker = await getWorker();
   await worker.setParameters({ tessedit_pageseg_mode: "6", preserve_interword_spaces: "1" });
   const { data } = await worker.recognize(processed);
+  const rawText = data.text || "";
   let items = flagLowConfidence(parseTesseractData(data), 45);
-  return { raw_text: data.text || "", preprocessing: { pipeline: "opencv/handwritten", width, height, n_lines_detected }, items };
+
+  // Tingkatkan akurasi tulisan tangan dengan Groq Vision (gambar ASLI + teks
+  // Tesseract sebagai referensi). Bila gagal, tetap pakai hasil baseline Tesseract.
+  const aiItems = await parseWithGroqVision(inputBuffer, rawText);
+  let pipeline = "opencv/handwritten";
+  if (aiItems && aiItems.length > 0) {
+    items = aiItems;
+    pipeline += " + GroqVision";
+  }
+  return { raw_text: rawText, preprocessing: { pipeline, width, height, n_lines_detected }, items };
 }
 
-// HYBRID AI PARSER — Claude Vision (Anthropic) + Groq fallback
+// AI PARSER — Groq Vision (satu-satunya provider AI)
 
-// System prompt — dipakai oleh semua AI provider
+// System prompt — dipakai oleh Groq Vision
 const AI_SYSTEM_PROMPT = `Anda adalah agen ekstraksi data nota ahli untuk toko suku cadang motor CV Asia Jaya Maju.
 Tugas Anda: mem-parsing nota pembelian supplier menjadi array JSON yang valid.
 
@@ -812,185 +819,84 @@ Keluarkan TEPAT array JSON dengan struktur:
 ]
 </schema>`;
 
-// TIER 1: Gemini Vision (GRATIS — support gambar)
-// Model cascade: gemini-2.0-flash → gemini-2.0-flash-lite
-// Deteksi "limit: 0" (kuota harian habis) → langsung skip, tidak retry
-// Retry hanya untuk rate-limit sementara (per-menit)
-const GEMINI_MODELS = ["gemini-1.5-flash", "gemini-1.5-flash-8b"];
+// Groq Vision — satu-satunya provider AI. Model vision (default Llama 4 Scout)
+// melihat gambar nota LANGSUNG; teks Tesseract dikirim sebagai referensi
+// (grounding) untuk membantu koreksi. ID model bisa di-override via env karena
+// daftar model Groq sesekali berubah.
+const GROQ_VISION_MODEL =
+  process.env.GROQ_VISION_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct";
 
-function isGeminiDailyQuotaExhausted(errorMsg) {
-  return errorMsg?.includes("limit: 0") || errorMsg?.includes("PerDay");
-}
-
-async function callGeminiModel(genAI, modelName, imagePart, textPart) {
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    systemInstruction: AI_SYSTEM_PROMPT,
-    generationConfig: {
-      temperature: 0,
-      responseMimeType: "application/json",
-    },
-  });
-  const result = await model.generateContent([imagePart, textPart]);
-  return result.response.text();
-}
-
-async function parseWithGeminiVision(imageBuffer, rawText) {
-  if (!process.env.GEMINI_API_KEY) return null;
-
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-  const resizedImage = await sharp(imageBuffer)
-    .resize({ width: 1600, withoutEnlargement: true })
-    .jpeg({ quality: 85 })
-    .toBuffer();
-
-  const imagePart = {
-    inlineData: {
-      mimeType: "image/jpeg",
-      data: resizedImage.toString("base64"),
-    },
-  };
-
-  const textPart = rawText
-    ? `Ekstrak semua item barang dari nota ini menjadi JSON array.\n\nSebagai referensi tambahan, berikut teks kasar OCR:\n<ocr_text>\n${rawText.slice(0, 3000)}\n</ocr_text>`
-    : "Ekstrak semua item barang dari nota ini menjadi JSON array.";
-
-  for (const modelName of GEMINI_MODELS) {
-    try {
-      console.log(`[POS-OCR] Mengirim gambar nota ke ${modelName} (gratis)...`);
-      let responseText;
-
-      try {
-        responseText = await callGeminiModel(genAI, modelName, imagePart, textPart);
-      } catch (err) {
-        const is429 = err.message?.includes("429") || err.status === 429;
-        if (is429 && isGeminiDailyQuotaExhausted(err.message)) {
-          console.warn(`[POS-OCR] ${modelName} kuota harian habis (limit: 0) → skip langsung.`);
-          continue;
-        }
-        if (is429) {
-          const retryMatch = err.message?.match(/retry in (\d+)/i);
-          const waitSec = retryMatch ? Math.min(parseInt(retryMatch[1], 10) + 2, 35) : 10;
-          console.log(`[POS-OCR] ${modelName} rate-limited (sementara) → tunggu ${waitSec}s...`);
-          await new Promise((r) => setTimeout(r, waitSec * 1000));
-          responseText = await callGeminiModel(genAI, modelName, imagePart, textPart);
-        } else {
-          throw err;
-        }
-      }
-
-      const parsed = JSON.parse(responseText);
-      const parsedArray = Array.isArray(parsed) ? parsed :
-        (parsed.items || parsed.data || parsed.products || Object.values(parsed).find(Array.isArray));
-
-      if (!parsedArray || !Array.isArray(parsedArray) || parsedArray.length === 0) {
-        console.warn(`[POS-OCR] ${modelName} → array kosong, coba model berikut...`);
-        continue;
-      }
-
-      console.log(`[POS-OCR] ${modelName} berhasil ekstrak ${parsedArray.length} item.`);
-      return formatAiItems(parsedArray, `Gemini-${modelName}`);
-    } catch (error) {
-      console.warn(`[POS-OCR] ${modelName} GAGAL: ${error.message}`);
-      continue;
-    }
+// Ekstrak array JSON dari respons model, toleran terhadap pembungkus markdown
+// atau objek pembungkus ({ items: [...] }, dst).
+function extractJsonArray(text) {
+  if (!text) return null;
+  let t = String(text).trim().replace(/```json\s*/gi, "").replace(/```/g, "").trim();
+  const start = t.indexOf("[");
+  const end = t.lastIndexOf("]");
+  if (start !== -1 && end !== -1 && end > start) t = t.slice(start, end + 1);
+  try {
+    const parsed = JSON.parse(t);
+    if (Array.isArray(parsed)) return parsed;
+    return (
+      parsed.items ||
+      parsed.data ||
+      parsed.products ||
+      Object.values(parsed).find(Array.isArray) ||
+      null
+    );
+  } catch {
+    return null;
   }
-
-  console.warn("[POS-OCR] Semua model Gemini gagal → lanjut ke fallback.");
-  return null;
 }
 
-// TIER 2: Claude Vision (BERBAYAR — lebih akurat, opsional)
-async function parseWithClaudeVision(imageBuffer, rawText) {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+async function parseWithGroqVision(imageBuffer, rawText) {
+  if (!process.env.GROQ_API_KEY) return null;
 
   try {
-    console.log("[POS-OCR] Fallback → mengirim gambar ke Claude Vision...");
-    const Anthropic = require("@anthropic-ai/sdk").default;
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    console.log(`[POS-OCR] Mengirim gambar nota ke Groq Vision (${GROQ_VISION_MODEL})...`);
+    const Groq = require("groq-sdk");
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const resizedImage = await sharp(imageBuffer)
       .resize({ width: 1600, withoutEnlargement: true })
       .jpeg({ quality: 85 })
       .toBuffer();
+    const dataUrl = `data:image/jpeg;base64,${resizedImage.toString("base64")}`;
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6-20250514",
-      max_tokens: 4096,
+    const userText =
+      (rawText
+        ? `Sebagai referensi tambahan, berikut teks kasar hasil OCR Tesseract:\n<ocr_text>\n${rawText.slice(0, 3000)}\n</ocr_text>\n\n`
+        : "") +
+      "Ekstrak semua item barang dari gambar nota ini menjadi array JSON sesuai schema. Keluarkan HANYA array JSON.";
+
+    const result = await groq.chat.completions.create({
+      model: GROQ_VISION_MODEL,
       temperature: 0,
-      system: AI_SYSTEM_PROMPT,
+      max_tokens: 4096,
       messages: [
+        { role: "system", content: AI_SYSTEM_PROMPT },
         {
           role: "user",
           content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/jpeg",
-                data: resizedImage.toString("base64"),
-              },
-            },
-            {
-              type: "text",
-              text: rawText
-                ? `Ekstrak semua item barang dari nota di atas menjadi JSON array.\n\nReferensi teks OCR:\n<ocr_text>\n${rawText.slice(0, 3000)}\n</ocr_text>`
-                : "Ekstrak semua item barang dari nota di atas menjadi JSON array.",
-            },
+            { type: "text", text: userText },
+            { type: "image_url", image_url: { url: dataUrl } },
           ],
         },
-        { role: "assistant", content: "[" },
       ],
     });
 
-    const responseText = "[" + response.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    const responseText = result.choices?.[0]?.message?.content || "";
+    const parsedArray = extractJsonArray(responseText);
 
-    const parsedArray = JSON.parse(responseText);
-
-    if (!Array.isArray(parsedArray) || parsedArray.length === 0) {
-      throw new Error("Claude mengembalikan array kosong");
+    if (!parsedArray || !Array.isArray(parsedArray) || parsedArray.length === 0) {
+      console.warn("[POS-OCR] Groq Vision → array kosong/tidak valid.");
+      return null;
     }
 
-    console.log(`[POS-OCR] Claude Vision berhasil ekstrak ${parsedArray.length} item.`);
-    return formatAiItems(parsedArray, "Claude-Vision");
+    console.log(`[POS-OCR] Groq Vision berhasil ekstrak ${parsedArray.length} item.`);
+    return formatAiItems(parsedArray, "Groq-Vision");
   } catch (error) {
-    console.error("[POS-OCR] Claude Vision GAGAL:", error.message);
-    return null;
-  }
-}
-
-// TIER 3: Groq/Llama (GRATIS — teks saja, tanpa gambar)
-async function parseWithGroq(rawText) {
-  if (!process.env.GROQ_API_KEY || !rawText) return null;
-
-  try {
-    console.log("[POS-OCR] Fallback → mengirim teks ke Groq/Llama...");
-    const Groq = require("groq-sdk");
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-    const result = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        { role: "system", content: AI_SYSTEM_PROMPT },
-        { role: "user", content: `Berikut teks OCR mentah dari nota:\n<ocr_text>\n${rawText}\n</ocr_text>\n\nEkstrak menjadi JSON array sekarang.` },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0,
-    });
-
-    const responseText = result.choices[0].message.content;
-    const parsed = JSON.parse(responseText);
-    const parsedArray = Array.isArray(parsed) ? parsed :
-      (parsed.items || parsed.data || parsed.products || Object.values(parsed).find(Array.isArray));
-
-    if (!parsedArray || parsedArray.length === 0) return null;
-    return formatAiItems(parsedArray, "Groq-Llama");
-  } catch (error) {
-    console.error("[POS-OCR] Groq Parsing GAGAL:", error.message);
+    console.error("[POS-OCR] Groq Vision GAGAL:", error.message);
     return null;
   }
 }
