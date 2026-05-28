@@ -118,6 +118,7 @@ function ReturSupplierForm() {
   const [catatan, setCatatan] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const fetchPurchases = useCallback(async (q) => {
     setSearching(true);
@@ -193,52 +194,94 @@ function ReturSupplierForm() {
 
   if (!selected) {
     return (
-      <Card className="p-5">
-        <h3 className="mb-3 font-semibold text-slate-800">
-          Pilih Nota Pembelian Supplier
-        </h3>
-        <input
-          placeholder="Filter no. nota supplier..."
-          value={notaQ}
-          onChange={(e) => {
-            setNotaQ(e.target.value);
-            fetchPurchases(e.target.value);
-          }}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-        />
+      <>
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-800">
+              Pilih Nota Pembelian Supplier
+            </h3>
+            <Button size="sm" onClick={() => setPickerOpen(true)}>Browse</Button>
+          </div>
+          <input
+            placeholder="Filter no. nota supplier..."
+            value={notaQ}
+            onChange={(e) => {
+              setNotaQ(e.target.value);
+              fetchPurchases(e.target.value);
+            }}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+          />
 
-        <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
-          {searching && (
-            <div className="py-4 text-center">
-              <Spinner />
-            </div>
-          )}
-          {!searching && purchases.length === 0 && (
-            <p className="py-4 text-center text-sm text-slate-400">Tidak ada nota ditemukan</p>
-          )}
-          {!searching &&
-            purchases.map((p) => (
+          <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+            {searching && (
+              <div className="py-4 text-center">
+                <Spinner />
+              </div>
+            )}
+            {!searching && purchases.length === 0 && (
+              <p className="py-4 text-center text-sm text-slate-400">Tidak ada nota ditemukan</p>
+            )}
+            {!searching &&
+              purchases.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => selectPurchase(p)}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left hover:border-brand-400 hover:bg-brand-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">
+                      {p.no_nota_supplier || "(tanpa nomor)"}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {tanggalJam(p.created_at)} · {p.items?.length || 0} item
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {rupiah(p.total)}
+                  </p>
+                </button>
+              ))}
+          </div>
+        </Card>
+
+        <Modal
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          title="Browse Nota Pembelian Supplier"
+          width="max-w-lg"
+        >
+          <input
+            placeholder="Filter no. nota supplier..."
+            value={notaQ}
+            onChange={(e) => {
+              setNotaQ(e.target.value);
+              fetchPurchases(e.target.value);
+            }}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <div className="mt-3 max-h-96 space-y-2 overflow-y-auto pr-1">
+            {searching && <div className="py-4 text-center"><Spinner /></div>}
+            {!searching && purchases.length === 0 && (
+              <p className="py-4 text-center text-sm text-slate-400">Tidak ada nota ditemukan</p>
+            )}
+            {!searching && purchases.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                onClick={() => selectPurchase(p)}
+                onClick={() => { selectPurchase(p); setPickerOpen(false); }}
                 className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left hover:border-brand-400 hover:bg-brand-50"
               >
                 <div>
-                  <p className="text-sm font-medium text-slate-800">
-                    {p.no_nota_supplier || "(tanpa nomor)"}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {tanggalJam(p.created_at)} · {p.items?.length || 0} item
-                  </p>
+                  <p className="text-sm font-medium text-slate-800">{p.no_nota_supplier || "(tanpa nomor)"}</p>
+                  <p className="text-xs text-slate-400">{tanggalJam(p.created_at)} · {p.items?.length || 0} item</p>
                 </div>
-                <p className="text-sm font-semibold text-slate-700">
-                  {rupiah(p.total)}
-                </p>
+                <p className="text-sm font-semibold text-slate-700">{rupiah(p.total)}</p>
               </button>
             ))}
-        </div>
-      </Card>
+          </div>
+        </Modal>
+      </>
     );
   }
 
@@ -367,6 +410,7 @@ function ReturPelangganForm() {
   const [catatan, setCatatan] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Manager Override state
   const [overrideData, setOverrideData] = useState(null); // { adjustmentId, kode }
@@ -540,63 +584,105 @@ function ReturPelangganForm() {
 
   if (!selected && !overrideData) {
     return (
-      <Card className="p-5">
-        <h3 className="mb-3 font-semibold text-slate-800">
-          Cari Transaksi Penjualan
-        </h3>
-
-        {user?.role === "kasir" && (
-          <div className="mb-3 rounded-lg bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
-            <strong>Info:</strong> Retur pelanggan membutuhkan persetujuan admin
-            (Manager Override). Setelah submit, admin bisa menyetujui via PIN
-            langsung di layar ini atau dari Dashboard Admin.
+      <>
+        <Card className="p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold text-slate-800">
+              Cari Transaksi Penjualan
+            </h3>
+            <Button size="sm" onClick={() => setPickerOpen(true)}>Browse</Button>
           </div>
-        )}
 
-        <input
-          placeholder="Filter kode transaksi..."
-          value={kodeQ}
-          onChange={(e) => {
-            setKodeQ(e.target.value);
-            fetchSales(e.target.value);
-          }}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-        />
-
-        <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
-          {searching && (
-            <div className="py-4 text-center">
-              <Spinner />
+          {user?.role === "kasir" && (
+            <div className="mb-3 rounded-lg bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
+              <strong>Info:</strong> Retur pelanggan membutuhkan persetujuan admin
+              Setelah submit, admin bisa menyetujui via PIN
+              langsung di layar ini atau dari Dashboard Admin.
             </div>
           )}
-          {!searching && sales.length === 0 && (
-            <p className="py-4 text-center text-sm text-slate-400">
-              Tidak ada transaksi ditemukan
-            </p>
-          )}
-          {!searching &&
-            sales.map((s) => (
+
+          <input
+            placeholder="Filter kode transaksi..."
+            value={kodeQ}
+            onChange={(e) => {
+              setKodeQ(e.target.value);
+              fetchSales(e.target.value);
+            }}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+          />
+
+          <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+            {searching && (
+              <div className="py-4 text-center">
+                <Spinner />
+              </div>
+            )}
+            {!searching && sales.length === 0 && (
+              <p className="py-4 text-center text-sm text-slate-400">
+                Tidak ada transaksi ditemukan
+              </p>
+            )}
+            {!searching &&
+              sales.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => selectSale(s)}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left hover:border-brand-400 hover:bg-brand-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">
+                      {s.kode_transaksi}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {tanggalJam(s.created_at)} · {s.items?.length || 0} item
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {rupiah(s.total_harga)}
+                  </p>
+                </button>
+              ))}
+          </div>
+        </Card>
+
+        <Modal
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          title="Browse Transaksi Penjualan"
+          width="max-w-lg"
+        >
+          <input
+            placeholder="Filter kode transaksi..."
+            value={kodeQ}
+            onChange={(e) => {
+              setKodeQ(e.target.value);
+              fetchSales(e.target.value);
+            }}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <div className="mt-3 max-h-96 space-y-2 overflow-y-auto pr-1">
+            {searching && <div className="py-4 text-center"><Spinner /></div>}
+            {!searching && sales.length === 0 && (
+              <p className="py-4 text-center text-sm text-slate-400">Tidak ada transaksi ditemukan</p>
+            )}
+            {!searching && sales.map((s) => (
               <button
                 key={s.id}
                 type="button"
-                onClick={() => selectSale(s)}
+                onClick={() => { selectSale(s); setPickerOpen(false); }}
                 className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-left hover:border-brand-400 hover:bg-brand-50"
               >
                 <div>
-                  <p className="text-sm font-medium text-slate-800">
-                    {s.kode_transaksi}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    {tanggalJam(s.created_at)} · {s.items?.length || 0} item
-                  </p>
+                  <p className="text-sm font-medium text-slate-800">{s.kode_transaksi}</p>
+                  <p className="text-xs text-slate-400">{tanggalJam(s.created_at)} · {s.items?.length || 0} item</p>
                 </div>
-                <p className="text-sm font-semibold text-slate-700">
-                  {rupiah(s.total_harga)}
-                </p>
+                <p className="text-sm font-semibold text-slate-700">{rupiah(s.total_harga)}</p>
               </button>
             ))}
-        </div>
-      </Card>
+          </div>
+        </Modal>
+      </>
     );
   }
 
@@ -663,7 +749,7 @@ function ReturPelangganForm() {
                 disabled={pinSubmitting}
                 className="w-full"
               >
-                {pinSubmitting ? "Memverifikasi..." : "Verifikasi & Setujui"}
+                {pinSubmitting ? "Verifying..." : "Verify & Accept"}
               </Button>
             </div>
 
@@ -694,7 +780,7 @@ function ReturPelangganForm() {
             }}
             className="mt-4 text-xs text-slate-400 hover:text-slate-600"
           >
-            Tutup (retur tetap pending)
+            Close (retur will remain pending and can be approved later from Admin Dashboard)
           </button>
         </div>
       </Card>
@@ -918,9 +1004,6 @@ function PenyesuaianStokForm() {
         <strong>Penyesuaian Stok (Penyusutan):</strong> Gunakan fitur ini untuk
         mencatat barang yang rusak, pecah, hilang, atau penyusutan stok di toko.
         Stok akan <strong>berkurang</strong> sesuai jumlah yang diinput.
-        <br />
-        <strong>Hanya admin</strong> yang berhak melakukan penyesuaian stok untuk
-        mencegah penyalahgunaan.
       </div>
 
       <div className="mb-4 flex items-center justify-between">
@@ -933,7 +1016,7 @@ function PenyesuaianStokForm() {
       {items.length === 0 ? (
         <EmptyState
           title="Belum ada barang"
-          description="Klik 'Tambah Barang' untuk memilih barang yang akan disesuaikan"
+          description="Klik 'Add Item' untuk memilih barang yang akan disesuaikan"
         />
       ) : (
         <div className="overflow-x-auto">
@@ -1162,14 +1245,14 @@ function PendingApprovalTab() {
                     }}
                     disabled={processing === row.id}
                   >
-                    Tolak
+                    Decline
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => handleApprove(row.id)}
                     disabled={processing === row.id}
                   >
-                    {processing === row.id ? "..." : "Setujui"}
+                    {processing === row.id ? "..." : "Accept"}
                   </Button>
                 </div>
               </div>
@@ -1258,7 +1341,7 @@ function PendingApprovalTab() {
                     setRejectReason("");
                   }}
                 >
-                  Tolak
+                  Decline
                 </Button>
                 <Button
                   size="sm"
@@ -1452,7 +1535,7 @@ function HistoryTab() {
             </div>
 
             <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
-              <p>{data.length} item · halaman {page}/{totalPages}</p>
+              <p>{data.length} items · page {page}/{totalPages}</p>
               <div className="flex gap-1">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}

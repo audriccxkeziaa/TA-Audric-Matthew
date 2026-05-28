@@ -381,7 +381,7 @@ export default function MasterBarangPage() {
 
       {total > 0 && (
         <div className="mt-2 flex shrink-0 items-center justify-between text-sm text-slate-500">
-          <span>{total} items · pages {page}/{totalPages}</span>
+          <span>{total} items · page {page}/{totalPages}</span>
           <div className="flex gap-1">
             <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               Previous

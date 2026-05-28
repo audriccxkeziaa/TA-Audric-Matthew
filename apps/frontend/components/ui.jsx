@@ -214,7 +214,7 @@ export function ConfirmDialog({
   onConfirm,
   title = "Konfirmasi",
   message,
-  confirmLabel = "Ya, lanjutkan",
+  confirmLabel = "Yes, confirm",
   tone = "danger",
 }) {
   return (
@@ -222,7 +222,7 @@ export function ConfirmDialog({
       <p className="text-sm text-slate-600">{message}</p>
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
-          Batal
+          Cancel
         </Button>
         <Button variant={tone} onClick={onConfirm}>
           {confirmLabel}

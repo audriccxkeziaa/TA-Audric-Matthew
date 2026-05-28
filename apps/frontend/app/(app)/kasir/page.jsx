@@ -717,7 +717,7 @@ function BayarModal({ open, onClose, total, cart, onConfirm, processing }) {
 
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="secondary" onClick={onClose} disabled={processing}>
-            Batal (Esc)
+            Cancel (Esc)
           </Button>
           <Button
             onClick={() => onConfirm(n)}

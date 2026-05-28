@@ -743,7 +743,7 @@ export default function StokMasukPage() {
                 disabled={!file || ocrLoading}
                 onClick={() => runOcr()}
               >
-                {ocrLoading ? "Memproses OCR..." : "Proses OCR"}
+                {ocrLoading ? "Processing OCR..." : "Process OCR"}
               </Button>
             </div>
 
