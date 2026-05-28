@@ -57,6 +57,8 @@ function ocrItemToRow(item) {
     confidence: item.confidence || {},
     confidence_avg: item.confidence_avg,
     low_confidence: item.low_confidence,
+    needs_review: !!item.needs_review,
+    review_reasons: item.review_reasons || [],
     line_text: item.line_text || "",
     candidates: cands,
     action: exactMatch ? "restock" : autoNew ? "new" : null,
@@ -241,6 +243,8 @@ export default function StokMasukPage() {
       confidence: r.confidence || {},
       confidence_avg: r.confidence_avg ?? null,
       low_confidence: !!r.low_confidence,
+      needs_review: !!r.needs_review,
+      review_reasons: r.review_reasons || [],
       line_text: r.line_text || "",
       candidates: r.candidates || [],
       action: r.action || null,
@@ -264,6 +268,8 @@ export default function StokMasukPage() {
       confidence: it.confidence || {},
       confidence_avg: it.confidence_avg ?? null,
       low_confidence: !!it.low_confidence,
+      needs_review: !!it.needs_review,
+      review_reasons: it.review_reasons || [],
       line_text: it.line_text || "",
       candidates: it.candidates || [],
       action: it.action || null,
@@ -1283,6 +1289,20 @@ function ItemRow({
           Delete Row
         </button>
       </div>
+
+      {/* Peringatan validasi: item terdeteksi meragukan → wajib diperiksa */}
+      {row.needs_review && (row.review_reasons?.length > 0) && (
+        <div className="mb-2 rounded-md border border-red-300 bg-red-50 px-3 py-2">
+          <p className="text-xs font-semibold text-red-800">
+            Perlu diperiksa — sistem mendeteksi kemungkinan salah baca:
+          </p>
+          <ul className="mt-0.5 list-disc pl-4 text-[11px] text-red-700">
+            {row.review_reasons.map((reason, i) => (
+              <li key={i}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Alert kesamaan tinggi (>= 80% tapi bukan 100%) */}
       {showHighMatchAlert && (

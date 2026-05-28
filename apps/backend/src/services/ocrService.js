@@ -762,7 +762,7 @@ async function recognizePrintedReceipt(inputBuffer) {
 
   return { raw_text: rawOcrText,
     preprocessing: { pipeline: pipelineUsed, otsu_threshold: otsuValue, paper_color: color,width: metaWidth, height: metaHeight, upscaled_to: upscaledTo },
-    items: finalItems };
+    items: validateAndFlagItems(finalItems) };
 }
 
 // JALUR TULISAN TANGAN (opencv4nodejs)
@@ -864,7 +864,7 @@ async function recognizeHandwrittenReceipt(inputBuffer) {
     items = aiItems;
     pipeline += " + GroqVision";
   }
-  return { raw_text: rawText, preprocessing: { pipeline, width, height, n_lines_detected }, items };
+  return { raw_text: rawText, preprocessing: { pipeline, width, height, n_lines_detected }, items: validateAndFlagItems(items) };
 }
 
 // AI PARSER — Groq Vision (satu-satunya provider AI)
@@ -878,7 +878,7 @@ Tugas Anda: mem-parsing nota pembelian supplier menjadi array JSON yang valid.
 2. EKSTRAK SEMUA BARIS: Ekstrak SETIAP baris barang yang diorder, dari baris pertama sampai baris terakhir. JANGAN melewatkan, menggabungkan, atau meringkas baris. Lebih baik menebak baris yang buram daripada menghilangkannya. Periksa ulang: jumlah objek JSON harus sama dengan jumlah baris barang pada nota.
 3. SANITASI KODE: Perbaiki OCR typo pada kode barang (misal '5VT' → 'SVT', '0' → 'O' jika konteks huruf, 'l' → '1' jika konteks angka). Pertahankan format dengan tanda hubung bila ada.
 4. NAMA BARANG BERSIH: Field "nama_barang" HANYA berisi nama produk. JANGAN sertakan: kode barang, nomor urut baris, qty, harga, persen diskon, angka "0 00" di akhir, tanda centang/verifikasi seperti "v" atau "V", atau potongan kolom lain. Contoh: dari baris "3 54P-E7611-00 54P E7611 KIPAS VBEL 10 PCS 49.000 0,00" → nama_barang HARUS "KIPAS VBEL" (tanpa kode, tanpa angka).
-5. PENALARAN ANGKA: Jika angka terpotong, ingat bahwa [Harga Total ≈ Qty × Harga Beli]. Gunakan logika ini untuk mengoreksi angka yang salah baca. "harga_beli" adalah HARGA SATUAN, bukan total.
+5. PENALARAN ANGKA: Jika angka terpotong, ingat bahwa [Harga Total ≈ Qty × Harga Beli]. Gunakan logika ini untuk mengoreksi angka yang salah baca. "harga_beli" adalah HARGA SATUAN, bukan total. Selalu isi "harga_total" dari kolom Total baris tersebut bila terlihat (untuk verifikasi silang); isi 0 bila tidak ada.
 6. ABAIKAN BARIS NON-ITEM: header toko, alamat, tanggal, nomor nota/transaksi, baris judul kolom (No, Kode, Nama Item, Jml, Satuan, Harga, Pot, Total), footer, total, subtotal, pajak/PPN, dan potongan keseluruhan. JANGAN pernah menjadikan baris judul/header sebagai item.
 7. STRICT OUTPUT: Respons Anda HANYA boleh berupa array JSON murni. Tanpa markdown, tanpa penjelasan, tanpa blockquote.
 </rules>
@@ -891,6 +891,7 @@ Keluarkan TEPAT array JSON dengan struktur:
     "nama_barang": "string (HANYA nama produk, tanpa kode/angka/nomor urut)",
     "qty": number (jumlah barang, integer, wajib),
     "harga_beli": number (harga SATUAN Rupiah, integer tanpa titik/koma, wajib),
+    "harga_total": number (kolom Total baris ini bila ada, integer; 0 jika tidak ada),
     "diskon_persen": number (persentase diskon, default 0),
     "transaction_code": "string|null (kode transaksi misal S1-25120493 jika ada)"
   }
@@ -961,28 +962,49 @@ async function parseWithGroqVision(imageBuffer, rawText, expectedRows = 0) {
       "Ingat: field nama_barang HANYA nama produk (tanpa kode, tanpa nomor urut, tanpa angka/0 di akhir). " +
       "Keluarkan HANYA array JSON.";
 
-    const result = await groq.chat.completions.create({
-      model: GROQ_VISION_MODEL,
-      temperature: 0,
-      max_tokens: 8000,
-      messages: [
-        { role: "system", content: AI_SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userText },
-            { type: "image_url", image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    });
+    const callGroq = async (text) =>
+      groq.chat.completions.create({
+        model: GROQ_VISION_MODEL,
+        temperature: 0,
+        max_tokens: 8000,
+        messages: [
+          { role: "system", content: AI_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "text", text },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      });
 
-    const responseText = result.choices?.[0]?.message?.content || "";
-    const parsedArray = extractJsonArray(responseText);
+    const result = await callGroq(userText);
+    let parsedArray = extractJsonArray(result.choices?.[0]?.message?.content || "");
 
     if (!parsedArray || !Array.isArray(parsedArray) || parsedArray.length === 0) {
       console.warn("[POS-OCR] Groq Vision → array kosong/tidak valid.");
       return null;
+    }
+
+    // RECALL GUARD: bila baris yang ditemukan jauh lebih sedikit dari deteksi
+    // Tesseract, coba sekali lagi dengan instruksi lebih tegas. Ambil hasil
+    // dengan baris terbanyak.
+    if (expectedRows > 0 && parsedArray.length < expectedRows - 1) {
+      console.log(`[POS-OCR] Groq baru ${parsedArray.length}/${expectedRows} baris → retry sekali...`);
+      try {
+        const retryText =
+          userText +
+          `\n\nPENTING: Percobaan sebelumnya hanya menemukan ${parsedArray.length} baris, padahal nota memiliki sekitar ${expectedRows} baris. Periksa ULANG tabel dari baris pertama sampai terakhir dan ekstrak SEMUA baris item tanpa terlewat.`;
+        const retry = await callGroq(retryText);
+        const retryArr = extractJsonArray(retry.choices?.[0]?.message?.content || "");
+        if (Array.isArray(retryArr) && retryArr.length > parsedArray.length) {
+          console.log(`[POS-OCR] Retry lebih lengkap: ${retryArr.length} baris.`);
+          parsedArray = retryArr;
+        }
+      } catch (e) {
+        console.warn("[POS-OCR] Retry Groq gagal:", e.message);
+      }
     }
 
     console.log(`[POS-OCR] Groq Vision berhasil ekstrak ${parsedArray.length} item.`);
@@ -991,6 +1013,47 @@ async function parseWithGroqVision(imageBuffer, rawText, expectedRows = 0) {
     console.error("[POS-OCR] Groq Vision GAGAL:", error.message);
     return null;
   }
+}
+
+// Lapisan validasi akhir: cek aritmetika (qty×harga vs Total), auto-koreksi
+// harga yang kosong, dan tandai item meragukan agar WAJIB ditinjau user.
+// Tujuan: error yang lolos ke data tersimpan mendekati nol.
+function validateAndFlagItems(items) {
+  return (items || []).map((it) => {
+    const raw = it.raw || {};
+    const reasons = [];
+    const total = Number(it._harga_total) || 0;
+    const qty = Number(raw.qty) || 0;
+    let harga = Number(raw.harga_beli) || 0;
+
+    if (harga <= 0 && total > 0 && qty > 0) {
+      harga = Math.round(total / qty);
+      raw.harga_beli = harga;
+      reasons.push("harga beli direkonstruksi dari Total ÷ qty");
+    }
+    if (harga > 0 && qty > 0 && total > 0) {
+      const expected = harga * qty;
+      const diff = Math.abs(expected - total) / total;
+      if (diff > 0.05) reasons.push(`qty×harga (${expected}) ≠ Total nota (${total})`);
+    }
+    if (harga <= 0) reasons.push("harga beli kosong/0");
+    if (!Number.isFinite(qty) || qty <= 0) reasons.push("qty kosong/0");
+    const nama = String(raw.nama_barang || "").trim();
+    if (nama.length < 3 || nama === "(tidak terbaca)") reasons.push("nama barang meragukan");
+    if (!raw.kode_barang || raw.kode_barang === "UNKNOWN") reasons.push("kode barang kosong");
+
+    const needsReview = reasons.length > 0;
+    const prevConf = typeof it.confidence_avg === "number" ? it.confidence_avg : 99;
+    const out = {
+      ...it,
+      confidence_avg: needsReview ? Math.min(prevConf, 45) : prevConf,
+      low_confidence: needsReview ? true : !!it.low_confidence,
+      needs_review: needsReview,
+      review_reasons: reasons,
+    };
+    delete out._harga_total;
+    return out;
+  });
 }
 
 function formatAiItems(parsedArray, source) {
@@ -1004,6 +1067,7 @@ function formatAiItems(parsedArray, source) {
         harga_beli: Math.max(0, Math.round(Number(item.harga_beli) || 0)),
         diskon_persen: Math.max(0, Math.min(100, Number(diskon) || 0)),
       },
+      _harga_total: Math.max(0, Math.round(Number(item.harga_total) || 0)),
       confidence: {
         kode_barang: 99,
         nama_barang: 99,
@@ -1011,6 +1075,8 @@ function formatAiItems(parsedArray, source) {
         harga_beli: 99,
         diskon_persen: 99,
       },
+      confidence_avg: 99,
+      low_confidence: false,
       line_text: `AI Extracted (${source}): ${item.nama_barang}`,
       transaction_index: item.transaction_code ? 1 : 0,
       transaction_code: item.transaction_code || null,
@@ -1039,5 +1105,8 @@ module.exports = {
   extractItemNameFromZone,
   isValidItemCode,
   flagLowConfidence,
+  validateAndFlagItems,
+  cleanItemName,
+  isHeaderRow,
   terminateWorker,
 };

@@ -89,9 +89,11 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
       if (extracted.isDigital) {
         // Parse text PDF langsung pakai parser yang sama, tanpa Tesseract.
         const fakeData = { text: extracted.text, lines: [], confidence: 99 };
-        let items = ocrService.flagLowConfidence(
-          ocrService.parseTesseractData(fakeData),
-          60
+        let items = ocrService.validateAndFlagItems(
+          ocrService.flagLowConfidence(
+            ocrService.parseTesseractData(fakeData),
+            60
+          )
         );
         // Levenshtein matching
         const catalog = await purchaseRepository.listActiveProductsForMatching();
@@ -101,6 +103,8 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
           confidence: item.confidence,
           confidence_avg: item.confidence_avg,
           low_confidence: item.low_confidence,
+          needs_review: item.needs_review || false,
+          review_reasons: item.review_reasons || [],
           line_text: item.line_text,
           transaction_index: item.transaction_index,
           transaction_code: item.transaction_code,
@@ -268,6 +272,8 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
     confidence: item.confidence,
     confidence_avg: item.confidence_avg,
     low_confidence: item.low_confidence,
+    needs_review: item.needs_review || false,
+    review_reasons: item.review_reasons || [],
     line_text: item.line_text,
     candidates: stringMatcher.findTopCandidates({
       ocrName: item.raw.nama_barang,
