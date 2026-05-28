@@ -1510,7 +1510,7 @@ function DraftsPanel({ drafts, loading, onOpen, onDelete, onRefresh }) {
           </p>
         </div>
         <Button size="sm" variant="ghost" onClick={onRefresh}>
-          ↻ Reload
+          ↻ Refresh
         </Button>
       </div>
 

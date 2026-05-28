@@ -1015,7 +1015,7 @@ function PenyesuaianStokForm() {
           disabled={items.length === 0 || !alasan.trim() || submitting}
           variant="danger"
         >
-          {submitting ? "Processing..." : "Proses Stock Adjustment"}
+          {submitting ? "Loading..." : "Confirm Adjustment"}
         </Button>
       </div>
 
