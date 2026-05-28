@@ -46,14 +46,15 @@ function validateProductPayload(payload, { isUpdate = false } = {}) {
   return errors;
 }
 
-// GET /api/products?q=&limit=&page=&status=&stock=
+// GET /api/products?q=&limit=&page=&status=&stock=&merk=
 async function searchProducts(req, res) {
   try {
-    const { q = "", limit, page, status, stock } = req.query;
+    const { q = "", limit, page, status, stock, merk } = req.query;
     const result = await productRepository.search({
       q,
       status: status === "aktif" || status === "nonaktif" ? status : status === "all" ? null : "aktif",
       stockFilter: ["low", "out", "normal"].includes(stock) ? stock : null,
+      merk: merk || null,
       limit: limit ? Math.min(parseInt(limit, 10), 200) : 20,
       page: parseInt(page, 10) || 1,
     });
@@ -61,6 +62,17 @@ async function searchProducts(req, res) {
   } catch (err) {
     console.error("[POS-PROD] searchProducts error:", err.message);
     return res.status(500).json({ error: "Gagal mencari produk" });
+  }
+}
+
+// GET /api/products/merks
+async function listMerks(req, res) {
+  try {
+    const merks = await productRepository.listDistinctMerks();
+    return res.json({ data: merks });
+  } catch (err) {
+    console.error("[POS-PROD] listMerks error:", err.message);
+    return res.status(500).json({ error: "Gagal memuat daftar merk" });
   }
 }
 
@@ -110,7 +122,7 @@ async function createProduct(req, res) {
       `[POS-PROD] Produk baru ${created.kode_barang} dibuat oleh ${req.user.username}`
     );
     return res.status(201).json({
-      message: "Produk berhasil dibuat",
+      message: "Produk berhasil dibuat.",
       data: created,
     });
   } catch (err) {
@@ -225,7 +237,7 @@ async function updateProduct(req, res) {
       `[POS-PROD] Produk ${updated.kode_barang} diupdate oleh ${req.user.username}`
     );
     return res.json({
-      message: "Produk berhasil diupdate",
+      message: "Produk berhasil diupdate.",
       data: updated,
     });
   } catch (err) {
@@ -239,6 +251,7 @@ async function updateProduct(req, res) {
 
 module.exports = {
   searchProducts,
+  listMerks,
   getProduct,
   createProduct,
   updateProduct,

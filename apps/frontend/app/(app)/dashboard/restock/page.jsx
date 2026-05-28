@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { restockApi, productsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -11,6 +11,7 @@ import {
   PageHeader,
   Card,
   Button,
+  Select,
   Badge,
   Modal,
   Spinner,
@@ -31,14 +32,20 @@ export default function RestockPage() {
   const isAdmin = user?.role === "admin";
   const [page, setPage] = useState(1);
   const [detailItem, setDetailItem] = useState(null);
+  const [stockFilter, setStockFilter] = useState("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["restock"],
     queryFn: restockApi.list,
     staleTime: 30_000,
   });
-  const items = data?.data || [];
+  const allItems = data?.data || [];
   const summary = data?.summary || { total: 0, habis: 0, kritis: 0, menipis: 0 };
+
+  const items = useMemo(() => {
+    if (stockFilter === "all") return allItems;
+    return allItems.filter((it) => it.tingkat_urgensi === stockFilter);
+  }, [allItems, stockFilter]);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const paginatedItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -56,6 +63,21 @@ export default function RestockPage() {
         <StatCard label="Kritis" value={angka(summary.kritis)} tone="warn" />
         <StatCard label="Menipis" value={angka(summary.menipis)} />
       </div>
+
+      <Card className="mb-3 shrink-0 p-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-slate-700">Filter Kondisi:</span>
+          <Select
+            value={stockFilter}
+            onChange={(e) => { setStockFilter(e.target.value); setPage(1); }}
+          >
+            <option value="all">Semua Kondisi</option>
+            <option value="HABIS">Stok Habis</option>
+            <option value="KRITIS">Stok Kritis</option>
+            <option value="MENIPIS">Stok Menipis</option>
+          </Select>
+        </div>
+      </Card>
 
       <Card className="flex min-h-0 flex-1 flex-col p-0">
         {isLoading ? (

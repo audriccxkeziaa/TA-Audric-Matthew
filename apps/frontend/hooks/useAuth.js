@@ -1,10 +1,5 @@
-﻿"use client";
-// hooks/useAuth.js — Context autentikasi global
-// Menyimpan user yang sedang login + fungsi login/logout. Sesi (token)
-// disimpan di localStorage via api-client. Saat aplikasi dibuka ulang,
-// provider memvalidasi token ke GET /api/auth/me.
-
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+"use client";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { authApi } from "@/lib/api";
 import {
   getSession,
@@ -17,8 +12,8 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const intervalRef = useRef(null);
 
-  // Saat mount: kalau ada sesi tersimpan, verifikasi ke backend.
   useEffect(() => {
     let aktif = true;
     async function bootstrap() {
@@ -31,7 +26,6 @@ export function AuthProvider({ children }) {
         const res = await authApi.me();
         if (aktif) setUser(res.user);
       } catch {
-        // Token mati / tidak valid → bersihkan.
         clearSession();
         if (aktif) setUser(null);
       } finally {
@@ -43,6 +37,32 @@ export function AuthProvider({ children }) {
       aktif = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    intervalRef.current = setInterval(async () => {
+      try {
+        const res = await authApi.me();
+        if (!res.user || res.user.is_active === false) {
+          clearSession();
+          setUser(null);
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+            window.location.href = "/login";
+          }
+        }
+      } catch {
+        clearSession();
+        setUser(null);
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login";
+        }
+      }
+    }, 15_000);
+    return () => clearInterval(intervalRef.current);
+  }, [user]);
 
   const login = useCallback(async (username, password) => {
     const res = await authApi.login(username, password);

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const {
   searchProducts,
+  listMerks,
   getProduct,
   createProduct,
   updateProduct,
@@ -12,6 +13,7 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 router.use(authMiddleware, roleMiddleware("kasir", "admin"));
 
 router.get("/", searchProducts);
+router.get("/merks", listMerks);
 router.get("/:id", getProduct);
 router.post("/", createProduct);
 router.patch("/:id", updateProduct);

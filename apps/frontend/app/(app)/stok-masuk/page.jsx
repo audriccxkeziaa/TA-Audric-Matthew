@@ -340,7 +340,7 @@ export default function StokMasukPage() {
   async function removeDraft(draftId) {
     try {
       await purchasesApi.drafts.remove(draftId);
-      toast.success("Draft berhasil dihapus");
+      toast.success("Draft berhasil dihapus.");
       setDrafts((arr) => arr.filter((d) => d.id !== draftId));
       if (currentDraftId === draftId) setCurrentDraftId(null);
     } catch (e) {
@@ -593,7 +593,7 @@ export default function StokMasukPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-800">Input Other Purchase Invoice (Manual)</p>
+            <p className="text-sm font-semibold text-slate-800">Input Other Purchase <Invoice></Invoice> (Manual)</p>
             <p className="mt-1 text-xs text-slate-500">
               Input data stok masuk spareparts. Direkomendasikan untuk nota yang kualitasnya buruk/rusak.
             </p>
@@ -1031,7 +1031,7 @@ export default function StokMasukPage() {
         onConfirm={() => removeDraft(confirmDelete)}
         title="Hapus Draft?"
         message="Draft beserta hasil OCR-nya akan dihapus permanen. Lanjutkan?"
-        confirmLabel="Ya, hapus"
+        confirmLabel="Yes, delete"
       />
 
       {/* ============ MODAL: hasil commit ============ */}
@@ -1366,8 +1366,11 @@ function ItemRow({
             onChange={handleKodeChange}
             onKeyDown={handleKodeKeyDown}
             placeholder="Ketik / scan barcode → Enter"
+            disabled={row.action === "restock"}
             className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              fieldClass("kode_barang") || "border-slate-300"
+              row.action === "restock"
+                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                : fieldClass("kode_barang") || "border-slate-300"
             }`}
           />
           {autoFillMsg && (
@@ -1381,12 +1384,14 @@ function ItemRow({
           <input
             value={row.nama_barang}
             onChange={(e) => onPatch({ nama_barang: e.target.value })}
+            disabled={row.action === "restock"}
             className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              fieldClass("nama_barang") || "border-slate-300"
+              row.action === "restock"
+                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                : fieldClass("nama_barang") || "border-slate-300"
             }`}
           />
         </label>
-        {/* Merk — wajib untuk produk baru, readonly untuk restock */}
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
             Merk{row.action === "new" && <span className="ml-0.5 text-red-500">*</span>}
@@ -1426,8 +1431,11 @@ function ItemRow({
             min="0"
             value={row.harga_beli}
             onChange={(e) => onPatch({ harga_beli: e.target.value })}
+            disabled={row.action === "restock"}
             className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              fieldClass("harga_beli") || "border-slate-300"
+              row.action === "restock"
+                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                : fieldClass("harga_beli") || "border-slate-300"
             }`}
           />
         </label>
@@ -1441,7 +1449,12 @@ function ItemRow({
             value={row.harga_jual || ""}
             onChange={(e) => onPatch({ harga_jual: e.target.value })}
             placeholder="0"
-            className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+            disabled={row.action === "restock"}
+            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
+              row.action === "restock"
+                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                : "border-slate-300"
+            }`}
           />
         </label>
       </div>

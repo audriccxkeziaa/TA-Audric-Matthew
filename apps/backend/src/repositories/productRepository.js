@@ -49,7 +49,22 @@ async function existsByKodeBarang(kodeBarang, excludeId = null) {
 // Pencarian produk untuk halaman /kasir & /master-barang
 // q: search term, status: 'aktif'|'nonaktif'|null, stockFilter: 'low'|'out'|'normal'|null
 // page: nomor halaman (1-based), limit: per halaman
-async function search({ q = "", status = null, stockFilter = null, limit = 20, page = 1 }) {
+async function listDistinctMerks() {
+  const { data, error } = await supabase
+    .from("products")
+    .select("merk")
+    .eq("status", "aktif")
+    .not("merk", "is", null)
+    .order("merk", { ascending: true });
+  if (error) {
+    console.error("[POS-PRODREPO] listDistinctMerks error:", error.message);
+    return [];
+  }
+  const unique = [...new Set((data || []).map((r) => r.merk).filter(Boolean))];
+  return unique;
+}
+
+async function search({ q = "", status = null, stockFilter = null, merk = null, limit = 20, page = 1 }) {
   const offset = (Math.max(1, page) - 1) * limit;
 
   let query = supabase
@@ -73,6 +88,10 @@ async function search({ q = "", status = null, stockFilter = null, limit = 20, p
     query = query.or(
       `nama_barang.ilike.%${term}%,kode_barang.ilike.%${term}%,kode_normalized.ilike.${termNorm}%`
     );
+  }
+
+  if (merk) {
+    query = query.eq("merk", merk);
   }
 
   const { data, error, count } = await query;
@@ -158,6 +177,7 @@ module.exports = {
   findByIds,
   findById,
   existsByKodeBarang,
+  listDistinctMerks,
   search,
   create,
   update,

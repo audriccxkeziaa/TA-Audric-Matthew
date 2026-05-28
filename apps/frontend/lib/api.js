@@ -10,8 +10,9 @@ export const authApi = {
 };
 
 export const productsApi = {
-  // params: { q, limit, status, stock }
+  // params: { q, limit, status, stock, merk }
   list: (params) => apiFetch("/products", { query: params }),
+  merks: () => apiFetch("/products/merks"),
   get: (id) => apiFetch(`/products/${id}`),
   create: (body) => apiFetch("/products", { method: "POST", body }),
   update: (id, body) => apiFetch(`/products/${id}`, { method: "PATCH", body }),

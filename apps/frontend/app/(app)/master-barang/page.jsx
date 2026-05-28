@@ -5,7 +5,7 @@
 // - min_stock hanya bisa diubah admin (RBAC field-level).
 // - "Hapus" = soft delete → status nonaktif.
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -196,7 +196,7 @@ export default function MasterBarangPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
-  const [stockFilter, setStockFilter] = useState("all");
+  const [merkFilter, setMerkFilter] = useState("");
   const [page, setPage] = useState(1);
 
   // Debounce: hanya kirim query ke backend 300ms setelah user berhenti mengetik
@@ -225,13 +225,20 @@ export default function MasterBarangPage() {
     setBarcodeInput("");
   }
 
+  const merksQ = useQuery({
+    queryKey: ["product-merks"],
+    queryFn: productsApi.merks,
+    staleTime: 60_000,
+  });
+  const merkList = merksQ.data?.data || [];
+
   const { data, isLoading } = useQuery({
-    queryKey: ["products", q, stockFilter, page],
+    queryKey: ["products", q, merkFilter, page],
     queryFn: () =>
       productsApi.list({
         q,
         status: "aktif",
-        stock: stockFilter === "all" ? undefined : stockFilter,
+        merk: merkFilter || undefined,
         limit: 20,
         page,
       }),
@@ -280,13 +287,13 @@ export default function MasterBarangPage() {
             onChange={(e) => { setSearchInput(e.target.value); setPage(1); }}
           />
           <Select
-            value={stockFilter}
-            onChange={(e) => { setStockFilter(e.target.value); setPage(1); }}
+            value={merkFilter}
+            onChange={(e) => { setMerkFilter(e.target.value); setPage(1); }}
           >
-            <option value="all">Semua Kondisi Stok</option>
-            <option value="normal">Stok Normal</option>
-            <option value="low">Stok Menipis</option>
-            <option value="out">Stok Habis</option>
+            <option value="">Semua Merk</option>
+            {merkList.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
           </Select>
         </div>
       </Card>
