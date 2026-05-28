@@ -3,6 +3,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { adjustmentsApi } from "@/lib/api";
 
 // Daftar menu. `roles` menentukan siapa yang boleh melihat item.
 const NAV = [
@@ -76,6 +78,14 @@ export default function Sidebar({ role, open, onClose }) {
   const pathname = usePathname();
   const items = NAV.filter((n) => n.roles.includes(role));
 
+  const { data: pendingData } = useQuery({
+    queryKey: ["notif-pending-approval"],
+    queryFn: adjustmentsApi.pendingCount,
+    refetchInterval: 30_000,
+    enabled: role === "admin",
+  });
+  const pendingCount = pendingData?.count || 0;
+
   return (
     <>
       {/* Overlay mobile */}
@@ -102,6 +112,7 @@ export default function Sidebar({ role, open, onClose }) {
               pathname === item.href ||
               (item.href !== "/dashboard" &&
                 pathname.startsWith(item.href + "/"));
+            const showBadge = item.href === "/retur-stok" && pendingCount > 0;
             return (
               <Link
                 key={item.href}
@@ -114,7 +125,12 @@ export default function Sidebar({ role, open, onClose }) {
                 }`}
               >
                 <Icon name={item.icon} />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {showBadge && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             );
           })}

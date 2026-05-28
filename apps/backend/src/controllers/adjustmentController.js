@@ -129,10 +129,7 @@ async function pendingCount(req, res) {
 async function lookupSale(req, res) {
   try {
     const { kode } = req.query;
-    if (!kode || !kode.trim()) {
-      return res.status(400).json({ error: "Parameter kode wajib diisi" });
-    }
-    const data = await adjustmentService.lookupSale(kode.trim());
+    const data = await adjustmentService.lookupSale(kode?.trim() || "");
     return res.json({ data });
   } catch (err) {
     console.error("[POS-ADJ] lookupSale error:", err.message);
