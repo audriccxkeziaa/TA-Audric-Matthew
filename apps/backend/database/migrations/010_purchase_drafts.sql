@@ -1,14 +1,10 @@
--- =================================================================
 -- Migration 010 — purchase_drafts (Cross-device Draft Resume)
--- =================================================================
 -- Untuk fitur "scan dari HP, edit di laptop": draft OCR yang belum
 -- di-commit disimpan di tabel ini. User bisa list & resume dari device
 -- manapun selama login dengan akun yang sama.
 --
 -- Catatan keamanan: payload disimpan sebagai JSONB. Tidak boleh berisi
 -- data sensitif lain selain hasil parsing OCR + state validasi user.
--- =================================================================
-
 CREATE TABLE IF NOT EXISTS purchase_drafts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -1,6 +1,4 @@
-// =================================================================
-// seed.js — Seed data demo untuk presentasi skripsi
-// =================================================================
+﻿// seed.js — Seed data demo untuk presentasi skripsi
 // Idempotent: aman dijalankan berulang. Cek-by-key sebelum insert.
 //
 //   node apps/backend/database/seed.js
@@ -23,7 +21,6 @@
 //
 // Beberapa produk sengaja dibiarkan dengan stok rendah supaya R5
 // (Rekomendasi Restock) dan notifikasi low-stock punya data demo.
-// =================================================================
 
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
 const { createClient } = require("@supabase/supabase-js");

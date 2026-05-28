@@ -1,10 +1,7 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /login — Halaman autentikasi
-// =================================================================
 // Setelah submit berhasil, tampilkan LoginLoadingScreen sebelum
 // melakukan redirect ke dashboard (admin) atau kasir (kasir).
-// =================================================================
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";

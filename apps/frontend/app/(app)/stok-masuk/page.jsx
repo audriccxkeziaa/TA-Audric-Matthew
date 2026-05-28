@@ -1,8 +1,6 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /stok-masuk — Input Stok Masuk via OCR Nota Supplier
-// =================================================================
-// Alur (Gambar 3.6 laporan):
+// Alur :
 //   Step 1  Upload nota  → POST /api/purchases/ocr
 //   Step 2  Validasi hasil OCR (draft, status 'unsaved')
 //   Step 3  Konfirmasi   → POST /api/purchases/commit (R2)
@@ -14,7 +12,6 @@
 //
 // Frontend TIDAK pernah mempercayai hasil OCR mentah — selalu draft +
 // validasi user sebelum commit.
-// =================================================================
 
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1081,9 +1078,7 @@ export default function StokMasukPage() {
   );
 }
 
-// =================================================================
 // Komponen: input diskon fleksibel (% atau nominal Rp)
-// =================================================================
 function DiskonInput({ diskonPersen, hargaBeli, fieldClass, onPatch }) {
   const [mode, setMode] = useState("persen"); // "persen" | "rupiah"
   const [rpValue, setRpValue] = useState("");
@@ -1144,9 +1139,7 @@ function DiskonInput({ diskonPersen, hargaBeli, fieldClass, onPatch }) {
   );
 }
 
-// =================================================================
 // Komponen: satu baris item pada tabel validasi
-// =================================================================
 function kodeSimilarity(a, b) {
   const na = (a || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
   const nb = (b || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
@@ -1459,9 +1452,7 @@ function ItemRow({
   );
 }
 
-// =================================================================
 // Komponen: panel daftar Draft (Cross-device Resume)
-// =================================================================
 // Tampilkan kartu untuk tiap draft tersimpan agar bisa dilanjutkan
 // di perangkat lain. Skenario utama: foto + OCR di HP, koreksi di laptop.
 function DraftsPanel({ drafts, loading, onOpen, onDelete, onRefresh }) {

@@ -1,10 +1,7 @@
--- ============================================
 -- 004_purchases.sql
 -- Header & detail pembelian dari supplier (input via OCR / manual).
 -- R2 (Validasi Stok Masuk) dievaluasi di service layer SEBELUM INSERT purchase_items.
 -- R4 (Konsistensi Stok) dijalankan di trigger AFTER INSERT (lihat 006).
--- ============================================
-
 CREATE TABLE IF NOT EXISTS purchases (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   no_nota_supplier  VARCHAR(50),

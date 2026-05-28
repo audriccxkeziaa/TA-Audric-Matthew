@@ -1,7 +1,7 @@
 # User Acceptance Testing (UAT) — POS CV Asia Jaya Maju
 
 Berkas pada folder ini adalah **kerangka/template** pelaksanaan UAT untuk
-Bab Pengujian skripsi (Pertemuan 11). Diisi **setelah** sesi UAT nyata
+Bab Pengujian skripsi. Diisi **setelah** sesi UAT nyata
 bersama pemilik dan karyawan CV Asia Jaya Maju.
 
 > ⚠️ **Integritas akademik:** Hasil aktual, skor SUS, dan transcript

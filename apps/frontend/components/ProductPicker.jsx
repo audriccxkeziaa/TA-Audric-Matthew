@@ -1,13 +1,10 @@
-"use client";
-// =================================================================
+﻿"use client";
 // components/ProductPicker.jsx — Modal pilih produk dari katalog
-// =================================================================
 // Dipakai di /stok-masuk ketika kandidat Levenshtein tidak cocok dan
 // user ingin memilih produk lain secara manual.
 //
 // Mendukung input teks maupun USB/Bluetooth barcode scanner:
 //   Scanner mengetik kode → lalu Enter → jika 1 hasil → auto-select.
-// =================================================================
 
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";

@@ -1,12 +1,9 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /master-barang — CRUD Master Barang (kasir & admin)
-// =================================================================
 // - Cari & filter (status / kondisi stok)
 // - Tambah & edit barang. Kolom stok TIDAK bisa diedit manual (R3).
 // - min_stock hanya bisa diubah admin (RBAC field-level).
 // - "Hapus" = soft delete → status nonaktif.
-// =================================================================
 
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

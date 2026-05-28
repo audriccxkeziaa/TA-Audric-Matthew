@@ -1,12 +1,9 @@
-"use client";
-// =================================================================
+﻿"use client";
 // (app)/layout.jsx — Kerangka aplikasi setelah login
-// =================================================================
 // Route group "(app)" tidak mengubah URL — hanya membungkus seluruh
 // halaman terproteksi dengan sidebar + topbar + penjaga akses (guard).
 //   - Belum login            → redirect /login
 //   - Kasir buka rute admin  → redirect /kasir
-// =================================================================
 
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -41,7 +38,7 @@ export default function AppLayout({ children }) {
       router.replace("/login");
       return;
     }
-    // Lapisan 2 (RBAC) sisi klien — backend tetap re-check tiap request.
+    // (RBAC) sisi klien — backend tetap re-check tiap request.
     // /dashboard/restock dikecualikan dari ADMIN_ONLY — kasir juga boleh baca.
     const isAdminRoute =
       ADMIN_ONLY.some((p) => pathname.startsWith(p)) &&

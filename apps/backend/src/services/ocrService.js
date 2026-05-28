@@ -1,6 +1,4 @@
-// =================================================================
-// ocrService.js — Pipeline OCR (jalur CETAK + jalur TULISAN TANGAN)
-// =================================================================
+﻿// ocrService.js — Pipeline OCR (jalur CETAK + jalur TULISAN TANGAN)
 
 const sharp = require("sharp");
 const { createWorker } = require("tesseract.js");
@@ -694,9 +692,7 @@ async function recognizePrintedReceipt(inputBuffer) {
     items: finalItems };
 }
 
-// =================================================================
 // JALUR TULISAN TANGAN (opencv4nodejs)
-// =================================================================
 
 function detectTextLines(binaryMat, cv) {
   const height = binaryMat.rows, width = binaryMat.cols;
@@ -788,9 +784,7 @@ async function recognizeHandwrittenReceipt(inputBuffer) {
   return { raw_text: data.text || "", preprocessing: { pipeline: "opencv/handwritten", width, height, n_lines_detected }, items };
 }
 
-// =================================================================
 // HYBRID AI PARSER — Claude Vision (Anthropic) + Groq fallback
-// =================================================================
 
 // System prompt — dipakai oleh semua AI provider
 const AI_SYSTEM_PROMPT = `Anda adalah agen ekstraksi data nota ahli untuk toko suku cadang motor CV Asia Jaya Maju.
@@ -818,12 +812,10 @@ Keluarkan TEPAT array JSON dengan struktur:
 ]
 </schema>`;
 
-// =================================================================
 // TIER 1: Gemini Vision (GRATIS — support gambar)
 // Model cascade: gemini-2.0-flash → gemini-2.0-flash-lite
 // Deteksi "limit: 0" (kuota harian habis) → langsung skip, tidak retry
 // Retry hanya untuk rate-limit sementara (per-menit)
-// =================================================================
 const GEMINI_MODELS = ["gemini-1.5-flash", "gemini-1.5-flash-8b"];
 
 function isGeminiDailyQuotaExhausted(errorMsg) {
@@ -909,9 +901,7 @@ async function parseWithGeminiVision(imageBuffer, rawText) {
   return null;
 }
 
-// =================================================================
 // TIER 2: Claude Vision (BERBAYAR — lebih akurat, opsional)
-// =================================================================
 async function parseWithClaudeVision(imageBuffer, rawText) {
   if (!process.env.ANTHROPIC_API_KEY) return null;
 
@@ -973,9 +963,7 @@ async function parseWithClaudeVision(imageBuffer, rawText) {
   }
 }
 
-// =================================================================
 // TIER 3: Groq/Llama (GRATIS — teks saja, tanpa gambar)
-// =================================================================
 async function parseWithGroq(rawText) {
   if (!process.env.GROQ_API_KEY || !rawText) return null;
 

@@ -1,7 +1,6 @@
 # Black Box Testing — POS CV Asia Jaya Maju
 
-Pengujian fungsional black box untuk seluruh modul yang sudah diimplementasikan
-sampai Pertemuan 10. Setiap berkas berisi tabel skenario per modul dengan kolom
+Pengujian fungsional black box untuk seluruh modul. Setiap berkas berisi tabel skenario per modul dengan kolom
 `Aktual` dan `Status` yang diisi saat eksekusi testing manual.
 
 ## Cara Mengisi

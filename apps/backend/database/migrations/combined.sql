@@ -1,10 +1,6 @@
--- =================================================================
 -- Migration 001 — Initial Schema (users + products)
--- =================================================================
 -- Tabel inti yang dijadikan referensi oleh semua tabel lain. Mengacu
 -- pada Supabase Auth: kolom users.id = auth.users.id (UUID).
--- =================================================================
-
 -- Pastikan extension yang dipakai aktif
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -60,16 +56,12 @@ DROP TRIGGER IF EXISTS trg_products_touch ON products;
 CREATE TRIGGER trg_products_touch
 BEFORE UPDATE ON products
 FOR EACH ROW EXECUTE FUNCTION fn_products_touch_updated_at();
--- =================================================================
 -- Migration 002 — Sales & Purchases (transaksi penjualan + stok masuk)
--- =================================================================
 -- Header + items mengikuti pola klasik. Stok TIDAK pernah diupdate
 -- manual lewat tabel ini; perubahan stok dilakukan oleh trigger R4
 -- (lihat 006_triggers_R3_R4.sql) saat sale_items / purchase_items
 -- di-INSERT, dan dijaga R3 supaya kolom stok tidak bisa di-UPDATE
 -- dari jalur lain.
--- =================================================================
-
 DO $$ BEGIN
   CREATE TYPE purchase_validation AS ENUM ('draft', 'tervalidasi');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -131,16 +123,12 @@ CREATE TABLE IF NOT EXISTS purchase_items (
 
 CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase  ON purchase_items (purchase_id);
 CREATE INDEX IF NOT EXISTS idx_purchase_items_product   ON purchase_items (product_id);
--- =================================================================
 -- Migration 003 — Stock Logs (Audit Trail Rule-Based System)
--- =================================================================
 -- Satu tabel sebagai jejak audit untuk SEMUA rule (R1..R5).
 -- Setiap baris menyimpan: efek pada stok (delta_qty, sebelum/sesudah),
 -- rule yang aktif (rule_triggered), aksi yang diambil (ACCEPTED /
 -- REJECTED / TRIGGERED), sumber (sales / purchase / manual), serta
 -- konteks bebas dalam JSONB.
--- =================================================================
-
 DO $$ BEGIN
   CREATE TYPE stock_log_source AS ENUM ('sales', 'purchase', 'manual');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -170,13 +158,9 @@ CREATE INDEX IF NOT EXISTS idx_stock_logs_user     ON stock_logs (user_id);
 CREATE INDEX IF NOT EXISTS idx_stock_logs_rule     ON stock_logs (rule_triggered);
 CREATE INDEX IF NOT EXISTS idx_stock_logs_action   ON stock_logs (rule_action);
 CREATE INDEX IF NOT EXISTS idx_stock_logs_source   ON stock_logs (source_type);
--- =================================================================
 -- Migration 004 — Storage Bucket "nota-supplier"
--- =================================================================
 -- Bucket private untuk menyimpan file nota supplier (JPG/PNG/PDF).
 -- Akses hanya lewat service-role key dari backend (signed URL ke FE).
--- =================================================================
-
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('nota-supplier', 'nota-supplier', false)
 ON CONFLICT (id) DO NOTHING;
@@ -185,14 +169,10 @@ ON CONFLICT (id) DO NOTHING;
 -- jadi policy ini relevan kalau nanti diakses dari client. Default: tutup.
 DROP POLICY IF EXISTS nota_supplier_no_anon_read   ON storage.objects;
 DROP POLICY IF EXISTS nota_supplier_no_anon_write  ON storage.objects;
--- =================================================================
 -- Migration 005 — Row Level Security
--- =================================================================
 -- Backend pakai SERVICE ROLE key (bypass RLS) — policy berikut hanya
 -- bertindak sebagai pengaman tambahan jika kelak ada akses langsung
 -- dari frontend dengan JWT user.
--- =================================================================
-
 -- Helper: ambil role current user dari tabel users (kalau JWT terpasang)
 CREATE OR REPLACE FUNCTION fn_current_role()
 RETURNS TEXT AS $$
@@ -261,9 +241,7 @@ CREATE POLICY stock_logs_authed_select ON stock_logs
 DROP POLICY IF EXISTS stock_logs_authed_insert ON stock_logs;
 CREATE POLICY stock_logs_authed_insert ON stock_logs
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
--- =================================================================
 -- Migration 006 — Triggers R3 (Pembaruan Stok Terpusat) & R4 (Konsistensi)
--- =================================================================
 -- R3: BEFORE UPDATE pada products — kolom `stok` HANYA boleh berubah
 --     bila session memasang flag app.allow_stok_update='true'.
 --     Flag itu di-SET LOCAL oleh fn_create_sale / fn_commit_purchase
@@ -277,8 +255,6 @@ CREATE POLICY stock_logs_authed_insert ON stock_logs
 -- SQLSTATE custom:
 --   '45R01' = R1 violation (dilempar fn_create_sale)
 --   '45R03' = R3 violation (manual stok update tanpa flag)
--- =================================================================
-
 -- ---------- R3: BLOCK manual update kolom stok ----------
 CREATE OR REPLACE FUNCTION fn_products_block_manual_stok_update()
 RETURNS TRIGGER AS $$
@@ -410,9 +386,7 @@ DROP TRIGGER IF EXISTS trg_purchase_items_apply ON purchase_items;
 CREATE TRIGGER trg_purchase_items_apply
 AFTER INSERT ON purchase_items
 FOR EACH ROW EXECUTE FUNCTION fn_purchase_items_apply();
--- =================================================================
 -- Migration 007 — View R5 (Rekomendasi Restock) — versi awal
--- =================================================================
 -- View ini dipakai endpoint GET /api/restock. Disempurnakan di
 -- migrasi 011 dengan kolom avg_sales_30d & estimasi_hari_habis.
 --
@@ -420,8 +394,6 @@ FOR EACH ROW EXECUTE FUNCTION fn_purchase_items_apply();
 --   HABIS    = stok = 0
 --   KRITIS   = stok > 0 AND stok <= ceil(min_stock * 0.5)
 --   MENIPIS  = stok > kritis AND stok <= min_stock
--- =================================================================
-
 DROP VIEW IF EXISTS v_restock_recommendation CASCADE;
 
 CREATE OR REPLACE VIEW v_restock_recommendation AS
@@ -450,9 +422,7 @@ ORDER BY
     ELSE 2
   END,
   (p.min_stock - p.stok) DESC;
--- =================================================================
 -- Migration 008 — RPC fn_create_sale (transaksi atomik penjualan)
--- =================================================================
 -- Dipanggil dari salesRepository.createSaleViaRpc().
 -- Param:
 --   p_user_id        UUID
@@ -466,8 +436,6 @@ ORDER BY
 --     menulis stock_logs ACCEPTED. Trigger juga melempar SQLSTATE
 --     '45R01' bila stok kurang → seluruh function rollback otomatis.
 --   - Update total_harga pada header sales.
--- =================================================================
-
 CREATE OR REPLACE FUNCTION fn_create_sale(
   p_user_id        UUID,
   p_kode_transaksi TEXT,
@@ -517,9 +485,7 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION fn_create_sale(UUID, TEXT, JSONB) TO authenticated, service_role;
--- =================================================================
 -- Migration 009 — RPC fn_commit_purchase (commit stok masuk atomik)
--- =================================================================
 -- Dipanggil dari purchaseRepository.commitPurchaseViaRpc().
 -- Param:
 --   p_user_id           UUID
@@ -538,8 +504,6 @@ GRANT EXECUTE ON FUNCTION fn_create_sale(UUID, TEXT, JSONB) TO authenticated, se
 --   - Untuk action='new' kita INSERT produk dulu dengan stok=0,
 --     harga_beli/harga_jual dari payload (harga_jual = harga_beli * 1.3
 --     sebagai default — admin bisa edit nanti via master barang).
--- =================================================================
-
 CREATE OR REPLACE FUNCTION fn_commit_purchase(
   p_user_id           UUID,
   p_no_nota_supplier  TEXT,
@@ -629,17 +593,13 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION fn_commit_purchase(UUID, TEXT, TEXT, JSONB) TO authenticated, service_role;
--- =================================================================
 -- Migration 010 — purchase_drafts (Cross-device Draft Resume)
--- =================================================================
 -- Untuk fitur "scan dari HP, edit di laptop": draft OCR yang belum
 -- di-commit disimpan di tabel ini. User bisa list & resume dari device
 -- manapun selama login dengan akun yang sama.
 --
 -- Catatan keamanan: payload disimpan sebagai JSONB. Tidak boleh berisi
 -- data sensitif lain selain hasil parsing OCR + state validasi user.
--- =================================================================
-
 CREATE TABLE IF NOT EXISTS purchase_drafts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -685,9 +645,7 @@ CREATE POLICY purchase_drafts_owner_modify
   ON purchase_drafts FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
--- =================================================================
 -- Migration 011 — Extend view v_restock_recommendation
--- =================================================================
 -- Tambah kolom rata-rata penjualan 30 hari & estimasi habis stok.
 -- Nilai dihitung dari sale_items × sales.created_at (>= NOW()-30d).
 --
@@ -695,8 +653,6 @@ CREATE POLICY purchase_drafts_owner_modify
 -- - total_sold_30d       = total qty terjual 30 hari terakhir
 -- - n_transactions_30d   = jumlah transaksi unik yang menyentuh produk
 -- - estimasi_hari_habis  = stok / avg_sales_30d (NULL bila avg = 0)
--- =================================================================
-
 DROP VIEW IF EXISTS v_restock_recommendation CASCADE;
 
 CREATE OR REPLACE VIEW v_restock_recommendation AS
@@ -743,20 +699,14 @@ ORDER BY
     ELSE 2
   END,
   (p.min_stock - p.stok) DESC;
--- =================================================================
 -- Migration 012 — users.is_active (soft-deactivate akun)
--- =================================================================
 -- Dipakai authMiddleware untuk menolak request dari user yang sudah
 -- dinonaktifkan admin, meski JWT-nya belum kedaluwarsa.
--- =================================================================
-
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE INDEX IF NOT EXISTS idx_users_is_active ON users (is_active);
--- =================================================================
 -- Migration 013 — Expenses (Pengeluaran Operasional) & Saldo
--- =================================================================
 -- Tabel pengeluaran operasional yang DI LUAR pembelian supplier
 -- (gaji karyawan, listrik, air, sewa, dsb). Pembelian supplier
 -- otomatis ikut potong saldo karena diambil dari tabel purchases
@@ -766,8 +716,6 @@ CREATE INDEX IF NOT EXISTS idx_users_is_active ON users (is_active);
 --   saldo_bersih = omset_kotor (sales)
 --                  - total_pembelian_supplier (purchases tervalidasi)
 --                  - total_pengeluaran_operasional (expenses)
--- =================================================================
-
 DO $$ BEGIN
   CREATE TYPE expense_kind AS ENUM ('gaji', 'listrik', 'air', 'sewa', 'lainnya');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -808,13 +756,9 @@ SELECT
   COALESCE((SELECT SUM(total_harga) FROM sales), 0)
     - COALESCE((SELECT SUM(total) FROM purchases WHERE status_validasi = 'tervalidasi'), 0)
     - COALESCE((SELECT SUM(nominal) FROM expenses), 0)                                           AS saldo_bersih;
--- =================================================================
 -- Migration 014 — sale_items.diskon_persen (Diskon per item di POS)
--- =================================================================
 -- Kasir bisa memberi diskon manual per baris di keranjang. Subtotal
 -- final = qty * harga_satuan * (1 - diskon_persen/100). Default 0.
--- =================================================================
-
 ALTER TABLE sale_items
   ADD COLUMN IF NOT EXISTS diskon_persen NUMERIC(5,2) NOT NULL DEFAULT 0
   CHECK (diskon_persen BETWEEN 0 AND 100);
@@ -873,17 +817,13 @@ BEGIN
   RETURN jsonb_build_object('sale_id', v_sale_id, 'total_harga', v_total);
 END;
 $$;
--- =================================================================
 -- Migration 015 — Rename enum expense_kind
--- =================================================================
 -- Permintaan user:
 --   'sewa'    -> 'supplier'  (pembelian dari supplier yang tidak via OCR)
 --   'lainnya' -> 'custom'    (pengeluaran custom dengan deskripsi bebas)
 --
 -- PostgreSQL 10+ mendukung ALTER TYPE … RENAME VALUE — aman dijalankan
 -- walau ada data eksisting (label berubah, ID enum di-preserve).
--- =================================================================
-
 DO $$
 BEGIN
   IF EXISTS (

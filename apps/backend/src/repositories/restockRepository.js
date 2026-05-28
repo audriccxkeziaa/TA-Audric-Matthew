@@ -1,9 +1,6 @@
-// =================================================================
-// restockRepository.js — Akses view v_restock_recommendation (R5)
-// =================================================================
+﻿// restockRepository.js — Akses view v_restock_recommendation (R5)
 // View dibuat di migrasi 007_view_R5.sql, di-extend di 010_view_R5_avg_sales.sql
 // dengan kolom avg_sales_30d, total_sold_30d, n_transactions_30d, estimasi_hari_habis.
-// =================================================================
 
 const supabase = require("../config/supabase");
 

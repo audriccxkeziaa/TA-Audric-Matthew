@@ -1,7 +1,4 @@
--- =================================================================
 -- Migration 008 — RPC fn_create_sale (transaksi atomik penjualan)
--- =================================================================
-
 CREATE OR REPLACE FUNCTION fn_create_sale(
   p_user_id        UUID,
   p_kode_transaksi TEXT,

@@ -1,10 +1,7 @@
--- ============================================
 -- 007_view_R5.sql
 -- R5 — Rekomendasi Restock (read-only rule)
 -- View dipakai endpoint GET /api/restock.
 -- min_stock ditetapkan MANUAL oleh admin via PATCH /api/products/:id.
--- ============================================
-
 CREATE OR REPLACE VIEW v_restock_recommendation AS
 SELECT
   id,

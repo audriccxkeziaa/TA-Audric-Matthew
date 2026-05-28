@@ -1,6 +1,4 @@
--- =================================================================
 -- Migration 022 — Stock Adjustments (Retur & Penyesuaian Stok)
--- =================================================================
 -- Menangani 3 skenario:
 --   1. return_supplier   — Retur ke supplier (stok -)
 --   2. sales_return      — Retur pelanggan:
@@ -10,8 +8,6 @@
 --
 -- Prinsip Immutability: tidak ada data lama yang diubah/dihapus.
 -- Setiap koreksi stok membuat baris INSERT baru.
--- =================================================================
-
 -- Extend stock_log_source enum agar stock_logs bisa mencatat 'adjustment'.
 -- PENTING: ALTER TYPE ADD VALUE tidak boleh di dalam transaction block.
 ALTER TYPE stock_log_source ADD VALUE IF NOT EXISTS 'adjustment';

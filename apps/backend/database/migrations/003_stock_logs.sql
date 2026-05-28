@@ -1,13 +1,9 @@
--- =================================================================
 -- Migration 003 — Stock Logs (Audit Trail Rule-Based System)
--- =================================================================
 -- Satu tabel sebagai jejak audit untuk SEMUA rule (R1..R5).
 -- Setiap baris menyimpan: efek pada stok (delta_qty, sebelum/sesudah),
 -- rule yang aktif (rule_triggered), aksi yang diambil (ACCEPTED /
 -- REJECTED / TRIGGERED), sumber (sales / purchase / manual), serta
 -- konteks bebas dalam JSONB.
--- =================================================================
-
 DO $$ BEGIN
   CREATE TYPE stock_log_source AS ENUM ('sales', 'purchase', 'manual');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

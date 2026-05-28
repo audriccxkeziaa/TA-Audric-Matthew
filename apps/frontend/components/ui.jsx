@@ -1,9 +1,6 @@
-"use client";
-// =================================================================
+﻿"use client";
 // components/ui.jsx — Komponen UI dasar (design system Tailwind)
-// =================================================================
 // Dipakai seluruh halaman supaya tampilan konsisten.
-// =================================================================
 
 import { useEffect } from "react";
 

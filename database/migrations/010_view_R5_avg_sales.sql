@@ -1,14 +1,11 @@
--- ============================================
 -- 010_view_R5_avg_sales.sql
--- Pertemuan 9: extend view R5 (Rekomendasi Restock) dengan kolom
+-- Extend view R5 (Rekomendasi Restock) dengan kolom
 -- avg_sales_30d = rata-rata kuantitas terjual per hari dalam 30 hari
 -- terakhir. Dipakai halaman /admin/dashboard/restock untuk membantu
 -- admin memutuskan jumlah restock yang masuk akal.
 --
 -- min_stock TETAP ditetapkan MANUAL oleh admin (laporan: BUKAN otomatis,
 -- BUKAN Min-Max/EOQ/AI). Kolom avg_sales_30d hanya nilai informasi.
--- ============================================
-
 DROP VIEW IF EXISTS v_restock_recommendation;
 
 CREATE OR REPLACE VIEW v_restock_recommendation AS

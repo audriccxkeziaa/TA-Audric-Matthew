@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const {
   getSummary,
@@ -9,7 +9,7 @@ const {
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
-// Lapisan 2: dashboard analytics admin-only
+//  dashboard analytics admin-only
 router.use(authMiddleware, roleMiddleware("admin"));
 
 router.get("/summary", getSummary);

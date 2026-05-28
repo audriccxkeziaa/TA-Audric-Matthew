@@ -1,6 +1,4 @@
-// =================================================================
-// ruleEngine.js — Lapisan 1 (service layer) implementasi 5 rule
-// =================================================================
+﻿// ruleEngine.js — (service layer) implementasi 5 rule
 // Tujuan: pre-check rule SEBELUM masuk ke database, plus mapping dari
 // SQLSTATE custom (yang dilempar trigger di Layer 2) ke pesan user-friendly.
 //
@@ -9,7 +7,6 @@
 // R3: Pembaruan Stok Terpusat (BEFORE UPDATE products) — dijaga DB
 // R4: Konsistensi Stok (AFTER INSERT items) — dijalankan trigger DB
 // R5: Rekomendasi Restock — read-only view
-// =================================================================
 
 // SQLSTATE custom yang dipakai migrasi 006_triggers_R3_R4.sql
 const SQLSTATE_R1 = "45R01";
@@ -54,11 +51,7 @@ function checkR1StockAvailability({ items, products }) {
 }
 
 // R2 pre-check: validasi payload commit pembelian.
-// Pertemuan 12: payload item bisa salah satu dari dua bentuk berdasarkan
-// keputusan user di UI (kode_barang match catalog atau buat produk baru):
-//   action='restock' → wajib product_id (UUID)
-//   action='new'     → wajib kode_barang + nama_barang (string)
-// Field umum: qty (int > 0), harga_beli (num ≥ 0), diskon_persen (0-100).
+// Dua bentuk item: action='restock' (product_id) atau action='new' (kode+nama baru).
 function checkR2PurchaseValidation({ status_validasi, items }) {
   if (status_validasi !== "tervalidasi") {
     return {

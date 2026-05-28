@@ -1,18 +1,15 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /keuangan — Manajemen Keuangan (admin only)
-// =================================================================
 // - Ringkasan: omset kotor, total pembelian (otomatis dari OCR/manual
 //   purchase tervalidasi), total pengeluaran operasional, saldo bersih.
 // - Tabel pengeluaran + form tambah & hapus.
 // - Filter rentang tanggal (default: all-time).
-// =================================================================
 
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { expensesApi, salesApi, purchasesApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
-import { rupiah, angka } from "@/lib/format";
+import { rupiah, angka, tanggal } from "@/lib/format";
 import {
   PageShell,
   PageHeader,
@@ -41,15 +38,6 @@ const JENIS_TONE = {
   air: "blue",
   custom: "green",
 };
-
-function tanggal(d) {
-  if (!d) return "-";
-  return new Date(d).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 // Placeholder & label deskripsi tergantung jenis pengeluaran.
 const DESKRIPSI_HINT = {

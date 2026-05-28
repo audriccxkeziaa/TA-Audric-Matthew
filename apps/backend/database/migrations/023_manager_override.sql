@@ -1,6 +1,4 @@
--- =================================================================
 -- Migration 023 — Manager Override (Otorisasi Ganda Retur Pelanggan)
--- =================================================================
 -- Menambahkan workflow approval untuk sales_return:
 --   Kasir buat retur → status 'pending' → Admin approve (PIN/remote).
 -- Tipe lain (return_supplier, stock_adjustment) tetap langsung approved.
@@ -12,8 +10,6 @@
 --   4. fn_reject_stock_adjustment (tolak tanpa ubah stok)
 --   5. RLS policy untuk realtime subscription
 --   6. Realtime publication
--- =================================================================
-
 -- 1. Tambah kolom approval
 ALTER TABLE stock_adjustments
   ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved';

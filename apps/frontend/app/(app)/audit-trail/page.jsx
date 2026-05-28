@@ -1,12 +1,9 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /audit-trail — Audit Trail stock_logs (admin)
-// =================================================================
 // Bukti Rule-Based System bekerja: tiap perubahan/penolakan stok
 // tercatat. Layout 1 layar: header/filter/pagination tetap terlihat,
 // hanya tabel yang scroll di dalam panelnya.
 // Detail forensik tiap baris tampil sebagai modal pop-up.
-// =================================================================
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";

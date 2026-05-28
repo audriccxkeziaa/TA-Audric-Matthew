@@ -1,13 +1,9 @@
--- =================================================================
 -- Migration 002 — Sales & Purchases (transaksi penjualan + stok masuk)
--- =================================================================
 -- Header + items mengikuti pola klasik. Stok TIDAK pernah diupdate
 -- manual lewat tabel ini; perubahan stok dilakukan oleh trigger R4
 -- (lihat 006_triggers_R3_R4.sql) saat sale_items / purchase_items
 -- di-INSERT, dan dijaga R3 supaya kolom stok tidak bisa di-UPDATE
 -- dari jalur lain.
--- =================================================================
-
 DO $$ BEGIN
   CREATE TYPE purchase_validation AS ENUM ('draft', 'tervalidasi');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

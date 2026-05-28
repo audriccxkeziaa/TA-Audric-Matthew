@@ -1,8 +1,5 @@
--- ============================================
 -- 002_products.sql
 -- Tabel master barang. Kolom `stok` dilindungi trigger R3 (lihat 006).
--- ============================================
-
 CREATE TABLE IF NOT EXISTS products (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   kode_barang  VARCHAR(30)  NOT NULL UNIQUE,

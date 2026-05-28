@@ -1,13 +1,9 @@
--- =================================================================
 -- _apply_all.sql — Jalankan semua migrasi sekaligus di Supabase SQL Editor
--- =================================================================
 -- Cara pakai:
 --   1) Buka Supabase Dashboard → project oepjabpiwaslolwxdood → SQL Editor
 --   2) New query → copy seluruh isi file ini → paste → Run
 --   3) Tunggu sampai semua statement selesai (idempotent: aman re-run)
 --   4) Lanjut jalankan seed:  node apps/backend/database/seed.js
--- =================================================================
-
 \i 001_initial_schema.sql
 \i 002_sales_purchases.sql
 \i 003_stock_logs.sql

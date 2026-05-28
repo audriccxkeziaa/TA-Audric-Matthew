@@ -1,10 +1,7 @@
-// =================================================================
-// notificationsController.js — Notifikasi runtime untuk badge sidebar
-// =================================================================
+﻿// notificationsController.js — Notifikasi runtime untuk badge sidebar
 // Saat ini hanya 1 jenis notifikasi: barang dengan stok <= min_stock.
 // Endpoint dipakai AdminLayout (polling 60 detik) di sisi admin & kasir.
 // Tidak menyentuh tabel/tabel baru — query langsung ke products.
-// =================================================================
 
 const supabase = require("../config/supabase");
 

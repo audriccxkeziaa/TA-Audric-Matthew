@@ -1,10 +1,6 @@
--- =================================================================
 -- Migration 001 — Initial Schema (users + products)
--- =================================================================
 -- Tabel inti yang dijadikan referensi oleh semua tabel lain. Mengacu
 -- pada Supabase Auth: kolom users.id = auth.users.id (UUID).
--- =================================================================
-
 -- Pastikan extension yang dipakai aktif
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

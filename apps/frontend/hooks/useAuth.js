@@ -1,11 +1,8 @@
-"use client";
-// =================================================================
+﻿"use client";
 // hooks/useAuth.js — Context autentikasi global
-// =================================================================
 // Menyimpan user yang sedang login + fungsi login/logout. Sesi (token)
 // disimpan di localStorage via api-client. Saat aplikasi dibuka ulang,
 // provider memvalidasi token ke GET /api/auth/me.
-// =================================================================
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { authApi } from "@/lib/api";

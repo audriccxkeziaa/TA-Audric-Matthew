@@ -1,6 +1,4 @@
--- =================================================================
 -- Migration 006 — Triggers R3 (Pembaruan Stok Terpusat) & R4 (Konsistensi)
--- =================================================================
 -- R3: BEFORE UPDATE pada products — kolom `stok` HANYA boleh berubah
 --     bila session memasang flag app.allow_stok_update='true'.
 --     Flag itu di-SET LOCAL oleh fn_create_sale / fn_commit_purchase
@@ -14,8 +12,6 @@
 -- SQLSTATE custom:
 --   '45R01' = R1 violation (dilempar fn_create_sale)
 --   '45R03' = R3 violation (manual stok update tanpa flag)
--- =================================================================
-
 -- ---------- R3: BLOCK manual update kolom stok ----------
 CREATE OR REPLACE FUNCTION fn_products_block_manual_stok_update()
 RETURNS TRIGGER AS $$

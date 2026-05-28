@@ -1,8 +1,4 @@
-// =================================================================
-// lib/api.js — Definisi tiap endpoint REST backend (sesuai Bab 3)
-// =================================================================
-// Dikelompokkan per modul. Dipakai React Query di tiap halaman.
-// =================================================================
+// Definisi tiap endpoint REST backend, dikelompokkan per modul.
 
 import { apiFetch } from "./api-client";
 

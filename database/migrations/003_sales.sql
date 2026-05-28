@@ -1,10 +1,7 @@
--- ============================================
 -- 003_sales.sql
 -- Header & detail transaksi penjualan.
 -- R1 (Pencegahan Stok Negatif) dijalankan di service layer SEBELUM INSERT.
 -- R4 (Konsistensi Stok) dijalankan di trigger AFTER INSERT (lihat 006).
--- ============================================
-
 CREATE TABLE IF NOT EXISTS sales (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   kode_transaksi  VARCHAR(30) NOT NULL UNIQUE,

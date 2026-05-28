@@ -1,6 +1,6 @@
 # Pengujian Keamanan — POS CV Asia Jaya Maju
 
-Dokumentasi pengujian keamanan untuk Bab Pengujian skripsi (Pertemuan 11),
+Dokumentasi pengujian keamanan untuk Bab Pengujian skripsi,
 menguji **Keamanan Berlapis 4 Lapisan** yang dirancang di laporan.
 
 ## Isi Folder

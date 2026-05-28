@@ -1,7 +1,5 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /kasir — Point of Sale (gaya BEEPOS, terinspirasi POS klasik)
-// =================================================================
 // Fitur:
 //   - Input barcode / kode produk (F1, auto-fokus). Enter → tambah ke
 //     keranjang. Cocok untuk USB barcode scanner (emulate keyboard +
@@ -16,7 +14,6 @@
 //   - F-key shortcuts: F1 fokus input, F2 toggle pencarian, F12 bayar.
 //   - Aturan R1 (Pencegahan Stok Negatif) di backend; bila qty > stok
 //     transaksi DITOLAK utuh.
-// =================================================================
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -599,9 +596,7 @@ export default function KasirPage() {
   );
 }
 
-// =================================================================
 // Modal BAYAR — input uang diterima, hitung kembalian otomatis
-// =================================================================
 function BayarModal({ open, onClose, total, cart, onConfirm, processing }) {
   const [tunai, setTunai] = useState("");
   const inputRef = useRef(null);

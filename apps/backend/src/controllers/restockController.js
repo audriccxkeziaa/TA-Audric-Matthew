@@ -1,8 +1,5 @@
-// =================================================================
-// restockController.js — R5 Rekomendasi Restock (read-only rule)
-// =================================================================
+﻿// restockController.js — R5 Rekomendasi Restock (read-only rule)
 // Endpoint admin-only. View v_restock_recommendation dipanggil via repository.
-// =================================================================
 
 const restockRepository = require("../repositories/restockRepository");
 

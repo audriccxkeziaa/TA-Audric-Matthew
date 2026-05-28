@@ -1,13 +1,10 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /dashboard — Dashboard Analitik Admin (single-viewport, interaktif)
-// =================================================================
 // - 5 kartu metrik (Transaksi, Revenue, Stok Masuk, Stok Menipis, Stok
 //   Negatif). SEMUA bisa diklik → popup detail terkait.
 // - Heatmap stok menipis pindah ke popup yang dipicu kartu "Stok Menipis"
 //   sehingga halaman utama bebas scroll.
 // - Dua grafik (tren penjualan & top produk) menempati sisa tinggi viewport.
-// =================================================================
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -30,7 +27,7 @@ import {
   purchasesApi,
   productsApi,
 } from "@/lib/api";
-import { rupiah, angka } from "@/lib/format";
+import { rupiah, angka, tanggal, jam } from "@/lib/format";
 import {
   PageShell,
   PageHeader,
@@ -57,21 +54,6 @@ function last7DaysRange() {
   const end = new Date();
   return { from: start.toISOString(), to: end.toISOString() };
 }
-function jam(iso) {
-  if (!iso) return "-";
-  const d = new Date(iso);
-  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-}
-function tanggal(iso) {
-  if (!iso) return "-";
-  const d = new Date(iso);
-  return d.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 // Warna kotak heatmap sesuai level kekritisan stok.
 function heatColor(level) {
   if (level === "out") return "bg-red-600 text-white";
@@ -95,9 +77,7 @@ function ClickableStat({ label, value, hint, tone, onClick, disabled }) {
   );
 }
 
-// =================================================================
 // Modal detail per metric
-// =================================================================
 
 function SaleDetailPopup({ saleId, onBack }) {
   const q = useQuery({
@@ -548,9 +528,7 @@ function NegativeStockModal({ open, onClose, count }) {
   );
 }
 
-// =================================================================
 // Page
-// =================================================================
 export default function DashboardPage() {
   const [openModal, setOpenModal] = useState(null);
 

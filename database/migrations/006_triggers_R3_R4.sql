@@ -1,4 +1,3 @@
--- ============================================
 -- 006_triggers_R3_R4.sql
 -- LAPISAN 2 (database) untuk Rule-Based System.
 --
@@ -9,8 +8,6 @@
 --   sebelum statement pemicu — bukan dari trigger.
 --   Trigger di sini hanya memblokir; service layer mencatat alasan REJECTED.
 --   Untuk ACCEPTED (UPDATE berhasil), trigger AMAN menulis log karena commit.
--- ============================================
-
 -- --------------------------------------------
 -- R3 — Pembaruan Stok Terpusat
 -- BEFORE UPDATE pada products: tolak perubahan stok jika app.allow_stok_update != 'true'

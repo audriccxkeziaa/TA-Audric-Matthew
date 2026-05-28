@@ -1,9 +1,6 @@
-// =================================================================
-// lib/receipt.js — Cetak struk transaksi ke jendela baru
-// =================================================================
+﻿// lib/receipt.js — Cetak struk transaksi ke jendela baru
 // Lebar 80mm thermal printer (~302px pada 96dpi).
 // @media print mengatur ukuran kertas 80mm × continuous.
-// =================================================================
 
 import { rupiah, tanggalJam } from "./format";
 

@@ -1,6 +1,4 @@
--- =================================================================
 -- Migration 009 — RPC fn_commit_purchase (commit stok masuk atomik)
--- =================================================================
 -- Dipanggil dari purchaseRepository.commitPurchaseViaRpc().
 -- Param:
 --   p_user_id           UUID
@@ -19,8 +17,6 @@
 --   - Untuk action='new' kita INSERT produk dulu dengan stok=0,
 --     harga_beli/harga_jual dari payload (harga_jual = harga_beli * 1.3
 --     sebagai default — admin bisa edit nanti via master barang).
--- =================================================================
-
 CREATE OR REPLACE FUNCTION fn_commit_purchase(
   p_user_id           UUID,
   p_no_nota_supplier  TEXT,

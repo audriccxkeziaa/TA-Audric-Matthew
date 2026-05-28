@@ -1,6 +1,6 @@
 # Pengujian Performa — k6
 
-Skrip uji beban untuk Bab Pengujian (Pertemuan 11). Mengukur latency
+Skrip uji beban untuk Bab Pengujian. Mengukur latency
 endpoint kritis di bawah beban, sesuai target laporan: **p95 < 500 ms**.
 
 ## Prasyarat

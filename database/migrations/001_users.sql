@@ -1,7 +1,5 @@
--- ============================================
 -- 001_users.sql
 -- Tabel users — profil aplikasi (auth.users dikelola Supabase)
--- ============================================
 -- Catatan: password TIDAK disimpan di tabel ini. Supabase Auth (auth.users)
 -- yang menyimpan & memverifikasi password. JWT-nya diverifikasi via JWKS.
 

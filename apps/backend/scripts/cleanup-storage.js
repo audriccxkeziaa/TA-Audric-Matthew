@@ -1,8 +1,6 @@
-// =================================================================
-// scripts/cleanup-storage.js
+﻿// scripts/cleanup-storage.js
 // Hapus semua file di bucket nota-supplier (Supabase Storage).
 // Jalankan sekali: node scripts/cleanup-storage.js
-// =================================================================
 
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const { createClient } = require("@supabase/supabase-js");

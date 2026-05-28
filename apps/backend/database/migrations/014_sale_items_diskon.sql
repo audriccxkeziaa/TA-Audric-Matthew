@@ -1,10 +1,6 @@
--- =================================================================
 -- Migration 014 — sale_items.diskon_persen (Diskon per item di POS)
--- =================================================================
 -- Kasir bisa memberi diskon manual per baris di keranjang. Subtotal
 -- final = qty * harga_satuan * (1 - diskon_persen/100). Default 0.
--- =================================================================
-
 ALTER TABLE sale_items
   ADD COLUMN IF NOT EXISTS diskon_persen NUMERIC(5,2) NOT NULL DEFAULT 0
   CHECK (diskon_persen BETWEEN 0 AND 100);

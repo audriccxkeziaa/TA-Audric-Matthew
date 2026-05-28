@@ -1,7 +1,7 @@
 # 01 — Authentication & RBAC
 
 Modul: login, JWT verification, role-based access control.
-Lapisan: 2 (RBAC) & 3 (JWT integrity) — lihat SYSTEM PROMPT bagian Keamanan Berlapis.
+Lapisan: RBAC & JWT integrity.
 
 | No | Skenario | Input | Ekspektasi | Aktual | Status |
 |---|---|---|---|---|---|

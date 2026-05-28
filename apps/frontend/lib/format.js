@@ -1,6 +1,4 @@
-// =================================================================
-// lib/format.js — Utilitas format tampilan (Bahasa Indonesia)
-// =================================================================
+﻿// lib/format.js — Utilitas format tampilan (Bahasa Indonesia)
 
 // Format angka jadi Rupiah: 25000 → "Rp 25.000"
 export function rupiah(value) {
@@ -11,6 +9,14 @@ export function rupiah(value) {
 // Format angka biasa dengan pemisah ribuan: 1500 → "1.500"
 export function angka(value) {
   return Number(value || 0).toLocaleString("id-ID");
+}
+
+// Format jam saja: "14:30"
+export function jam(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
 // Format tanggal+jam: "22 Mei 2026, 14:30"

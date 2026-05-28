@@ -1,6 +1,4 @@
--- =================================================================
 -- Migration 011 — Extend view v_restock_recommendation
--- =================================================================
 -- Tambah kolom rata-rata penjualan 30 hari & estimasi habis stok.
 -- Nilai dihitung dari sale_items × sales.created_at (>= NOW()-30d).
 --
@@ -8,8 +6,6 @@
 -- - total_sold_30d       = total qty terjual 30 hari terakhir
 -- - n_transactions_30d   = jumlah transaksi unik yang menyentuh produk
 -- - estimasi_hari_habis  = stok / avg_sales_30d (NULL bila avg = 0)
--- =================================================================
-
 DROP VIEW IF EXISTS v_restock_recommendation CASCADE;
 
 CREATE OR REPLACE VIEW v_restock_recommendation AS

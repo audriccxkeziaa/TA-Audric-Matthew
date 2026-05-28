@@ -4,8 +4,7 @@ const { getLowStockNotifications } = require("../controllers/notificationsContro
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
-// Notifikasi badge — admin dan kasir keduanya butuh tahu barang menipis
-// (sesuai CLAUDE.md Fase 5.1).
+// Admin dan kasir keduanya butuh tahu barang menipis
 router.use(authMiddleware, roleMiddleware("admin", "kasir"));
 
 router.get("/low-stock", getLowStockNotifications);

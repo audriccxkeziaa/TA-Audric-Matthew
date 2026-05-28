@@ -1,8 +1,5 @@
--- =================================================================
 -- Migration 019: Update existing users email to match new format
 -- Format: username@pos.local
--- =================================================================
-
 -- Step 1: Update email untuk semua users yang belum match format
 UPDATE users
 SET email = username || '@pos.local'

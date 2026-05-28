@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -19,7 +19,7 @@ const adjustmentRoutes = require("./routes/adjustments");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Lapisan 4: HTTP security headers (HSTS, CSP, X-Frame-Options, dll)
+//  HTTP security headers (HSTS, CSP, X-Frame-Options, dll)
 app.use(
   helmet({
     contentSecurityPolicy: {

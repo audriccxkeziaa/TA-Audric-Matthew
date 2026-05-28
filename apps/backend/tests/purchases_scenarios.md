@@ -1,7 +1,5 @@
 # Test Scenarios — POST /api/purchases/ocr & /api/purchases/commit (R2, R4)
 
-> Pertemuan 8 — Modul Stok Masuk (Nota Cetak Komputer) + Levenshtein + R2
->
 > Prasyarat:
 >
 > 1. Backend menyala (`npm run dev` di `apps/backend`)
@@ -178,7 +176,7 @@ SELECT rule_triggered, rule_action, reason_detail
 
 ## Skenario 4 — R2 REJECTED (item tanpa product_id)
 
-**Tujuan:** Buktikan validasi memastikan SETIAP baris harus dipilih `product_id` (tidak boleh draft kosong) — sesuai SYSTEM PROMPT "Tombol Konfirmasi Semua disabled jika ada baris belum dipilih".
+**Tujuan:** Buktikan validasi memastikan SETIAP baris harus dipilih `product_id` (tidak boleh draft kosong) — tombol Konfirmasi disabled jika ada baris belum dipilih.
 
 ```bash
 curl -X POST http://localhost:5000/api/purchases/commit \
@@ -205,7 +203,7 @@ curl -X POST http://localhost:5000/api/purchases/commit \
 **Tujuan:** Buktikan multer fileFilter menolak format non-image.
 
 ```bash
-# Coba upload PDF (Pertemuan 8 belum support PDF)
+# Coba upload PDF (awalnya belum support PDF)
 curl -X POST http://localhost:5000/api/purchases/ocr \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -F "file=@./nota.pdf"
@@ -215,7 +213,7 @@ curl -X POST http://localhost:5000/api/purchases/ocr \
 
 ```json
 {
-  "error": "Format tidak didukung. Pertemuan 8 hanya menerima JPG/PNG/WebP (nota cetak)."
+  "error": "Format tidak didukung. Gunakan JPG / PNG / WebP / PDF."
 }
 ```
 
@@ -232,7 +230,7 @@ curl -X POST http://localhost:5000/api/purchases/ocr \
 
 ---
 
-## Ringkasan defense-in-depth Pertemuan 8
+## Ringkasan defense-in-depth
 
 | Lapisan                  | R2 (Validasi Stok Masuk)                                         | R3 (UPDATE liar)                          | R4 (Konsistensi)                                                        |
 | ------------------------ | ---------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |

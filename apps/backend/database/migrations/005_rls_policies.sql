@@ -1,11 +1,7 @@
--- =================================================================
 -- Migration 005 — Row Level Security
--- =================================================================
 -- Backend pakai SERVICE ROLE key (bypass RLS) — policy berikut hanya
 -- bertindak sebagai pengaman tambahan jika kelak ada akses langsung
 -- dari frontend dengan JWT user.
--- =================================================================
-
 -- Helper: ambil role current user dari tabel users (kalau JWT terpasang)
 CREATE OR REPLACE FUNCTION fn_current_role()
 RETURNS TEXT AS $$

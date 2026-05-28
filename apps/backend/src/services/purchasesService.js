@@ -1,22 +1,11 @@
-// =================================================================
 // purchasesService.js — Orkestrator OCR + Validasi + Commit Pembelian
-// =================================================================
-// Pertemuan 8: jalur nota CETAK (sharp + tesseract).
-// Pertemuan 9: tambah jalur TULISAN TANGAN (opencv4nodejs) + 4 Strategi
-//              mitigasi (sub-bab 3.2.6.4):
-//   - Strategi 1: Klasifikasi awal jenis nota (cetak / tulisan_tangan / ambigu)
-//   - Strategi 2: Pipeline preprocessing bersyarat (sharp vs opencv)
-//   - Strategi 3: Ambang confidence berbeda (60 cetak vs 45 tulisan tangan)
-//   - Strategi 4: Fallback agresif ke input manual jika kualitas terlalu rendah
 //
-// Alur Gambar 3.6 di laporan:
-//   1. POST /api/purchases/ocr  — upload file → simpan Storage → klasifikasi →
-//      preprocessing → tesseract → parse field → Levenshtein top-3 → return
-//      draft 'unsaved'  ATAU  status 'ambiguous_classification'  ATAU
-//      'manual_input_required'
-//   2. POST /api/purchases/commit — payload tervalidasi user → R2 check →
-//      RPC fn_commit_purchase (atomik). Trigger R4 menambah stok + log.
-// =================================================================
+// Dua jalur pemrosesan: nota cetak (sharp + tesseract) dan
+// tulisan tangan (opencv fallback). Strategi mitigasi:
+//   1. Klasifikasi awal jenis nota (cetak / tulisan_tangan / ambigu)
+//   2. Pipeline preprocessing bersyarat (sharp vs opencv)
+//   3. Ambang confidence berbeda per jenis nota
+//   4. Fallback ke input manual jika kualitas terlalu rendah
 
 const ocrService = require("./ocrService");
 const notaClassifier = require("./notaClassifierService");
@@ -336,9 +325,7 @@ async function commitPurchase({ user, payload }) {
     throw e;
   }
 
-  // Normalisasi item agar fn_commit_purchase menerima tipe konsisten.
-  // Pertemuan 12: item bisa action='restock' (pakai product_id) atau
-  // action='new' (kirim kode_barang + nama_barang supaya RPC INSERT produk baru).
+  // action='restock' → product_id, action='new' → kode_barang + nama_barang
   const normalizedItems = items.map((it) => {
     const action = it.action === "new" ? "new" : "restock";
     const base = {

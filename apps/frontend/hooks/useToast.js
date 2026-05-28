@@ -1,7 +1,5 @@
-"use client";
-// =================================================================
+﻿"use client";
 // hooks/useToast.js — Notifikasi toast sederhana (sukses / error / info)
-// =================================================================
 
 import { createContext, useContext, useState, useCallback } from "react";
 

@@ -1,4 +1,3 @@
--- ============================================
 -- 008_fn_create_sale.sql
 -- Wrapper transaksi atomik untuk POST /api/sales.
 --
@@ -12,8 +11,6 @@
 -- Function ini juga menjalankan SET LOCAL app.allow_stok_update = 'true' supaya
 -- trigger R3 (BEFORE UPDATE products) mengizinkan UPDATE stok yang dilakukan
 -- oleh trigger R4 (AFTER INSERT sale_items).
--- ============================================
-
 CREATE OR REPLACE FUNCTION fn_create_sale(
   p_user_id        UUID,
   p_kode_transaksi VARCHAR(30),

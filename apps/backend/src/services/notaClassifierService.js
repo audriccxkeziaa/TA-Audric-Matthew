@@ -1,7 +1,5 @@
-// =================================================================
-// notaClassifierService.js — STRATEGI 1: Klasifikasi Awal Jenis Nota
-// =================================================================
-// Subbab 3.2.6.4 (Mitigasi OCR Tulisan Tangan), Strategi 1.
+﻿// notaClassifierService.js — STRATEGI 1: Klasifikasi Awal Jenis Nota
+// 4 (Mitigasi OCR Tulisan Tangan), Strategi 1.
 //
 // Tujuan: dari satu image buffer, putuskan jalur preprocessing mana
 // yang cocok — pipeline 'cetak' (sharp) atau 'tulisan_tangan'
@@ -16,7 +14,6 @@
 //         - stroke_width_variance    (variasi lebar coretan)
 //         - avg_tilt_deg             (rata-rata kemiringan baris teks)
 //   (d) Heuristik IF-THEN → cetak / tulisan_tangan / ambigu
-// =================================================================
 
 const sharp = require("sharp");
 const { computeOtsuThreshold } = require("./ocrService");

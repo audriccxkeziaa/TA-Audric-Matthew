@@ -1,10 +1,10 @@
-const { createClient } = require("@supabase/supabase-js");
+﻿const { createClient } = require("@supabase/supabase-js");
 const supabaseAdmin = require("../config/supabase");
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-// Lapisan 2 & 3: verifikasi JWT Supabase (signature, exp, sub claim) lalu attach profil user
+// Verifikasi JWT Supabase (signature, exp, sub claim) lalu attach profil user
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -38,9 +38,7 @@ async function authMiddleware(req, res, next) {
       return res.status(401).json({ error: "Profil user tidak ditemukan" });
     }
 
-    // Soft-deactivate (Pertemuan 13): admin bisa nonaktifkan akun lewat
-    // PATCH /api/users/:id/status. Sesi yang masih punya JWT valid pun
-    // langsung kehilangan akses karena dicek tiap request.
+    // Akun yang dinonaktifkan langsung kehilangan akses walau JWT masih valid
     if (profile.is_active === false) {
       return res.status(401).json({ error: "Akun Anda telah dinonaktifkan" });
     }

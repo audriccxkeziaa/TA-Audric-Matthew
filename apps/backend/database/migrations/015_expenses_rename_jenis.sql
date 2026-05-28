@@ -1,14 +1,10 @@
--- =================================================================
 -- Migration 015 — Rename enum expense_kind
--- =================================================================
 -- Permintaan user:
 --   'sewa'    -> 'supplier'  (pembelian dari supplier yang tidak via OCR)
 --   'lainnya' -> 'custom'    (pengeluaran custom dengan deskripsi bebas)
 --
 -- PostgreSQL 10+ mendukung ALTER TYPE … RENAME VALUE — aman dijalankan
 -- walau ada data eksisting (label berubah, ID enum di-preserve).
--- =================================================================
-
 DO $$
 BEGIN
   IF EXISTS (

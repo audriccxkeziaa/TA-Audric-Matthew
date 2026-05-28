@@ -1,11 +1,7 @@
--- =================================================================
 -- Migration 021 — Tambah kolom merk pada INSERT produk baru di fn_commit_purchase
--- =================================================================
 -- Sebelumnya merk tidak disertakan saat action='new', menyebabkan produk
 -- baru tersimpan tanpa merk. Migration ini memperbarui fungsi agar membaca
 -- field merk dari JSONB item dan menyertakannya saat INSERT.
--- =================================================================
-
 CREATE OR REPLACE FUNCTION fn_commit_purchase(
   p_user_id           UUID,
   p_no_nota_supplier  TEXT,

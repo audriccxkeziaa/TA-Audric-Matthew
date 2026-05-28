@@ -1,10 +1,6 @@
--- =================================================================
 -- Migration 018 — users.updated_at + auto-touch trigger
--- =================================================================
 -- Menambahkan kolom updated_at pada tabel users supaya admin bisa
 -- melihat kapan terakhir profil user diperbarui.
--- =================================================================
-
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 

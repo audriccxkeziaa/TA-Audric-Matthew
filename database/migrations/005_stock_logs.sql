@@ -1,9 +1,6 @@
--- ============================================
 -- 005_stock_logs.sql
 -- AUDIT TRAIL — wajib terisi setiap kali stok berubah ATAU rule menolak operasi.
 -- Kolom: WHO (user_id), WHEN (created_at presisi millidetik), WHY (rule_triggered + rule_action + reason_detail)
--- ============================================
-
 CREATE TABLE IF NOT EXISTS stock_logs (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id       UUID REFERENCES products(id),

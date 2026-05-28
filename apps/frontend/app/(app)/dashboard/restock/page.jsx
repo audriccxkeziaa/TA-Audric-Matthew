@@ -1,12 +1,9 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /dashboard/restock — R5 Rekomendasi Restock (admin)
-// =================================================================
 // Menampilkan barang aktif dengan stok <= min_stock dari view
 // v_restock_recommendation. Admin dapat menyesuaikan min_stock
 // langsung dari halaman ini (PATCH /api/products/:id).
 // min_stock ditetapkan MANUAL — bukan Min-Max/EOQ/AI.
-// =================================================================
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

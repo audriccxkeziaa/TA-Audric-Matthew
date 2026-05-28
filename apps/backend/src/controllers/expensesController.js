@@ -1,12 +1,9 @@
-// =================================================================
-// expensesController.js — Pengeluaran operasional & ringkasan keuangan
-// =================================================================
+﻿// expensesController.js — Pengeluaran operasional & ringkasan keuangan
 // Admin only (di-enforce oleh route). Memberikan:
 //   GET    /api/expenses              list + filter tanggal
 //   POST   /api/expenses              tambah pengeluaran
 //   DELETE /api/expenses/:id          hapus
 //   GET    /api/expenses/summary      ringkasan saldo (omset, biaya, bersih)
-// =================================================================
 
 const supabase = require("../config/supabase");
 

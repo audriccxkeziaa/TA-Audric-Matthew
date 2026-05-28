@@ -1,6 +1,5 @@
 # Test Scenarios — POST /api/sales (R1, R3, R4)
 
-> Pertemuan 7 — Modul Transaksi Penjualan
 > Setiap skenario dijalankan terhadap backend yang menyala (`npm run dev` di `apps/backend`) dan database Supabase terisi seed minimal:
 > - 1 user role `kasir` (login terlebih dahulu, simpan `ACCESS_TOKEN`)
 > - Produk demo `kode_barang='SCM-001'` dengan `stok=10`, `harga_jual=15000`, `status='aktif'`

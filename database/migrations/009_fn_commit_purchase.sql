@@ -1,4 +1,3 @@
--- ============================================
 -- 009_fn_commit_purchase.sql
 -- Wrapper transaksi atomik untuk POST /api/purchases/commit.
 --
@@ -12,8 +11,6 @@
 -- Function ini menjalankan SET LOCAL app.allow_stok_update='true' supaya
 -- trigger R3 (BEFORE UPDATE products) mengizinkan UPDATE stok yang dilakukan
 -- oleh trigger R4 (AFTER INSERT purchase_items, lihat 006).
--- ============================================
-
 CREATE OR REPLACE FUNCTION fn_commit_purchase(
   p_user_id          UUID,
   p_no_nota_supplier VARCHAR(50),

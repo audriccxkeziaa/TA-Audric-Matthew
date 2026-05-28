@@ -1,7 +1,5 @@
-"use client";
-// =================================================================
+﻿"use client";
 // components/Topbar.jsx — Bar atas: notifikasi stok menipis + pending approval + profil
-// =================================================================
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";

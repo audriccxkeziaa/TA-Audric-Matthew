@@ -1,4 +1,4 @@
-// Lapisan 2: RBAC — pastikan req.user.role termasuk dalam allowedRoles
+﻿//  RBAC — pastikan req.user.role termasuk dalam allowedRoles
 function roleMiddleware(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user) {

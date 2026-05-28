@@ -16,9 +16,7 @@ const {
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
-// Pertemuan 9: terima JPG/PNG/WebP. Klasifikasi cetak vs tulisan tangan
-// dilakukan di service layer (Strategi 1). PDF belum didukung — perlu
-// pdf-to-image converter terpisah, di luar scope laporan saat ini.
+// Terima JPG/PNG/WebP/PDF. Klasifikasi cetak vs tulisan tangan di service layer.
 const ACCEPTED_MIME_RE = /^(image\/(jpeg|jpg|png|webp)|application\/pdf)$/i;
 
 const upload = multer({
@@ -34,7 +32,7 @@ const upload = multer({
   },
 });
 
-// Lapisan 2: kasir & admin boleh input stok masuk
+// Kasir & admin boleh input stok masuk
 router.use(authMiddleware, roleMiddleware("kasir", "admin"));
 
 // Wrapping multer agar error (file size / mimetype) jadi HTTP 400 yang rapi

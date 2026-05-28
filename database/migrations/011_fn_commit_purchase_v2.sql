@@ -1,6 +1,5 @@
--- ============================================
 -- 011_fn_commit_purchase_v2.sql
--- Pertemuan 12: extend fn_commit_purchase supaya bisa auto-create produk baru
+-- Extend fn_commit_purchase supaya bisa auto-create produk baru
 -- saat OCR menemukan kode_barang yang belum ada di master barang.
 --
 -- Format payload p_items berubah: setiap item sekarang punya field "action":
@@ -20,8 +19,6 @@
 -- ON CONFLICT DO NOTHING + fallback SELECT untuk graceful merge ke produk
 -- existing. Stok tetap bertambah (R4), tapi nama_barang yang user ketik
 -- diabaikan (kode_barang adalah unique key).
--- ============================================
-
 CREATE OR REPLACE FUNCTION fn_commit_purchase(
   p_user_id          UUID,
   p_no_nota_supplier VARCHAR(50),

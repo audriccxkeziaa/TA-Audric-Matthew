@@ -1,7 +1,5 @@
-"use client";
-// =================================================================
+﻿"use client";
 // components/Sidebar.jsx — Navigasi samping, item difilter per role
-// =================================================================
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";

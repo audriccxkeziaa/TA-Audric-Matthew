@@ -1,12 +1,9 @@
-// =================================================================
-// lib/api-client.js — Pembungkus fetch ke backend Express REST API
-// =================================================================
+﻿// lib/api-client.js — Pembungkus fetch ke backend Express REST API
 // Tanggung jawab:
 //   - Menyimpan/membaca sesi (access_token, refresh_token, user) di localStorage
 //   - Menyisipkan header Authorization: Bearer <token> tiap request
-//   - Refresh token via Supabase ketika hampir kedaluwarsa (Lapisan 3)
+//   - Refresh token via Supabase ketika hampir kedaluwarsa
 //   - Menerjemahkan error backend jadi ApiError yang membawa status + rule
-// =================================================================
 
 import { supabase } from "./supabase";
 
@@ -74,7 +71,7 @@ export function clearSession() {
   window.sessionStorage.removeItem(TAB_USER_KEY);
 }
 
-// ---------- Refresh token (Lapisan 3) ----------
+// ---------- Refresh token ----------
 // Dipanggil sebelum tiap request. Kalau access_token kedaluwarsa < 60 detik
 // lagi, tukar refresh_token jadi token baru lewat Supabase.
 async function ensureFreshToken() {

@@ -1,6 +1,4 @@
--- =================================================================
 -- Migration 013 — Expenses (Pengeluaran Operasional) & Saldo
--- =================================================================
 -- Tabel pengeluaran operasional yang DI LUAR pembelian supplier
 -- (gaji karyawan, listrik, air, sewa, dsb). Pembelian supplier
 -- otomatis ikut potong saldo karena diambil dari tabel purchases
@@ -10,8 +8,6 @@
 --   saldo_bersih = omset_kotor (sales)
 --                  - total_pembelian_supplier (purchases tervalidasi)
 --                  - total_pengeluaran_operasional (expenses)
--- =================================================================
-
 DO $$ BEGIN
   CREATE TYPE expense_kind AS ENUM ('gaji', 'listrik', 'air', 'sewa', 'lainnya');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;

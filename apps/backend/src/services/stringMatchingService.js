@@ -1,10 +1,7 @@
-// =================================================================
-// stringMatchingService.js — Levenshtein top-3 candidate matcher
-// =================================================================
+﻿// stringMatchingService.js — Levenshtein top-3 candidate matcher
 // Mencocokkan hasil OCR ke produk database. Prioritas: kode_barang (85%)
 // lalu nama_barang (15%). Exact kode match → score 1.0 otomatis.
 // Formula similarity: 1 - distance / max(len_a, len_b).
-// =================================================================
 
 const levenshtein = require("fast-levenshtein");
 

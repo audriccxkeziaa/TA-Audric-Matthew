@@ -57,7 +57,7 @@ lib/                      api-client, api, supabase, format, receipt
 | Master Barang, Stok Masuk | ✓ | ✓ |
 
 Guard sisi klien ada di `app/(app)/layout.jsx`; backend tetap mengecek
-JWT + role pada setiap request (Lapisan 2/3).
+JWT + role pada setiap request.
 
 ## Build Produksi
 

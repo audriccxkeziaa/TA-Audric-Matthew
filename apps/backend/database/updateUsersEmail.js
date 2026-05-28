@@ -1,8 +1,6 @@
-#!/usr/bin/env node
-// =================================================================
+﻿#!/usr/bin/env node
 // Script: Update existing users email to new format
 // Jalankan: node database/updateUsersEmail.js
-// =================================================================
 
 require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");

@@ -1,9 +1,6 @@
-"use client";
-// =================================================================
+﻿"use client";
 // /laporan — Laporan Penjualan & Pembelian (admin)
-// =================================================================
 // Tabel grouped per transaksi/nota. Klik baris → modal detail items.
-// =================================================================
 
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";

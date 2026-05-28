@@ -1,6 +1,4 @@
--- =================================================================
 -- Migration 007 — View R5 (Rekomendasi Restock) — versi awal
--- =================================================================
 -- View ini dipakai endpoint GET /api/restock. Disempurnakan di
 -- migrasi 011 dengan kolom avg_sales_30d & estimasi_hari_habis.
 --
@@ -8,8 +6,6 @@
 --   HABIS    = stok = 0
 --   KRITIS   = stok > 0 AND stok <= ceil(min_stock * 0.5)
 --   MENIPIS  = stok > kritis AND stok <= min_stock
--- =================================================================
-
 DROP VIEW IF EXISTS v_restock_recommendation CASCADE;
 
 CREATE OR REPLACE VIEW v_restock_recommendation AS

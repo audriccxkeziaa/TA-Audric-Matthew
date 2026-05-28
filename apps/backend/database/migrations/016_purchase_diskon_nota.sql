@@ -1,12 +1,8 @@
--- =================================================================
 -- Migration 015 — Diskon & Potongan Harga level nota pada purchases
--- =================================================================
 -- Dua field terpisah:
 --   diskon_persen   = persentase diskon nota (misal 5%)
 --   potongan_harga  = potongan nominal Rupiah (misal Rp 50.000)
 -- Total = sum(items) - (sum(items) * diskon_persen/100) - potongan_harga
--- =================================================================
-
 ALTER TABLE purchases
   ADD COLUMN IF NOT EXISTS diskon_persen NUMERIC(5,2) NOT NULL DEFAULT 0
   CHECK (diskon_persen BETWEEN 0 AND 100);

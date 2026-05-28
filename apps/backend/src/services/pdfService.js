@@ -1,6 +1,4 @@
-// =================================================================
-// pdfService.js — Ekstraksi text-layer dari nota format PDF
-// =================================================================
+﻿// pdfService.js — Ekstraksi text-layer dari nota format PDF
 // Strategi: PDF dari supplier biasanya 2 jenis —
 //   (A) PDF "lahir digital" (di-export dari Excel/Word/sistem POS) — punya
 //       text-layer yang bisa diekstrak langsung. Akurasi praktis ~100%
@@ -11,7 +9,6 @@
 //
 // Halaman pertama biasanya cukup untuk nota toko motor (1-2 halaman).
 // Multi-halaman bisa di-implement di iterasi berikutnya.
-// =================================================================
 
 const { PDFParse } = require("pdf-parse");
 
