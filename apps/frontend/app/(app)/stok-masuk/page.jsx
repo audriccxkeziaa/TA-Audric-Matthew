@@ -385,7 +385,11 @@ export default function StokMasukPage() {
         action: "restock",
         product_id: pid,
         picked_label: c ? c.nama_barang : row.picked_label,
+        kode_barang: c?.kode_barang || row.kode_barang || "",
+        nama_barang: c?.nama_barang || row.nama_barang || "",
         merk: c?.merk || row.merk || "",
+        harga_beli: c?.harga_beli ?? row.harga_beli ?? 0,
+        harga_jual: c?.harga_jual ?? row.harga_jual ?? 0,
       });
     }
   }
@@ -1024,7 +1028,11 @@ export default function StokMasukPage() {
             action: "restock",
             product_id: p.id,
             picked_label: p.nama_barang,
+            kode_barang: p.kode_barang || "",
+            nama_barang: p.nama_barang || "",
             merk: p.merk || "",
+            harga_beli: p.harga_beli ?? 0,
+            harga_jual: p.harga_jual ?? 0,
           });
         }}
       />
@@ -1260,7 +1268,7 @@ function ItemRow({
           harga_beli: exact.harga_beli ?? 0,
           harga_jual: exact.harga_jual ?? 0,
           merk: exact.merk || "",
-          candidates: [{ product_id: exact.id, kode_barang: exact.kode_barang, nama_barang: exact.nama_barang, merk: exact.merk, similarity: 1.0 }],
+          candidates: [{ product_id: exact.id, kode_barang: exact.kode_barang, nama_barang: exact.nama_barang, merk: exact.merk, harga_beli: exact.harga_beli, harga_jual: exact.harga_jual, similarity: 1.0 }],
         });
         onDecisionRef.current(`cand:${exact.id}`);
         setAutoFillMsg(`Kode cocok 100% — data terisi dari "${exact.nama_barang}"`);
@@ -1272,6 +1280,8 @@ function ItemRow({
         kode_barang: p.kode_barang,
         nama_barang: p.nama_barang,
         merk: p.merk,
+        harga_beli: p.harga_beli,
+        harga_jual: p.harga_jual,
         similarity: kodeSimilarity(trimmed, p.kode_barang),
       }));
       const highMatches = withSim.filter((c) => c.similarity >= 0.8);
