@@ -189,7 +189,7 @@ function ReturSupplierForm() {
           harga_satuan: it.harga_beli,
         })),
       });
-      toast.success(res.message || "Retur supplier berhasil");
+      toast.success(res.message || "Retur supplier berhasil.");
       setSelected(null);
       setReturnItems([]);
       setAlasan("");
@@ -521,7 +521,7 @@ function ReturPelangganForm() {
         setPinPassword("");
         setPinError("");
       } else {
-        toast.success(res.message || "Retur pelanggan berhasil");
+        toast.success(res.message || "Retur pelanggan berhasil.");
         resetForm();
       }
     } catch (err) {
@@ -916,12 +916,12 @@ function PenyesuaianStokForm() {
           harga_satuan: it.harga_beli,
         })),
       });
-      toast.success(res.message || "Penyesuaian stok berhasil");
+      toast.success(res.message || "Penyesuaian stok berhasil.");
       setItems([]);
       setAlasan("");
       setCatatan("");
     } catch (err) {
-      toast.error(err.message || "Gagal menyimpan penyesuaian");
+      toast.error(err.message || "Gagal menyimpan penyesuaian.");
     } finally {
       setSubmitting(false);
     }

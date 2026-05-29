@@ -79,7 +79,7 @@ async function logout(req, res) {
     );
 
     await supabase.auth.signOut();
-    res.json({ message: "Logout berhasil" });
+    res.json({ message: "Logout berhasil." });
   } catch (err) {
     console.error("[POS-AUTH] Logout error:", err.message);
     res.status(500).json({ error: "Gagal logout" });
@@ -133,7 +133,7 @@ async function register(req, res) {
     }
 
     res.status(201).json({
-      message: "User berhasil dibuat",
+      message: "User berhasil dibuat.",
       user: { id: authData.user.id, username: username.trim(), role },
     });
   } catch (err) {
@@ -233,7 +233,7 @@ async function updateUser(req, res) {
         { ...profilePatch, ...authPatch }
       ).join(",")})`
     );
-    res.json({ message: "User berhasil diupdate" });
+    res.json({ message: "User berhasil diupdate." });
   } catch (err) {
     console.error("[POS-AUTH] updateUser error:", err.message);
     res.status(500).json({ error: "Gagal mengupdate user" });

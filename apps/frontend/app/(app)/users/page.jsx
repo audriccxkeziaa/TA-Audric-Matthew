@@ -162,10 +162,10 @@ function UserDetailModal({ open, onClose, target, isSelf }) {
               disabled={toggleMutation.isPending}
             >
               {toggleMutation.isPending
-                ? "Memproses..."
+                ? "Processing..."
                 : active
-                ? "Nonaktifkan User"
-                : "Aktifkan User"}
+                ? "Deactivate User"
+                : "Activate User"}
             </Button>
           ) : (
             <span />

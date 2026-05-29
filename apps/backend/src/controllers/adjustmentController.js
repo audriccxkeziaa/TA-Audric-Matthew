@@ -13,8 +13,8 @@ async function createAdjustment(req, res) {
     };
     const isPending = detail.status === "pending";
     const msg = isPending
-      ? `${typeLabels[detail.type]} berhasil dibuat — menunggu persetujuan admin`
-      : `${typeLabels[detail.type] || "Penyesuaian stok"} berhasil disimpan`;
+      ? `${typeLabels[detail.type]} berhasil dibuat — menunggu persetujuan admin..`
+      : `${typeLabels[detail.type] || "Penyesuaian stok"} berhasil disimpan.`;
     return res.status(201).json({ message: msg, data: detail });
   } catch (err) {
     const status = err.status || 500;
@@ -34,7 +34,7 @@ async function approveAdjustment(req, res) {
       adjustmentId: req.params.id,
     });
     return res.json({
-      message: "Retur pelanggan berhasil disetujui",
+      message: "Retur pelanggan berhasil disetujui!",
       data: detail,
     });
   } catch (err) {

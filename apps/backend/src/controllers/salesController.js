@@ -23,7 +23,7 @@ async function createSale(req, res) {
       items,
     });
     return res.status(201).json({
-      message: "Transaksi berhasil",
+      message: "Transaksi berhasil.",
       data: receipt,
     });
   } catch (err) {

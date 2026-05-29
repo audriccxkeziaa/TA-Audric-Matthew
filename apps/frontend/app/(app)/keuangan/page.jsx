@@ -290,7 +290,7 @@ export default function KeuanganPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["expenses"] });
       qc.invalidateQueries({ queryKey: ["finance-summary"] });
-      toast.success("Pengeluaran Operasional berhasil dihapus");
+      toast.success("Pengeluaran Operasional berhasil dihapus.");
       setConfirmDel(null);
     },
     onError: (e) => toast.error(e.message),

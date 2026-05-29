@@ -13,10 +13,10 @@ async function processOcr(req, res) {
     });
 
     // Pesan sesuai status hasil (Strategi 1 / Strategi 4)
-    let message = "OCR berhasil — silakan validasi hasil sebelum simpan";
+    let message = "OCR berhasil — silakan validasi hasil sebelum simpan.";
     if (result.status === "ambiguous_classification") {
       message =
-        "Sistem tidak yakin jenis nota, mohon konfirmasi: cetak atau tulisan tangan";
+        "Sistem tidak yakin jenis nota, mohon konfirmasi: cetak atau tulisan tangan?";
     } else if (result.status === "manual_input_required") {
       message =
         "Kualitas hasil OCR rendah — silakan lanjut dengan input manual";
@@ -41,7 +41,7 @@ async function commitPurchase(req, res) {
       payload: req.body,
     });
     return res.status(201).json({
-      message: "Stok masuk berhasil disimpan",
+      message: "Stok masuk berhasil disimpan.",
       data: detail,
     });
   } catch (err) {
@@ -152,10 +152,10 @@ async function deleteNotaFileCtrl(req, res) {
     const { file_url } = req.body || {};
     if (!file_url) return res.status(400).json({ error: "file_url wajib diisi" });
     await purchasesService.deleteFile({ fileUrl: file_url });
-    return res.json({ message: "File berhasil dihapus" });
+    return res.json({ message: "File berhasil dihapus." });
   } catch (err) {
     console.warn("[POS-PURCHASES] deleteFile:", err.message);
-    return res.status(500).json({ error: "Gagal menghapus file" });
+    return res.status(500).json({ error: "Gagal menghapus file." });
   }
 }
 

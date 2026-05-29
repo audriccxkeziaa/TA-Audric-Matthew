@@ -133,6 +133,11 @@ export default function StokMasukPage() {
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftSavedInfo, setDraftSavedInfo] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [merkList, setMerkList] = useState([]);
+
+  useEffect(() => {
+    productsApi.merks().then((res) => setMerkList(res?.data || [])).catch(() => {});
+  }, []);
 
   // nota_type efektif untuk hasil OCR aktif (penentu highlight & aturan review)
   const notaType = ocr?.nota_type || null;
@@ -392,12 +397,11 @@ export default function StokMasukPage() {
       const qtyOk = Number(r.qty) > 0;
       const hargaOk = Number(r.harga_beli) > 0; // wajib > 0
       if (!qtyOk || !hargaOk) return false;
+      if (!r.merk?.trim()) return false;
       if (r.action === "restock") {
         if (!r.product_id) return false;
       } else if (r.action === "new") {
-        // kode, nama, merk wajib untuk produk baru
         if (!r.kode_barang.trim() || !r.nama_barang.trim()) return false;
-        if (!r.merk?.trim()) return false;
       } else {
         return false; // belum ada keputusan
       }
@@ -593,7 +597,7 @@ export default function StokMasukPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-800">Input Other Purchase <Invoice></Invoice> (Manual)</p>
+            <p className="text-sm font-semibold text-slate-800">Input Other Purchase Invoice (Manual)</p>
             <p className="mt-1 text-xs text-slate-500">
               Input data stok masuk spareparts. Direkomendasikan untuk nota yang kualitasnya buruk/rusak.
             </p>
@@ -847,6 +851,7 @@ export default function StokMasukPage() {
                     index={idx}
                     row={row}
                     isHandwritten={isHandwritten}
+                    merkList={merkList}
                     onPatch={(p) => patchRow(row.uid, p)}
                     onRemove={() => removeRow(row.uid)}
                     onDecisionChange={(v) => onDecisionChange(row, v)}
@@ -1163,10 +1168,72 @@ function kodeSimilarity(a, b) {
   return 1 - dp[na.length][nb.length] / maxLen;
 }
 
+function MerkCombobox({ value, onChange, merkList, disabled, className }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return merkList;
+    return merkList.filter((m) => m.toLowerCase().includes(q));
+  }, [search, merkList]);
+
+  const showAddNew = search.trim() && !merkList.some((m) => m.toLowerCase() === search.trim().toLowerCase());
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        value={value || ""}
+        onChange={(e) => { onChange(e.target.value); setSearch(e.target.value); setOpen(true); }}
+        onFocus={() => { setSearch(value || ""); setOpen(true); }}
+        placeholder={disabled ? "—" : "Pilih atau ketik merk baru"}
+        disabled={disabled}
+        className={className}
+      />
+      {open && !disabled && (
+        <div className="absolute z-30 mt-0.5 max-h-44 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+          {filtered.map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`w-full px-3 py-1.5 text-left text-sm hover:bg-brand-50 ${m === value ? "bg-brand-50 font-medium text-brand-700" : "text-slate-700"}`}
+              onClick={() => { onChange(m); setOpen(false); }}
+            >
+              {m}
+            </button>
+          ))}
+          {showAddNew && (
+            <button
+              type="button"
+              className="w-full border-t border-slate-100 px-3 py-1.5 text-left text-sm font-medium text-emerald-600 hover:bg-emerald-50"
+              onClick={() => { onChange(search.trim()); setOpen(false); }}
+            >
+              + Tambah merk baru &quot;{search.trim()}&quot;
+            </button>
+          )}
+          {filtered.length === 0 && !showAddNew && (
+            <p className="px-3 py-2 text-xs text-slate-400">Tidak ada merk ditemukan</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ItemRow({
   index,
   row,
   isHandwritten,
+  merkList,
   onPatch,
   onRemove,
   onDecisionChange,
@@ -1394,15 +1461,15 @@ function ItemRow({
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Merk{row.action === "new" && <span className="ml-0.5 text-red-500">*</span>}
+            Merk <span className="ml-0.5 text-red-500">*</span>
           </span>
-          <input
+          <MerkCombobox
             value={row.merk || ""}
-            onChange={(e) => onPatch({ merk: e.target.value })}
-            placeholder={row.action === "restock" ? "—" : "mis. Aspira"}
-            disabled={row.action === "restock"}
+            onChange={(v) => onPatch({ merk: v })}
+            merkList={merkList}
+            disabled={row.action === "restock" && !!row.merk?.trim()}
             className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              row.action === "restock"
+              row.action === "restock" && row.merk?.trim()
                 ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
                 : fieldClass("merk") || "border-slate-300"
             }`}

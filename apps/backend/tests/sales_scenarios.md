@@ -29,7 +29,7 @@ curl -X POST http://localhost:5000/api/sales \
 **Expected response:** HTTP `201`
 ```json
 {
-  "message": "Transaksi berhasil",
+  "message": "Transaksi berhasil.",
   "data": {
     "kode_transaksi": "INV-20260428-XXXXXX",
     "total_harga": 45000,

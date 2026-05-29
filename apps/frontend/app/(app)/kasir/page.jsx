@@ -226,7 +226,7 @@ export default function KasirPage() {
       setReceipt({ ...res.data, tunai: tunaiRef.current });
       clearCart();
       setBayarOpen(false);
-      toast.success("Transaksi berhasil disimpan");
+      toast.success("Transaksi berhasil disimpan.");
     },
     onError: (e) => {
       if (e.rule === "R1") {
