@@ -110,26 +110,34 @@ export default function Topbar({ onToggleSidebar }) {
                   items.map((it) => (
                     <div
                       key={it.id}
-                      className="flex items-center justify-between gap-2 border-b border-slate-50 px-4 py-2 last:border-0"
+                      className="flex items-start gap-3 border-b border-slate-50 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer last:border-0"
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm text-slate-700">
+                      {/* Ikon Indikator */}
+                      <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${it.level === 'habis' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-700">
                           {it.nama_barang}
                         </p>
-                        <p className="text-xs text-slate-400">
-                          {it.kode_barang}
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          KODE: {it.kode_barang}
                         </p>
                       </div>
+                      <div className="shrink-0 pt-1">
                       <Badge tone={it.level === "habis" ? "red" : "amber"}>
                         {angka(it.stok)}/{angka(it.min_stock)}
                       </Badge>
                     </div>
-                  ))
-                )}
-              </div>
+                  </div>
+                ))
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
         {/* Profil + logout */}
         <div className="flex items-center gap-2.5 border-l border-slate-200 pl-3">

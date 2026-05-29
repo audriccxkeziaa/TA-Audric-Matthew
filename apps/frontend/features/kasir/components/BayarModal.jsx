@@ -132,7 +132,7 @@ export function BayarModal({ open, onClose, total, cart, onConfirm, processing }
             disabled={!cukup || processing}
             className="bg-emerald-600 hover:bg-emerald-700"
           >
-            {processing ? "Memproses…" : "Selesai (Enter)"}
+            {processing ? "Loading…" : "Selesai (Enter)"}
           </Button>
         </div>
       </div>

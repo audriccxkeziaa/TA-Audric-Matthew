@@ -129,8 +129,8 @@ export default function Sidebar({ role, open, onClose }) {
                 aria-current={active ? "page" : undefined}
                 className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
                   active
-                    ? "bg-white/15 font-semibold text-white shadow-sm"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                    ? "bg-gradient-to-r from-brand-600/40 to-transparent font-semibold text-white shadow-[inset_2px_0_0_0_#818cf8]"
+                    : "text-white/60 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 {/* Accent bar saat aktif */}

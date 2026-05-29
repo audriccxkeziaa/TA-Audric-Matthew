@@ -43,7 +43,7 @@ export function Button({
   ...props
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 " +
+    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:cursor-not-allowed disabled:opacity-60" +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-white " +
     "active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100";
   const variants = {
@@ -77,12 +77,19 @@ export function Button({
   );
 }
 
-// ---------- Field dasar (label + pesan error) ----------
+// // ---------- Field dasar (label + pesan error) ----------
+// const FIELD_BASE =
+//   "w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
+//   "placeholder:text-slate-400 transition-colors " +
+//   "hover:border-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 " +
+//   "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500";
+// ---------- Field dasar (ganti FIELD_BASE yang lama dengan ini) ----------
 const FIELD_BASE =
-  "w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
-  "placeholder:text-slate-400 transition-colors " +
-  "hover:border-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 " +
-  "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500";
+  "w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-900 shadow-sm " +
+  "placeholder:text-slate-400 transition-all duration-200 " +
+  "hover:bg-white hover:border-slate-300 " +
+  "focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 " +
+  "disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500";
 
 // ---------- Input teks ----------
 export function Input({ label, error, className = "", ...props }) {
@@ -134,7 +141,45 @@ export function Card({ children, className = "", hover = false }) {
   );
 }
 
-// ---------- Kartu metrik (dashboard) ----------
+// // ---------- Kartu metrik (dashboard) ----------
+// export function StatCard({ label, value, hint, tone = "default", icon }) {
+//   const tones = {
+//     default: "text-slate-900",
+//     good: "text-emerald-600",
+//     warn: "text-amber-600",
+//     bad: "text-red-600",
+//   };
+//   const iconTones = {
+//     default: "bg-brand-50 text-brand-600",
+//     good: "bg-emerald-50 text-emerald-600",
+//     warn: "bg-amber-50 text-amber-600",
+//     bad: "bg-red-50 text-red-600",
+//   };
+//   return (
+//     <Card className="p-4" hover>
+//       <div className="flex items-start justify-between gap-3">
+//         <div className="min-w-0">
+//           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+//             {label}
+//           </p>
+//           <p className={`mt-1.5 text-2xl font-bold tracking-tight ${tones[tone]}`}>
+//             {value}
+//           </p>
+//           {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+//         </div>
+//         {icon && (
+//           <span
+//             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconTones[tone]}`}
+//           >
+//             {icon}
+//           </span>
+//         )}
+//       </div>
+//     </Card>
+//   );
+// }
+
+// ---------- Kartu metrik (ganti fungsi StatCard yang lama dengan ini) ----------
 export function StatCard({ label, value, hint, tone = "default", icon }) {
   const tones = {
     default: "text-slate-900",
@@ -142,11 +187,12 @@ export function StatCard({ label, value, hint, tone = "default", icon }) {
     warn: "text-amber-600",
     bad: "text-red-600",
   };
+  // Icon tones diubah agar background-nya lebih soft dan premium
   const iconTones = {
-    default: "bg-brand-50 text-brand-600",
-    good: "bg-emerald-50 text-emerald-600",
-    warn: "bg-amber-50 text-amber-600",
-    bad: "bg-red-50 text-red-600",
+    default: "bg-brand-50/50 text-brand-600 ring-1 ring-brand-100/50",
+    good: "bg-emerald-50/50 text-emerald-600 ring-1 ring-emerald-100/50",
+    warn: "bg-amber-50/50 text-amber-600 ring-1 ring-amber-100/50",
+    bad: "bg-red-50/50 text-red-600 ring-1 ring-red-100/50",
   };
   return (
     <Card className="p-4" hover>
@@ -260,13 +306,13 @@ export function Modal({ open, onClose, title, children, width = "max-w-lg" }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm "transition-opacity
         onClick={onClose}
       />
       <div
-        className={`relative z-10 w-full ${width} max-h-[90vh] overflow-y-auto thin-scroll rounded-2xl bg-white shadow-pop animate-scale-in`}
+        className={`relative w-full ${maxWidth} transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all sm:my-8`}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-3.5 backdrop-blur">
           <h2 className="font-semibold text-slate-900">{title}</h2>

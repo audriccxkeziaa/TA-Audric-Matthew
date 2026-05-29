@@ -150,7 +150,7 @@ export function ReturSupplierForm() {
           disabled={r.checkedItems.length === 0 || !r.alasan.trim() || r.submitting}
           variant="danger"
         >
-          {r.submitting ? "Loading.." : "Konfirmasi Retur"}
+          {r.submitting ? "Please wait..." : "Confirm Return"}
         </Button>
       </div>
 

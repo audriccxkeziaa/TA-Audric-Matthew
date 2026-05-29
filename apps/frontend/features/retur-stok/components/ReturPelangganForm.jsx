@@ -126,7 +126,7 @@ export function ReturPelangganForm() {
                 <p className="text-xs font-medium text-red-600">{r.pinError}</p>
               )}
               <Button onClick={r.handlePinApprove} disabled={r.pinSubmitting} className="w-full">
-                {r.pinSubmitting ? "Memverifikasi..." : "Verifikasi & Setujui"}
+                {r.pinSubmitting ? "Verifying..." : "Verify & Confirm"}
               </Button>
             </div>
 
@@ -285,7 +285,7 @@ export function ReturPelangganForm() {
           disabled={r.checkedItems.length === 0 || !r.alasan.trim() || r.submitting}
           variant="primary"
         >
-          {r.submitting ? "Loading..." : "Konfirmasi Retur"}
+          {r.submitting ? "Please wait..." : "Confirm Return"}
         </Button>
       </div>
 

@@ -139,7 +139,7 @@ export default function LoginPage() {
             className="w-full"
             loading={submitting}
           >
-            {submitting ? "Memproses..." : "Login"}
+            {submitting ? "Please wait..." : "Login"}
           </Button>
         </form>
       </Card>

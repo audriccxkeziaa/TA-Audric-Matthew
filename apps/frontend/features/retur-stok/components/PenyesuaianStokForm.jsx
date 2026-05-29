@@ -20,7 +20,7 @@ export function PenyesuaianStokForm() {
       <div className="mb-4 flex items-center justify-between">
         <h3 className="font-semibold text-slate-800">Daftar Barang</h3>
         <Button size="sm" onClick={() => p.setPickerOpen(true)}>
-          + Tambah Item
+          + Add Item
         </Button>
       </div>
 
@@ -108,7 +108,7 @@ export function PenyesuaianStokForm() {
           disabled={p.items.length === 0 || !p.alasan.trim() || p.submitting}
           variant="danger"
         >
-          {p.submitting ? "Loading..." : "Konfirmasi Penyesuaian"}
+          {p.submitting ? "Please wait..." : "Confirm Adjustment"}
         </Button>
       </div>
 

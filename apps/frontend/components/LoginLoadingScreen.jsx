@@ -24,7 +24,7 @@ export default function LoginLoadingScreen({
       ? "Owner / Administrator"
       : role === "kasir"
       ? "Kasir"
-      : "Memproses...";
+      : "Please wait...";
 
   useEffect(() => {
     const tick = setInterval(() => {

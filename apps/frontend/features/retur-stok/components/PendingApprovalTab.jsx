@@ -170,7 +170,7 @@ export function PendingApprovalTab() {
                   onClick={() => a.handleApprove(a.detail.id)}
                   disabled={a.processing === a.detail.id}
                 >
-                  {a.processing === a.detail.id ? "Memproses..." : "Setujui Retur"}
+                  {a.processing === a.detail.id ? "Please wait..." : "Confirm Return"}
                 </Button>
               </div>
             )}
