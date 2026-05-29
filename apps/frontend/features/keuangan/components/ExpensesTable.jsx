@@ -19,7 +19,8 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
         />
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
-          <table className="w-full min-w-[500px] text-sm">
+          {/* ===== Tampilan DESKTOP (md+) ===== */}
+          <table className="hidden w-full min-w-[500px] text-sm md:table">
             <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2.5">Tanggal</th>
@@ -59,6 +60,37 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
               ))}
             </tbody>
           </table>
+
+          {/* ===== Tampilan HP (< md) — kartu per pengeluaran ===== */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {rows.map((r) => (
+              <li key={r.id} className="flex items-start justify-between gap-2 p-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Badge tone={JENIS_TONE[r.jenis] || "slate"}>
+                      {JENIS_OPTIONS.find((o) => o.value === r.jenis)?.label || r.jenis}
+                    </Badge>
+                    <span className="text-xs text-slate-400">{tanggal(r.tanggal)}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-700">{r.deskripsi}</p>
+                  <p className="text-xs text-slate-400">Oleh: {r.username || "-"}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="font-semibold text-red-600">− {rupiah(r.nominal)}</span>
+                  <button
+                    onClick={() => onEdit(r)}
+                    className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition"
+                    title="Lihat detail"
+                    aria-label="Lihat detail"
+                  >
+                    <svg className="h-4 w-4 text-slate-600 hover:text-brand-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 5C7 5 2.73 8.11 1 12.46c1.73 4.35 6 7.54 11 7.54s9.27-3.19 11-7.54C21.27 8.11 17 5 12 5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                    </svg>
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

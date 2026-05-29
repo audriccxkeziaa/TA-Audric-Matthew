@@ -16,7 +16,8 @@ export function AuditTable({ rows, isLoading, page, pageSize, onRowClick }) {
         <EmptyState title="Tidak ada catatan audit untuk filter ini" />
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
-          <table className="w-full min-w-[700px] text-sm">
+          {/* ===== Tampilan DESKTOP (md+) ===== */}
+          <table className="hidden w-full min-w-[700px] text-sm md:table">
             <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2.5 w-8">No</th>
@@ -89,6 +90,48 @@ export function AuditTable({ rows, isLoading, page, pageSize, onRowClick }) {
               ))}
             </tbody>
           </table>
+
+          {/* ===== Tampilan HP (< md) — kartu per catatan ===== */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {rows.map((r, index) => (
+              <li
+                key={r.id}
+                onClick={() => onRowClick(r)}
+                className="cursor-pointer p-3 transition-colors hover:bg-brand-50/40"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800">
+                      {r.nama_barang || (
+                        <span className="text-slate-300">(tanpa produk)</span>
+                      )}
+                    </p>
+                    {r.kode_barang && (
+                      <p className="font-mono text-xs text-slate-400">{r.kode_barang}</p>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-right text-sm font-semibold">
+                    {r.delta_qty > 0 ? `+${r.delta_qty}` : r.delta_qty}
+                  </span>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {ruleBadge(r.rule_triggered)}
+                  {actionBadge(r.rule_action)}
+                  <span className="text-xs text-slate-400">{humanSource(r.source_type)}</span>
+                </div>
+
+                <p className="mt-1.5 line-clamp-2 text-xs text-slate-600">
+                  {humanReason(r)}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  {tanggalJam(r.created_at)} · {r.username || "—"}
+                  {r.user_role ? ` (${r.user_role})` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

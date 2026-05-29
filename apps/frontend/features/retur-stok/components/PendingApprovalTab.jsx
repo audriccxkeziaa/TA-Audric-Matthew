@@ -37,7 +37,7 @@ export function PendingApprovalTab() {
             {a.pendingItems.map((row) => (
               <div
                 key={row.id}
-                className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
+                className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -53,7 +53,7 @@ export function PendingApprovalTab() {
                     {row.alasan}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 ml-3">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:ml-3">
                   <button
                     onClick={() => a.openDetail(row.id)}
                     className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"

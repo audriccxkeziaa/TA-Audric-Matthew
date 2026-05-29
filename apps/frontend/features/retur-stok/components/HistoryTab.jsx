@@ -48,7 +48,8 @@ export function HistoryTab() {
         {!h.loading && h.data.length > 0 && (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              {/* ===== Tampilan DESKTOP (md+) ===== */}
+              <table className="hidden w-full text-sm md:table">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <th className="py-2 pr-2">Kode</th>
@@ -106,6 +107,40 @@ export function HistoryTab() {
                   })}
                 </tbody>
               </table>
+
+              {/* ===== Tampilan HP (< md) — kartu per riwayat ===== */}
+              <ul className="divide-y divide-slate-100 md:hidden">
+                {h.pagedData.map((row) => {
+                  const tb = TYPE_BADGES[row.type] || { label: row.type, tone: "slate" };
+                  const sb = STATUS_BADGES[row.status] || { label: row.status, tone: "slate" };
+                  return (
+                    <li
+                      key={row.id}
+                      onClick={() => h.openDetail(row.id)}
+                      className="cursor-pointer py-3 transition-colors hover:bg-brand-50/40"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-mono text-xs font-medium text-slate-700">
+                          {row.kode_adjustment}
+                        </p>
+                        <span className="shrink-0 text-xs text-slate-500">
+                          Qty {angka(row.total_qty)}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <Badge tone={tb.tone}>{tb.label}</Badge>
+                        <Badge tone={sb.tone}>{sb.label}</Badge>
+                      </div>
+                      <p className="mt-1.5 line-clamp-2 text-xs text-slate-600" title={row.alasan}>
+                        {row.alasan}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {row.username || "-"} · {tanggalJam(row.created_at)}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
 
             <div className="mt-4 flex items-center justify-between text-sm text-slate-500">

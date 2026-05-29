@@ -7,10 +7,42 @@ body {
   height: 100%;
 }
 
+html {
+  /* Cegah iOS/Safari mengubah ukuran teks otomatis saat rotasi layar */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   @apply bg-slate-50 text-slate-800 antialiased;
   font-feature-settings: "cv11", "ss01";
   text-rendering: optimizeLegibility;
+  /* Hilangkan kilatan abu-abu saat tap tombol di HP, scroll mulus ala iOS */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-overflow-scrolling: touch;
+  /* Hormati area aman iPhone (poni/notch & home indicator) */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Utility: padding aman untuk elemen yang menempel di tepi layar (mis. bar sticky) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Mencegah scroll halaman ikut "memantul" ke parent di area scroll internal */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+/* Anti-zoom iOS: Safari mobile auto-zoom saat fokus ke input ber-font < 16px.
+   Naikkan font input ke 16px HANYA di layar kecil agar tidak ganggu desktop. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* Cincin fokus konsisten & aksesibel di seluruh kontrol interaktif */

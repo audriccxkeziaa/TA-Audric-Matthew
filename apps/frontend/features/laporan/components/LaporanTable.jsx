@@ -23,7 +23,8 @@ export function LaporanTable({
         <EmptyState title="Tidak ada data pada periode ini" />
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
-          <table className="w-full min-w-[600px] text-sm">
+          {/* ===== Tampilan DESKTOP (md+) ===== */}
+          <table className="hidden w-full min-w-[600px] text-sm md:table">
             <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs uppercase text-slate-500">
               {isSales ? (
                 <tr>
@@ -96,6 +97,37 @@ export function LaporanTable({
               ))}
             </tbody>
           </table>
+
+          {/* ===== Tampilan HP (< md) — kartu per transaksi/nota ===== */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {rows.map((g, i) => (
+              <li
+                key={isSales ? g.sale_id : g.purchase_id}
+                onClick={() => onRowClick(g)}
+                className="cursor-pointer p-3 transition-colors hover:bg-brand-50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-medium text-brand-700">
+                      {isSales ? g.kode_transaksi : g.no_nota || "-"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {tanggalJam(g.created_at)} · {isSales ? g.kasir : g.user}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-right font-semibold tabular-nums text-slate-900">
+                    {rupiah(g.total)}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                    {g.item_count} item
+                  </span>
+                  <span>Total Qty: {angka(g.total_qty)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

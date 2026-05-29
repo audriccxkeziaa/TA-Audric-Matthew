@@ -16,6 +16,17 @@ export const metadata = {
     "Sistem Point of Sale dengan OCR stok masuk dan Rule-Based System",
 };
 
+// Pengaturan layar resmi (Next.js App Router). viewportFit="cover" + safe-area
+// di globals.css membuat tampilan rapi di iPhone dengan poni/notch. maximumScale=5
+// tetap mengizinkan pengguna zoom (aksesibilitas), tanpa zoom paksa saat fokus input.
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#3730a3",
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="id" className={inter.variable}>

@@ -13,15 +13,16 @@ const TABLE_TO_QUERY_KEYS = {
     ["low-stock"],
     ["restock"],
     ["notifications"],
+    ["notif-low-stock"], // lonceng "Stok Menipis" di Topbar → update instan
   ],
   sales: [["sales"], ["dashboard"], ["reports"]],
   sale_items: [["sales"], ["dashboard"], ["reports"]],
   purchases: [["purchases"], ["dashboard"], ["reports"]],
-  purchase_items: [["purchases"], ["products"], ["pos-products"], ["dashboard"], ["restock"]],
+  purchase_items: [["purchases"], ["products"], ["pos-products"], ["dashboard"], ["restock"], ["notif-low-stock"]],
   users: [["users"]],
   stock_logs: [["audit-logs"]],
   expenses: [["expenses"]],
-  stock_adjustments: [["adjustments"], ["adjustments-pending"], ["notif-pending-approval"]],
+  stock_adjustments: [["adjustments"], ["adjustments-pending"], ["notif-pending-approval"], ["history"]],
   stock_adjustment_items: [["adjustments"]],
 };
 
