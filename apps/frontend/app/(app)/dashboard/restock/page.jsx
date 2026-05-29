@@ -330,7 +330,7 @@ function RestockDetailModal({ item, onClose }) {
               onClick={() => save.mutate()}
               disabled={save.isPending || !alasan.trim()}
             >
-              {save.isPending ? "Menyimpan..." : "Simpan"}
+              {save.isPending ? "saving..." : "Save"}
             </Button>
           </div>
         </div>

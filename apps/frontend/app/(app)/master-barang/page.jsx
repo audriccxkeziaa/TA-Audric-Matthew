@@ -182,7 +182,7 @@ function ProductForm({ open, onClose, editing, isAdmin }) {
             }}
             disabled={mutation.isPending}
           >
-            {mutation.isPending ? "Menyimpan..." : "Save"}
+            {mutation.isPending ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>

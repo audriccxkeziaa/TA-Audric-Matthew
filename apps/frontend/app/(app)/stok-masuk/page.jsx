@@ -601,7 +601,7 @@ export default function StokMasukPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-800">Input Other Purchase Invoice (Manual)</p>
+            <p className="text-sm font-semibold text-slate-800">Input Nota Pembelian (Manual)</p>
             <p className="mt-1 text-xs text-slate-500">
               Input data stok masuk spareparts. Direkomendasikan untuk nota yang kualitasnya buruk/rusak.
             </p>
@@ -934,7 +934,7 @@ export default function StokMasukPage() {
                 </span>
               ) : (
                 <span>
-                  Pastikan semua kolom sudah terisi agar tombol 'Konfirmasi dan Simpan' aktif. 
+                  Pastikan semua kolom sudah terisi agar tombol 'Confirm & Save' aktif. 
                   {isHandwritten && " serta tandai 'Diperiksa'"}
                 </span>
               )}
@@ -968,7 +968,7 @@ export default function StokMasukPage() {
                 onClick={commit}
                 disabled={!canCommit || committing}
               >
-                {committing ? "Menyimpan..." : "Confirm & Save All"}
+                {committing ? "Saving..." : "Confirm & Save All"}
               </Button>
             </div>
           </Card>
@@ -1088,7 +1088,7 @@ export default function StokMasukPage() {
               </div>
             </dl>
             <div className="mt-4 flex justify-end">
-              <Button onClick={resetAll}>Input Nota Pembelian Lain</Button>
+              <Button onClick={resetAll}>Input Other Purchase Invoice</Button>
             </div>
           </div>
         )}
