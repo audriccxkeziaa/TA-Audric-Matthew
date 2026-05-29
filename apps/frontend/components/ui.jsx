@@ -295,7 +295,7 @@ export function PageHeader({ title, description, actions }) {
 }
 
 // ---------- Modal ----------
-export function Modal({ open, onClose, title, children, width = "max-w-lg" }) {
+export function Modal({ open, onClose, title, children, maxWidth = "max-w-lg" }) {
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") onClose?.();
