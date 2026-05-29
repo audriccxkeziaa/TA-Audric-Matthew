@@ -5,9 +5,9 @@ import { Card, Button } from "@/components/ui";
 
 export function BarcodeBar({ value, onChange, onSubmit, inputRef, onBrowse }) {
   return (
-    <Card className="shrink-0 border-2 border-brand-500 p-3">
+    <Card className="shrink-0 ring-2 ring-brand-500/70 p-3">
       <form onSubmit={onSubmit} className="flex flex-wrap gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-lg bg-slate-50 px-3">
+        <div className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 transition focus-within:border-brand-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/30">
           <svg
             className="h-5 w-5 shrink-0 text-slate-400"
             viewBox="0 0 24 24"

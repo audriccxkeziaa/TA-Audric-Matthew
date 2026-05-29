@@ -70,10 +70,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-600 to-brand-700 p-4">
-      <Card className="w-full max-w-sm p-7">
-        <div className="mb-6 text-center">
-          <h1 className="text-lg font-bold text-slate-900">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 p-4">
+      {/* Ornamen latar lembut */}
+      <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-brand-500/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl" />
+
+      <Card className="relative w-full max-w-sm p-7 shadow-pop">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg ring-1 ring-brand-700/20">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7" />
+            </svg>
+          </span>
+          <h1 className="text-lg font-bold tracking-tight text-slate-900">
             POS — CV Asia Jaya Maju
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -102,7 +111,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setShowPw((p) => !p)}
-              className="absolute right-3 top-[34px] text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-[37px] text-slate-400 transition-colors hover:text-slate-600"
               tabIndex={-1}
             >
               {showPw ? (
@@ -128,9 +137,9 @@ export default function LoginPage() {
             type="submit"
             size="lg"
             className="w-full"
-            disabled={submitting}
+            loading={submitting}
           >
-            {submitting ? "Please wait..." : "Login"}
+            {submitting ? "Memproses..." : "Login"}
           </Button>
         </form>
       </Card>

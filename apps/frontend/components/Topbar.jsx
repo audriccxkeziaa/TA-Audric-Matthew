@@ -32,8 +32,15 @@ export default function Topbar({ onToggleSidebar }) {
 
   const totalBadge = count + pendingCount;
 
+  const initials = (user?.username || "?")
+    .split(/\s+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
-    <header className="z-20 flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 no-print">
+    <header className="z-20 flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80 no-print">
       {/* Kiri: hamburger (mobile) */}
       <button
         onClick={onToggleSidebar}
@@ -69,7 +76,7 @@ export default function Topbar({ onToggleSidebar }) {
           </button>
 
           {openNotif && (
-            <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div className="absolute right-0 z-30 mt-2 w-80 max-w-[calc(100vw-2rem)] origin-top-right overflow-hidden rounded-xl border border-slate-200 bg-white shadow-pop animate-slide-down">
               {/* Pending Approval (admin only) */}
               {user?.role === "admin" && pendingCount > 0 && (
                 <>
@@ -125,16 +132,19 @@ export default function Topbar({ onToggleSidebar }) {
         </div>
 
         {/* Profil + logout */}
-        <div className="flex items-center gap-2 border-l border-slate-200 pl-2">
-          <div className="text-right">
-            <p className="text-sm font-medium leading-tight text-slate-700">
+        <div className="flex items-center gap-2.5 border-l border-slate-200 pl-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white shadow-sm ring-1 ring-brand-700/20">
+            {initials}
+          </span>
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-semibold leading-tight text-slate-800">
               {user?.username || "—"}
             </p>
             <p className="text-xs capitalize text-slate-400">{user?.role}</p>
           </div>
           <button
             onClick={logout}
-            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
+            className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
           >
             Logout
           </button>

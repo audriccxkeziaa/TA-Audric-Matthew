@@ -91,21 +91,29 @@ export default function Sidebar({ role, open, onClose }) {
       {/* Overlay mobile */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/40 md:hidden"
+          className="fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm md:hidden"
           onClick={onClose}
         />
       )}
       <aside
-        className={`fixed z-40 flex h-screen w-60 flex-col bg-brand-700 text-white transition-transform md:translate-x-0 ${
+        className={`fixed z-40 flex h-screen w-60 flex-col bg-gradient-to-b from-brand-800 to-brand-900 text-white shadow-xl transition-transform md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="border-b border-white/10 px-5 py-4">
-          <p className="text-sm font-bold leading-tight">CV Asia Jaya Maju</p>
-          <p className="text-xs text-white/60">Point of Sale System</p>
+        {/* Brand / logo */}
+        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white shadow-inner ring-1 ring-white/20">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7" />
+            </svg>
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold leading-tight">CV Asia Jaya Maju</p>
+            <p className="text-[11px] text-white/60">Point of Sale System</p>
+          </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto thin-scroll p-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto thin-scroll px-3 py-4">
           {items.map((item) => {
             // Cocokkan rute aktif. /dashboard/restock jangan ikut menyalakan /dashboard.
             const active =
@@ -118,16 +126,25 @@ export default function Sidebar({ role, open, onClose }) {
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                aria-current={active ? "page" : undefined}
+                className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
                   active
-                    ? "bg-white/15 font-semibold"
-                    : "text-white/80 hover:bg-white/10"
+                    ? "bg-white/15 font-semibold text-white shadow-sm"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <Icon name={item.icon} />
+                {/* Accent bar saat aktif */}
+                <span
+                  className={`absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-300 transition-opacity ${
+                    active ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+                <span className={active ? "text-white" : "text-white/70 group-hover:text-white"}>
+                  <Icon name={item.icon} />
+                </span>
                 <span className="flex-1">{item.label}</span>
                 {showBadge && (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white shadow-sm">
                     {pendingCount}
                   </span>
                 )}
@@ -136,7 +153,7 @@ export default function Sidebar({ role, open, onClose }) {
           })}
         </nav>
 
-        <div className="border-t border-white/10 px-5 py-3 text-xs text-white/50">
+        <div className="border-t border-white/10 px-5 py-3 text-[11px] text-white/50">
           Skripsi S1 Informatika · UK Petra
         </div>
       </aside>

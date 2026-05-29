@@ -25,7 +25,7 @@ export function CartPanel({
     <Card className="mt-3 flex flex-col p-0 md:min-h-0 md:flex-1">
       <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
         <table className="w-full min-w-[720px] text-sm">
-          <thead className="sticky top-0 bg-slate-100 text-left text-xs uppercase text-slate-600">
+          <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-3 py-2.5 text-center">No</th>
               <th className="px-3 py-2.5">Kode Barang</th>
@@ -52,7 +52,7 @@ export function CartPanel({
               cart.map((x, i) => {
                 const over = x.qty > x.stok;
                 return (
-                  <tr key={x.id} className={over ? "bg-red-50" : "hover:bg-slate-50"}>
+                  <tr key={x.id} className={over ? "bg-red-50" : "transition-colors hover:bg-brand-50/40"}>
                     <td className="px-3 py-2.5 text-center text-slate-400">{i + 1}</td>
                     <td className="px-3 py-2.5 font-mono text-xs">{x.kode_barang}</td>
                     <td className="px-3 py-2.5">
@@ -67,7 +67,8 @@ export function CartPanel({
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => setQty(x.id, x.qty - 1)}
-                          className="h-7 w-7 rounded bg-slate-200 font-bold text-slate-700 hover:bg-slate-300"
+                          className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-lg font-bold text-slate-600 transition-colors hover:bg-brand-100 hover:text-brand-700"
+                          aria-label="Kurangi qty"
                         >
                           −
                         </button>
@@ -80,11 +81,12 @@ export function CartPanel({
                             setQty(x.id, n);
                             lastQtyRef.current = n;
                           }}
-                          className="h-7 w-14 rounded border border-slate-300 text-center text-sm"
+                          className="h-7 w-14 rounded-md border border-slate-300 text-center text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
                         />
                         <button
                           onClick={() => setQty(x.id, x.qty + 1)}
-                          className="h-7 w-7 rounded bg-slate-200 font-bold text-slate-700 hover:bg-slate-300"
+                          className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-lg font-bold text-slate-600 transition-colors hover:bg-brand-100 hover:text-brand-700"
+                          aria-label="Tambah qty"
                         >
                           +
                         </button>
@@ -101,7 +103,7 @@ export function CartPanel({
                         value={x.diskon_persen || 0}
                         onChange={(e) => setDiskon(x.id, e.target.value)}
                         onFocus={(e) => e.target.select()}
-                        className="h-7 w-16 rounded border border-slate-300 text-center text-sm"
+                        className="h-7 w-16 rounded-md border border-slate-300 text-center text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
                         title="Diskon (%) — default 0"
                       />
                     </td>
@@ -116,10 +118,13 @@ export function CartPanel({
                     <td className="px-3 py-2.5 text-right">
                       <button
                         onClick={() => removeItem(x.id)}
-                        className="text-xs text-red-500 hover:underline"
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
                         title="Hapus"
+                        aria-label="Hapus item"
                       >
-                        ✕
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M6 6l12 12M18 6L6 18" />
+                        </svg>
                       </button>
                     </td>
                   </tr>
@@ -131,7 +136,7 @@ export function CartPanel({
       </div>
 
       {/* Footer total — selalu terlihat */}
-      <div className="shrink-0 border-t-2 border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="shrink-0 border-t border-slate-200 bg-slate-50/80 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600">
             <span>
@@ -161,18 +166,22 @@ export function CartPanel({
                   </p>
                 </>
               )}
-              <p className="text-xs text-slate-500">TOTAL</p>
-              <p className="text-xl font-extrabold text-slate-900 sm:text-3xl">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Total</p>
+              <p className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                 {rupiah(total)}
               </p>
             </div>
             <Button
               size="lg"
+              variant="success"
+              loading={saleProcessing}
               disabled={cart.length === 0 || overStock.length > 0 || saleProcessing}
               onClick={onCheckout}
-              className="bg-emerald-600 hover:bg-emerald-700"
             >
-              💰 CHECKOUT (F12)
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+              CHECKOUT (F12)
             </Button>
           </div>
         </div>

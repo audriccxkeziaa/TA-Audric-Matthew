@@ -1,8 +1,35 @@
-﻿"use client";
+"use client";
 // components/ui.jsx — Komponen UI dasar (design system Tailwind)
-// Dipakai seluruh halaman supaya tampilan konsisten.
+// Dipakai seluruh halaman supaya tampilan konsisten & profesional.
+// Catatan: API/props tiap komponen dijaga backward-compatible.
 
 import { useEffect } from "react";
+
+// ---------- Spinner inline kecil (untuk tombol loading) ----------
+function InlineSpinner({ className = "h-4 w-4" }) {
+  return (
+    <svg
+      className={`animate-spin ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-90"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+      />
+    </svg>
+  );
+}
 
 // ---------- Tombol ----------
 export function Button({
@@ -11,17 +38,26 @@ export function Button({
   size = "md",
   className = "",
   type = "button",
+  loading = false,
+  disabled = false,
   ...props
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-white " +
+    "active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100";
   const variants = {
-    primary: "bg-brand-600 text-white hover:bg-brand-700",
-    secondary: "bg-slate-200 text-slate-800 hover:bg-slate-300",
-    danger: "bg-red-600 text-white hover:bg-red-700",
-    success: "bg-emerald-600 text-white hover:bg-emerald-700",
-    ghost: "text-slate-600 hover:bg-slate-100",
-    outline: "border border-slate-300 text-slate-700 hover:bg-slate-50",
+    primary:
+      "bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow focus-visible:ring-brand-500",
+    secondary:
+      "bg-slate-100 text-slate-800 ring-1 ring-inset ring-slate-200 hover:bg-slate-200 focus-visible:ring-slate-400",
+    danger:
+      "bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow focus-visible:ring-red-500",
+    success:
+      "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow focus-visible:ring-emerald-500",
+    ghost: "text-slate-600 hover:bg-slate-100 focus-visible:ring-slate-300",
+    outline:
+      "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400 focus-visible:ring-brand-500",
   };
   const sizes = {
     sm: "px-2.5 py-1.5 text-xs",
@@ -31,27 +67,34 @@ export function Button({
   return (
     <button
       type={type}
+      disabled={disabled || loading}
       className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
+      {loading && <InlineSpinner className={size === "lg" ? "h-5 w-5" : "h-4 w-4"} />}
       {children}
     </button>
   );
 }
+
+// ---------- Field dasar (label + pesan error) ----------
+const FIELD_BASE =
+  "w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm " +
+  "placeholder:text-slate-400 transition-colors " +
+  "hover:border-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 " +
+  "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500";
 
 // ---------- Input teks ----------
 export function Input({ label, error, className = "", ...props }) {
   return (
     <label className="block">
       {label && (
-        <span className="mb-1 block text-sm font-medium text-slate-700">
+        <span className="mb-1.5 block text-sm font-medium text-slate-700">
           {label}
         </span>
       )}
       <input
-        className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-          error ? "border-red-400" : "border-slate-300"
-        } ${className}`}
+        className={`${FIELD_BASE} ${error ? "border-red-400 focus:border-red-500 focus:ring-red-500/30" : "border-slate-300"} ${className}`}
         {...props}
       />
       {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
@@ -64,12 +107,12 @@ export function Select({ label, children, className = "", ...props }) {
   return (
     <label className="block">
       {label && (
-        <span className="mb-1 block text-sm font-medium text-slate-700">
+        <span className="mb-1.5 block text-sm font-medium text-slate-700">
           {label}
         </span>
       )}
       <select
-        className={`w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${className}`}
+        className={`${FIELD_BASE} border-slate-300 cursor-pointer pr-9 ${className}`}
         {...props}
       >
         {children}
@@ -79,10 +122,12 @@ export function Select({ label, children, className = "", ...props }) {
 }
 
 // ---------- Kartu ----------
-export function Card({ children, className = "" }) {
+export function Card({ children, className = "", hover = false }) {
   return (
     <div
-      className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}
+      className={`rounded-xl border border-slate-200 bg-white shadow-card ${
+        hover ? "transition-shadow hover:shadow-card-hover" : ""
+      } ${className}`}
     >
       {children}
     </div>
@@ -90,38 +135,66 @@ export function Card({ children, className = "" }) {
 }
 
 // ---------- Kartu metrik (dashboard) ----------
-export function StatCard({ label, value, hint, tone = "default" }) {
+export function StatCard({ label, value, hint, tone = "default", icon }) {
   const tones = {
     default: "text-slate-900",
     good: "text-emerald-600",
     warn: "text-amber-600",
     bad: "text-red-600",
   };
+  const iconTones = {
+    default: "bg-brand-50 text-brand-600",
+    good: "bg-emerald-50 text-emerald-600",
+    warn: "bg-amber-50 text-amber-600",
+    bad: "bg-red-50 text-red-600",
+  };
   return (
-    <Card className="p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-        {label}
-      </p>
-      <p className={`mt-1 text-2xl font-bold ${tones[tone]}`}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+    <Card className="p-4" hover>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            {label}
+          </p>
+          <p className={`mt-1.5 text-2xl font-bold tracking-tight ${tones[tone]}`}>
+            {value}
+          </p>
+          {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+        </div>
+        {icon && (
+          <span
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconTones[tone]}`}
+          >
+            {icon}
+          </span>
+        )}
+      </div>
     </Card>
   );
 }
 
 // ---------- Badge ----------
-export function Badge({ children, tone = "slate" }) {
+export function Badge({ children, tone = "slate", dot = false }) {
   const tones = {
-    slate: "bg-slate-100 text-slate-700",
-    green: "bg-emerald-100 text-emerald-700",
-    red: "bg-red-100 text-red-700",
-    amber: "bg-amber-100 text-amber-700",
-    blue: "bg-blue-100 text-blue-700",
-    indigo: "bg-brand-100 text-brand-700",
+    slate: "bg-slate-100 text-slate-700 ring-slate-200",
+    green: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    red: "bg-red-50 text-red-700 ring-red-200",
+    amber: "bg-amber-50 text-amber-700 ring-amber-200",
+    blue: "bg-blue-50 text-blue-700 ring-blue-200",
+    indigo: "bg-brand-50 text-brand-700 ring-brand-200",
+  };
+  const dotTones = {
+    slate: "bg-slate-400",
+    green: "bg-emerald-500",
+    red: "bg-red-500",
+    amber: "bg-amber-500",
+    blue: "bg-blue-500",
+    indigo: "bg-brand-500",
   };
   return (
     <span
-      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${tones[tone]}`}
     >
+      {dot && <span className={`h-1.5 w-1.5 rounded-full ${dotTones[tone]}`} />}
       {children}
     </span>
   );
@@ -138,13 +211,17 @@ export function Spinner({ label }) {
 }
 
 // ---------- Empty state ----------
-export function EmptyState({ title = "Tidak ada data", description }) {
+export function EmptyState({ title = "Tidak ada data", description, icon, action }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 py-12 text-center">
-      <p className="text-sm font-medium text-slate-600">{title}</p>
-      {description && (
-        <p className="text-xs text-slate-400">{description}</p>
+    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+      {icon && (
+        <span className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+          {icon}
+        </span>
       )}
+      <p className="text-sm font-medium text-slate-600">{title}</p>
+      {description && <p className="max-w-xs text-xs text-slate-400">{description}</p>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }
@@ -159,14 +236,14 @@ export function PageShell({ children }) {
 // ---------- Header halaman ----------
 export function PageHeader({ title, description, actions }) {
   return (
-    <div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-3">
+    <div className="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">{title}</h1>
         {description && (
-          <p className="mt-0.5 text-sm text-slate-500">{description}</p>
+          <p className="mt-1 text-sm text-slate-500">{description}</p>
         )}
       </div>
-      {actions && <div className="flex gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }
@@ -185,20 +262,22 @@ export function Modal({ open, onClose, title, children, width = "max-w-lg" }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-slate-900/50"
+        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
       <div
-        className={`relative z-10 w-full ${width} max-h-[90vh] overflow-y-auto thin-scroll rounded-xl bg-white shadow-xl`}
+        className={`relative z-10 w-full ${width} max-h-[90vh] overflow-y-auto thin-scroll rounded-2xl bg-white shadow-pop animate-scale-in`}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-3.5 backdrop-blur">
           <h2 className="font-semibold text-slate-900">{title}</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700"
+            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
             aria-label="Tutup"
           >
-            ✕
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
         </div>
         <div className="p-5">{children}</div>
@@ -235,11 +314,11 @@ export function ConfirmDialog({
 // ---------- Skeleton loader ----------
 export function Skeleton({ rows = 5 }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="h-9 w-full animate-pulse rounded bg-slate-200"
+          className="skeleton-shimmer h-9 w-full rounded-lg bg-slate-200/70"
         />
       ))}
     </div>
