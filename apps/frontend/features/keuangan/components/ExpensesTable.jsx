@@ -20,7 +20,7 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
           <table className="w-full min-w-[500px] text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2.5">Tanggal</th>
                 <th className="px-4 py-2.5">Jenis</th>
@@ -32,7 +32,7 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50">
+                <tr key={r.id} className="transition-colors hover:bg-brand-50/40">
                   <td className="px-4 py-2.5 text-xs">{tanggal(r.tanggal)}</td>
                   <td className="px-4 py-2.5">
                     <Badge tone={JENIS_TONE[r.jenis] || "slate"}>

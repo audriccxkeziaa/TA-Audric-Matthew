@@ -17,7 +17,7 @@ export function AuditTable({ rows, isLoading, page, pageSize, onRowClick }) {
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
           <table className="w-full min-w-[700px] text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-3 py-2.5 w-8">No</th>
                 <th className="px-3 py-2.5">Waktu</th>
@@ -37,7 +37,7 @@ export function AuditTable({ rows, isLoading, page, pageSize, onRowClick }) {
                 <tr
                   key={r.id}
                   onClick={() => onRowClick(r)}
-                  className="cursor-pointer hover:bg-slate-50"
+                  className="cursor-pointer transition-colors hover:bg-brand-50/40"
                 >
                   <td className="px-3 py-2 text-xs text-slate-400">
                     {(page - 1) * pageSize + index + 1}

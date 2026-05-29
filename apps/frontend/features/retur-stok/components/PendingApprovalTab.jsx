@@ -126,7 +126,7 @@ export function PendingApprovalTab() {
 
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-2">Barang</th>
                   <th className="py-2 pr-2 text-right">Qty</th>
                   <th className="py-2 pr-2">Kondisi</th>

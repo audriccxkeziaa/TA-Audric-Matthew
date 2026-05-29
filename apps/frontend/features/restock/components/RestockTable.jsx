@@ -28,7 +28,7 @@ export function RestockTable({
       ) : (
         <div className="min-h-0 flex-1 overflow-auto thin-scroll">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2.5 w-8">No</th>
                 <th className="px-4 py-2.5">Kode Barang</th>
@@ -44,7 +44,7 @@ export function RestockTable({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((it, index) => (
-                <tr key={it.id} className="hover:bg-slate-50">
+                <tr key={it.id} className="transition-colors hover:bg-brand-50/40">
                   <td className="px-4 py-2.5 text-xs text-slate-400">{(page - 1) * pageSize + index + 1}</td>
                   <td className="px-4 py-2.5 font-mono text-xs">{it.kode_barang}</td>
                   <td className="px-4 py-2.5">

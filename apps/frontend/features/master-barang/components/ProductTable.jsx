@@ -28,7 +28,7 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
           <table className="w-full min-w-[640px] text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2.5 w-8">No</th>
                 <th className="px-4 py-2.5">Kode</th>
@@ -44,7 +44,7 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {products.map((p, index) => (
-                <tr key={p.id} className="hover:bg-slate-50">
+                <tr key={p.id} className="transition-colors hover:bg-brand-50/40">
                   <td className="px-4 py-2.5 text-xs text-slate-400">
                     {(page - 1) * 20 + index + 1}
                   </td>

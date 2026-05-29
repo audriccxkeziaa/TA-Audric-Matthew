@@ -50,7 +50,7 @@ export function HistoryTab() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                  <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     <th className="py-2 pr-2">Kode</th>
                     <th className="py-2 pr-2">Tipe</th>
                     <th className="py-2 pr-2">Status</th>
@@ -66,7 +66,7 @@ export function HistoryTab() {
                     const tb = TYPE_BADGES[row.type] || { label: row.type, tone: "slate" };
                     const sb = STATUS_BADGES[row.status] || { label: row.status, tone: "slate" };
                     return (
-                      <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50">
+                      <tr key={row.id} className="border-b border-slate-100 transition-colors hover:bg-brand-50/40">
                         <td className="py-2 pr-2 font-mono text-xs">{row.kode_adjustment}</td>
                         <td className="py-2 pr-2">
                           <Badge tone={tb.tone}>{tb.label}</Badge>

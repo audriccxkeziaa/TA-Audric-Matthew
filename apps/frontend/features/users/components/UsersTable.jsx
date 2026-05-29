@@ -15,7 +15,7 @@ export function UsersTable({ users, isLoading, currentUserId, onView }) {
       ) : (
         <div className="min-h-0 flex-1 overflow-auto thin-scroll">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2.5">Username</th>
                 <th className="px-4 py-2.5">Role</th>
@@ -30,7 +30,7 @@ export function UsersTable({ users, isLoading, currentUserId, onView }) {
                 const isSelf = u.id === currentUserId;
                 const active = u.is_active !== false;
                 return (
-                  <tr key={u.id} className="hover:bg-slate-50">
+                  <tr key={u.id} className="transition-colors hover:bg-brand-50/40">
                     <td className="px-4 py-2.5 font-medium">
                       {u.username}
                       {isSelf && <span className="ml-1 text-xs text-slate-400">(Anda)</span>}
