@@ -2,9 +2,9 @@
 // features/dashboard/hooks/useDashboard.js — query ringkasan + tren + top produk,
 // transformasi data untuk grafik, dan kontrol modal mana yang terbuka.
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { dashboardApi } from "@/lib/api";
+import { dashboardApi, expensesApi } from "@/lib/api";
 
 export function useDashboard() {
   const [openModal, setOpenModal] = useState(null);
@@ -17,6 +17,18 @@ export function useDashboard() {
     queryKey: ["dash-trend"],
     queryFn: () => dashboardApi.salesTrend(30),
   });
+
+  const fromDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    return d.toISOString().slice(0, 10);
+  }, []);
+
+  const expense = useQuery({
+    queryKey: ["dash-expenses", fromDate],
+    queryFn: () => expensesApi.list({ from: fromDate, limit: 500 }),
+  });
+
   const top = useQuery({
     queryKey: ["dash-top"],
     queryFn: () => dashboardApi.topProducts({ days: 30, limit: 10 }),
@@ -24,13 +36,29 @@ export function useDashboard() {
 
   const s = summary.data?.data;
   const trendRaw = trend.data?.data || [];
-  const trendData = trendRaw
-    .filter((d) => d.total_revenue > 0)
-    .slice(-7)
-    .map((d) => ({
-      ...d,
-      label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
-    }));
+
+  // Buat map pengeluaran per tanggal (YYYY-MM-DD → total nominal)
+  const expenseByDate = useMemo(() => {
+    const map = new Map();
+    for (const r of expense.data?.data || []) {
+      const key = r.tanggal?.slice(0, 10);
+      if (key) map.set(key, (map.get(key) || 0) + Number(r.nominal || 0));
+    }
+    return map;
+  }, [expense.data]);
+
+  // 30 hari terakhir — gabungkan pendapatan & pengeluaran per hari
+  const combinedData = useMemo(
+    () =>
+      trendRaw.slice(-30).map((d) => ({
+        date: d.date,
+        label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
+        pendapatan: d.total_revenue,
+        pengeluaran: expenseByDate.get(d.date) || 0,
+      })),
+    [trendRaw, expenseByDate]
+  );
+
   const topData = (top.data?.data || []).map((d) => ({
     ...d,
     nama:
@@ -44,9 +72,10 @@ export function useDashboard() {
     setOpenModal,
     summary,
     trend,
+    expense,
     top,
     s,
-    trendData,
+    combinedData,
     topData,
   };
 }

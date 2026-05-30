@@ -96,8 +96,8 @@ export default function DashboardPage() {
       )}
 
       <DashboardCharts
-        trend={d.trend}
-        trendData={d.trendData}
+        combinedData={d.combinedData}
+        isLoadingCombined={d.trend.isLoading || d.expense.isLoading}
         top={d.top}
         topData={d.topData}
       />
