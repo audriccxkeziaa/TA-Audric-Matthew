@@ -42,7 +42,7 @@ function ReceiptPreview({ data }) {
       {/* Meta transaksi */}
       <div className="space-y-0.5 text-[9.5px]">
         <div className="flex gap-1">
-          <span className="w-14 shrink-0 text-slate-400">No</span>
+          <span className="w-14 shrink-0 text-slate-400">Transaksi</span>
           <span className="break-all">: {data.kode_transaksi}</span>
         </div>
         <div className="flex gap-1">

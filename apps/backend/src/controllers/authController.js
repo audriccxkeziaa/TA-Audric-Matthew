@@ -161,7 +161,7 @@ async function listUsers(req, res) {
     const { data, error } = await supabaseAdmin
       .from("users")
       .select(
-        "id, username, role, is_active, nama_lengkap, no_telepon, created_at, updated_at, transactions(count)"
+        "id, username, role, is_active, nama_lengkap, no_telepon, created_at, updated_at, sales(count)"
       )
       .order("username", { ascending: true });
     if (error) throw error;
@@ -175,7 +175,7 @@ async function listUsers(req, res) {
       no_telepon: u.no_telepon || null,
       created_at: u.created_at,
       updated_at: u.updated_at,
-      total_transaksi: u.transactions?.[0]?.count ?? 0,
+      total_transaksi: u.sales?.[0]?.count ?? 0,
     }));
 
     res.json({ data: rows });
