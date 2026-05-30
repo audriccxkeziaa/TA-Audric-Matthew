@@ -3,7 +3,7 @@
 
 import { Card, Badge, Spinner, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { rupiah, tanggal } from "@/lib/format";
-import { JENIS_OPTIONS, JENIS_TONE } from "../lib/constants";
+import { JENIS_LABELS, JENIS_TONE } from "../lib/constants";
 
 export function ExpensesTable({ rows, isLoading, onEdit }) {
   return (
@@ -35,7 +35,7 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
                   <TD className="text-xs">{tanggal(r.tanggal)}</TD>
                   <TD>
                     <Badge tone={JENIS_TONE[r.jenis] || "slate"}>
-                      {JENIS_OPTIONS.find((o) => o.value === r.jenis)?.label || r.jenis}
+                      {JENIS_LABELS[r.jenis] || r.jenis}
                     </Badge>
                   </TD>
                   <TD>{r.deskripsi}</TD>
@@ -66,7 +66,7 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge tone={JENIS_TONE[r.jenis] || "slate"}>
-                      {JENIS_OPTIONS.find((o) => o.value === r.jenis)?.label || r.jenis}
+                      {JENIS_LABELS[r.jenis] || r.jenis}
                     </Badge>
                     <span className="text-xs text-slate-400">{tanggal(r.tanggal)}</span>
                   </div>

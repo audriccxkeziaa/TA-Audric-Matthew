@@ -1,10 +1,17 @@
 "use client";
-// Tab "Retur Pelanggan" — cari transaksi, set item + kondisi, submit. Bila
-// dibuat kasir → menunggu persetujuan admin (PIN on-site / remote).
+// Tab "Retur Pelanggan" — cari transaksi, centang item, submit.
+// Aturan baku: semua item kondisi 'bagus' → stok bertambah + refund ke expenses.
 
-import { Card, Button, Input, Textarea, Badge, ConfirmDialog, Spinner } from "@/components/ui";
+import { Card, Button, Input, Textarea, ConfirmDialog, Spinner } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
 import { useReturPelanggan } from "../hooks/useReturPelanggan";
+
+const TIP_TUKAR_BARANG = (
+  <div className="mb-3 rounded-lg bg-emerald-50 px-4 py-2.5 text-xs text-emerald-700">
+    <strong>Tukar Barang?</strong> Selesaikan proses refund ini terlebih dahulu,
+    lalu buat transaksi baru di menu <strong>Kasir</strong>.
+  </div>
+);
 
 export function ReturPelangganForm() {
   const r = useReturPelanggan();
@@ -15,6 +22,8 @@ export function ReturPelangganForm() {
         <h3 className="mb-3 font-semibold text-slate-800">
           Cari Transaksi Penjualan
         </h3>
+
+        {TIP_TUKAR_BARANG}
 
         {r.user?.role === "kasir" && (
           <div className="mb-3 rounded-lg bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
@@ -169,10 +178,12 @@ export function ReturPelangganForm() {
       </div>
 
       <div className="mb-3 rounded-lg bg-blue-50 px-4 py-2.5 text-xs text-blue-700">
-        <strong>Info:</strong> Kondisi &ldquo;Bagus&rdquo; = stok kembali bertambah.
-        Kondisi &ldquo;Rusak&rdquo; = stok <strong>tidak</strong> bertambah (dicatat
-        sebagai barang reject).
+        <strong>Info:</strong> Semua barang retur diasumsikan dalam kondisi baik.
+        Stok akan <strong>bertambah</strong> dan nilai refund akan{" "}
+        <strong>mengurangi saldo kas</strong> secara otomatis.
       </div>
+
+      {TIP_TUKAR_BARANG}
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -183,7 +194,6 @@ export function ReturPelangganForm() {
               <th className="py-2 pr-2 text-right">Qty Beli</th>
               <th className="py-2 pr-2 text-right">Harga</th>
               <th className="py-2 pr-2 text-right">Qty Retur</th>
-              <th className="py-2">Kondisi</th>
             </tr>
           </thead>
           <tbody>
@@ -217,20 +227,6 @@ export function ReturPelangganForm() {
                     <span className="text-slate-300">-</span>
                   )}
                 </td>
-                <td className="py-2">
-                  {it.checked ? (
-                    <select
-                      value={it.kondisi}
-                      onChange={(e) => r.setKondisi(idx, e.target.value)}
-                      className="rounded border border-slate-300 px-2 py-1 text-sm"
-                    >
-                      <option value="bagus">Bagus</option>
-                      <option value="rusak">Rusak</option>
-                    </select>
-                  ) : (
-                    <span className="text-slate-300">-</span>
-                  )}
-                </td>
               </tr>
             ))}
           </tbody>
@@ -258,23 +254,16 @@ export function ReturPelangganForm() {
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <div className="text-sm text-slate-500">
-          <p>
-            {r.checkedItems.length} item dipilih
-            {r.goodCount > 0 && (
-              <>{" "}<Badge tone="green">{r.goodCount} bagus (stok +)</Badge></>
-            )}{" "}
-            {r.badCount > 0 && (
-              <Badge tone="red">{r.badCount} rusak (stok tetap)</Badge>
-            )}
-          </p>
-        </div>
+        <p className="text-sm text-slate-500">
+          {r.checkedItems.length} item dipilih — stok akan bertambah
+        </p>
         <Button
           onClick={() => r.setConfirm(true)}
           disabled={r.checkedItems.length === 0 || !r.alasan.trim() || r.submitting}
           variant="primary"
+          loading={r.submitting}
         >
-          {r.submitting ? "Please wait..." : "Confirm Return"}
+          Confirm Return
         </Button>
       </div>
 
@@ -285,8 +274,8 @@ export function ReturPelangganForm() {
         title="Konfirmasi Retur Pelanggan"
         message={
           r.user?.role === "kasir"
-            ? `${r.goodCount} barang kondisi bagus, ${r.badCount} barang kondisi rusak. Retur akan menunggu persetujuan admin. Lanjutkan?`
-            : `${r.goodCount} barang kondisi bagus (stok bertambah), ${r.badCount} barang kondisi rusak (stok tidak bertambah). Lanjutkan?`
+            ? `${r.checkedItems.length} item akan diretur (stok bertambah, refund dicatat). Retur menunggu persetujuan admin. Lanjutkan?`
+            : `${r.checkedItems.length} item akan diretur. Stok bertambah dan refund akan mengurangi saldo kas. Lanjutkan?`
         }
       />
     </Card>

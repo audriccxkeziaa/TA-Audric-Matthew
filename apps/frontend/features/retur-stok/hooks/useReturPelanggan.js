@@ -1,6 +1,8 @@
 "use client";
 // features/retur-stok/hooks/useReturPelanggan.js — retur pelanggan + manager
-// override (approve via PIN admin atau remote). Logika dipindahkan apa adanya.
+// override (approve via PIN admin atau remote).
+// Aturan baku: semua item diasumsikan kondisi 'bagus' → stok bertambah,
+// refund dicatat ke expenses oleh backend.
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -91,7 +93,7 @@ export function useReturPelanggan() {
   function selectSale(s) {
     setSelected(s);
     setReturnItems(
-      s.items.map((it) => ({ ...it, return_qty: 0, kondisi: "bagus", checked: false }))
+      s.items.map((it) => ({ ...it, return_qty: 0, checked: false }))
     );
   }
 
@@ -113,15 +115,7 @@ export function useReturPelanggan() {
     );
   }
 
-  function setKondisi(idx, kondisi) {
-    setReturnItems((prev) =>
-      prev.map((it, i) => (i === idx ? { ...it, kondisi } : it))
-    );
-  }
-
   const checkedItems = returnItems.filter((it) => it.checked && it.return_qty > 0);
-  const goodCount = checkedItems.filter((it) => it.kondisi === "bagus").length;
-  const badCount = checkedItems.filter((it) => it.kondisi === "rusak").length;
 
   async function handleSubmit() {
     setConfirm(false);
@@ -135,7 +129,7 @@ export function useReturPelanggan() {
         items: checkedItems.map((it) => ({
           product_id: it.product_id,
           qty: it.return_qty,
-          kondisi: it.kondisi,
+          kondisi: "bagus",
           harga_satuan: it.harga_satuan,
         })),
       });
@@ -189,10 +183,10 @@ export function useReturPelanggan() {
     kodeQ, setKodeQ,
     loading, filtered, listRef, handleBrowse,
     selected, setSelected, selectSale, resetForm,
-    returnItems, toggleItem, setQty, setKondisi,
+    returnItems, toggleItem, setQty,
     alasan, setAlasan, catatan, setCatatan,
     confirm, setConfirm, submitting,
-    checkedItems, goodCount, badCount, handleSubmit,
+    checkedItems, handleSubmit,
     // override
     overrideData, setOverrideData,
     pinUsername, setPinUsername,

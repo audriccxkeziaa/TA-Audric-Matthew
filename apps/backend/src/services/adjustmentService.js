@@ -4,6 +4,24 @@ const adjustmentRepository = require("../repositories/adjustmentRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
 const ruleEngine = require("./ruleEngine");
 
+// Catat refund retur pelanggan sebagai pengeluaran agar saldo kas/omset berkurang.
+async function recordRefundExpense({ kode, items, userId }) {
+  const refundTotal = items
+    .filter((it) => it.kondisi === "bagus")
+    .reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0);
+  if (refundTotal <= 0) return;
+  const { error } = await supabaseAdmin.from("expenses").insert({
+    tanggal: new Date().toISOString().split("T")[0],
+    jenis: "refund_pelanggan",
+    deskripsi: `Refund retur pelanggan — ${kode}`,
+    jumlah: refundTotal,
+    user_id: userId,
+  });
+  if (error) {
+    console.warn("[POS-ADJ] Gagal mencatat expense refund:", error.message);
+  }
+}
+
 function generateKode(type) {
   const prefixes = {
     return_supplier: "RTS",
@@ -88,7 +106,8 @@ async function createAdjustment({ user, payload }) {
   const normalizedItems = items.map((it) => ({
     product_id: it.product_id,
     qty: Number(it.qty),
-    kondisi: type === "sales_return" ? it.kondisi : null,
+    // sales_return selalu kondisi 'bagus': stok kembali + refund dicatat ke expenses
+    kondisi: type === "sales_return" ? "bagus" : null,
     harga_satuan: Number(it.harga_satuan || 0),
   }));
 
@@ -136,6 +155,10 @@ async function createAdjustment({ user, payload }) {
     throw e;
   }
 
+  if (type === "sales_return" && status === "approved") {
+    await recordRefundExpense({ kode, items: normalizedItems, userId: user.id });
+  }
+
   const detail = await adjustmentRepository.getDetail(rpcResult.adjustment_id);
   console.log(
     `[POS-ADJ] ${type} kode=${kode} status=${status} oleh user=${user.username} total_qty=${rpcResult.total_qty}`
@@ -165,6 +188,13 @@ async function approveAdjustment({ adminUser, adjustmentId }) {
   }
 
   const detail = await adjustmentRepository.getDetail(adjustmentId);
+  if (detail.type === "sales_return") {
+    await recordRefundExpense({
+      kode: detail.kode_adjustment,
+      items: detail.items || [],
+      userId: adminUser.id,
+    });
+  }
   console.log(
     `[POS-ADJ] APPROVED adjustment=${adjustmentId} oleh admin=${adminUser.username}`
   );
@@ -268,6 +298,13 @@ async function verifyAdminAndApprove({ adjustmentId, username, password }) {
   }
 
   const detail = await adjustmentRepository.getDetail(adjustmentId);
+  if (detail.type === "sales_return") {
+    await recordRefundExpense({
+      kode: detail.kode_adjustment,
+      items: detail.items || [],
+      userId: profile.id,
+    });
+  }
   console.log(
     `[POS-ADJ] PIN-APPROVED adjustment=${adjustmentId} oleh admin=${profile.username} (on-site)`
   );
