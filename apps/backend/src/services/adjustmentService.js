@@ -14,9 +14,9 @@ async function recordRefundExpense({ kode, items, userId }) {
   if (refundTotal <= 0) return;
   const { error } = await supabaseAdmin.from("expenses").insert({
     tanggal: new Date().toISOString().split("T")[0],
-    jenis: "refund_pelanggan",
+    jenis: "custom",
     deskripsi: `Refund retur pelanggan — ${kode}`,
-    jumlah: refundTotal,
+    nominal: refundTotal,
     user_id: userId,
   });
   if (error) {

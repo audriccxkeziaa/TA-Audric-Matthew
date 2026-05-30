@@ -51,6 +51,7 @@ export function useLaporan() {
     queryKey: ["users-list"],
     queryFn: usersApi.list,
     staleTime: 5 * 60 * 1000,
+    enabled: !isKasir, // /api/users adalah admin-only; kasir pakai data dari grouped saja
   });
   const kasirOptions = useMemo(() => {
     const allUsers = usersData?.data || [];
