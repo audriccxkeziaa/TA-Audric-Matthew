@@ -111,11 +111,11 @@ export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdi
                     {stokBadge(p)}
                     <button
                       onClick={() => onView(p)}
-                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-slate-500 hover:text-brand-600"
+                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-blue-600 hover:text-blue-800"
                       title="Lihat detail barang"
                       aria-label="Lihat detail barang"
                     >
-                      <EyeIcon />
+                      <Eye className="h-4 w-4" />
                     </button>
                     {isAdmin && (
                       <button
