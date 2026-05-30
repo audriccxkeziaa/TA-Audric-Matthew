@@ -57,7 +57,7 @@ export function ReturSupplierForm() {
                   onClick={() => r.setResolveId(ret.id)}
                   disabled={r.resolveSubmitting}
                 >
-                  Selesaikan Retur
+                  Complete Return
                 </Button>
               </div>
             ))}

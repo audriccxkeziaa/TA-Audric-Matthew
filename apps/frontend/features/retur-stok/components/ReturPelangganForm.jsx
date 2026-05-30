@@ -173,7 +173,7 @@ export function ReturPelangganForm() {
           <p className="text-xs text-slate-400">{tanggalJam(r.selected.created_at)}</p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => r.setSelected(null)}>
-          Ganti Transaksi
+          Change Transaction
         </Button>
       </div>
 
