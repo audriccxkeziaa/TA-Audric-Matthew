@@ -1,6 +1,6 @@
 "use client";
-// features/retur-stok/hooks/usePenyesuaianStok.js — penyesuaian/penyusutan stok
-// (admin). Tambah item via ProductPicker, set qty (≤ stok), submit.
+// features/retur-stok/hooks/usePenyesuaianStok.js — penyesuaian stok (admin).
+// Mendukung dua arah: "kurang" (penyusutan/koreksi minus) dan "tambah" (koreksi plus).
 
 import { useState } from "react";
 import { adjustmentsApi } from "@/lib/api";
@@ -30,6 +30,7 @@ export function usePenyesuaianStok() {
         stok: product.stok,
         harga_beli: Number(product.harga_beli),
         qty: 1,
+        arah: "kurang",
       },
     ]);
   }
@@ -40,9 +41,22 @@ export function usePenyesuaianStok() {
 
   function setQty(idx, val) {
     setItems((prev) =>
-      prev.map((it, i) =>
-        i === idx ? { ...it, qty: Math.max(1, Math.min(val, it.stok)) } : it
-      )
+      prev.map((it, i) => {
+        if (i !== idx) return it;
+        const clipped = it.arah === "kurang" ? Math.min(val, it.stok) : val;
+        return { ...it, qty: Math.max(1, clipped) };
+      })
+    );
+  }
+
+  function setArah(idx, arah) {
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== idx) return it;
+        // bila switch ke kurang dan qty melebihi stok, sesuaikan
+        const qty = arah === "kurang" ? Math.min(it.qty, it.stok) : it.qty;
+        return { ...it, arah, qty };
+      })
     );
   }
 
@@ -58,6 +72,7 @@ export function usePenyesuaianStok() {
           product_id: it.product_id,
           qty: it.qty,
           harga_satuan: it.harga_beli,
+          arah: it.arah,
         })),
       });
       toast.success(res.message || "Penyesuaian stok berhasil.");
@@ -71,13 +86,19 @@ export function usePenyesuaianStok() {
     }
   }
 
-  const totalQty = items.reduce((s, it) => s + it.qty, 0);
+  const totalKurang = items
+    .filter((it) => it.arah === "kurang")
+    .reduce((s, it) => s + it.qty, 0);
+  const totalTambah = items
+    .filter((it) => it.arah === "tambah")
+    .reduce((s, it) => s + it.qty, 0);
 
   return {
-    items, addProduct, removeItem, setQty,
+    items, addProduct, removeItem, setQty, setArah,
     alasan, setAlasan, catatan, setCatatan,
     pickerOpen, setPickerOpen,
     confirm, setConfirm, submitting,
-    totalQty, handleSubmit,
+    totalKurang, totalTambah,
+    handleSubmit,
   };
 }

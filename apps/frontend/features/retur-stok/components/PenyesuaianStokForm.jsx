@@ -1,7 +1,7 @@
 "use client";
-// Tab "Penyesuaian Stok" (admin) — catat penyusutan: stok berkurang.
+// Tab "Penyesuaian Stok" (admin) — koreksi stok: bisa bertambah atau berkurang.
 
-import { Card, Button, Input, Textarea, ConfirmDialog, EmptyState } from "@/components/ui";
+import { Card, Button, Textarea, Input, ConfirmDialog, EmptyState } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
 import ProductPicker from "@/components/ProductPicker";
 import { usePenyesuaianStok } from "../hooks/usePenyesuaianStok";
@@ -9,12 +9,21 @@ import { usePenyesuaianStok } from "../hooks/usePenyesuaianStok";
 export function PenyesuaianStokForm() {
   const p = usePenyesuaianStok();
 
+  const confirmMsg = [
+    `Akan memproses penyesuaian ${p.items.length} barang:`,
+    p.totalKurang > 0 ? `berkurang ${angka(p.totalKurang)} unit` : null,
+    p.totalTambah > 0 ? `bertambah ${angka(p.totalTambah)} unit` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ") + ". Tindakan ini tidak bisa dibatalkan. Lanjutkan?";
+
   return (
     <Card className="p-5">
       <div className="mb-3 rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-        <strong>Penyesuaian Stok (Penyusutan):</strong> Gunakan fitur ini untuk
-        mencatat barang yang rusak, pecah, hilang, atau penyusutan stok di toko.
-        Stok akan <strong>berkurang</strong> sesuai jumlah yang diinput.
+        <strong>Penyesuaian Stok:</strong> Gunakan fitur ini untuk mencatat
+        koreksi stok — barang rusak/hilang (<strong>Kurang</strong>) atau
+        koreksi hitung fisik yang lebih (<strong>Tambah</strong>). Hanya angka
+        stok yang berubah; saldo kas/omset tidak terpengaruh.
       </div>
 
       <div className="mb-4 flex items-center justify-between">
@@ -27,7 +36,7 @@ export function PenyesuaianStokForm() {
       {p.items.length === 0 ? (
         <EmptyState
           title="Belum ada barang"
-          description="Klik 'Tambah Item' untuk memilih barang yang akan disesuaikan"
+          description="Klik 'Add Item' untuk memilih barang yang akan disesuaikan"
         />
       ) : (
         <div className="overflow-x-auto">
@@ -37,7 +46,8 @@ export function PenyesuaianStokForm() {
                 <th className="py-2 pr-2">Barang</th>
                 <th className="py-2 pr-2 text-right">Stok Saat Ini</th>
                 <th className="py-2 pr-2 text-right">Harga Beli</th>
-                <th className="py-2 pr-2 text-right">Qty Dikurangi</th>
+                <th className="py-2 pr-2">Arah</th>
+                <th className="py-2 pr-2 text-right">Qty</th>
                 <th className="py-2 w-10"></th>
               </tr>
             </thead>
@@ -52,11 +62,21 @@ export function PenyesuaianStokForm() {
                   </td>
                   <td className="py-2 pr-2 text-right">{angka(it.stok)}</td>
                   <td className="py-2 pr-2 text-right">{rupiah(it.harga_beli)}</td>
+                  <td className="py-2 pr-2">
+                    <select
+                      value={it.arah}
+                      onChange={(e) => p.setArah(idx, e.target.value)}
+                      className="rounded border border-slate-300 px-2 py-1 text-sm"
+                    >
+                      <option value="kurang">Kurang</option>
+                      <option value="tambah">Tambah</option>
+                    </select>
+                  </td>
                   <td className="py-2 pr-2 text-right">
                     <input
                       type="number"
                       min={1}
-                      max={it.stok}
+                      max={it.arah === "kurang" ? it.stok : undefined}
                       value={it.qty}
                       onChange={(e) => p.setQty(idx, parseInt(e.target.value) || 1)}
                       className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
@@ -87,7 +107,7 @@ export function PenyesuaianStokForm() {
           }
           value={p.alasan}
           onChange={(e) => p.setAlasan(e.target.value)}
-          placeholder="Contoh: Barang pecah tersenggol, rusak karena kelembaban, hilang saat stock opname..."
+          placeholder="Contoh: Barang pecah tersenggol, selisih hitung stok opname, koreksi input sebelumnya..."
           rows={2}
         />
         <Input
@@ -100,14 +120,21 @@ export function PenyesuaianStokForm() {
 
       <div className="mt-4 flex items-center justify-between">
         <p className="text-sm text-slate-500">
-          {p.items.length} barang · Total qty dikurangi: <strong>{angka(p.totalQty)}</strong>
+          {p.items.length} barang
+          {p.totalKurang > 0 && (
+            <> · <span className="font-medium text-red-600">−{angka(p.totalKurang)} kurang</span></>
+          )}
+          {p.totalTambah > 0 && (
+            <> · <span className="font-medium text-emerald-600">+{angka(p.totalTambah)} tambah</span></>
+          )}
         </p>
         <Button
           onClick={() => p.setConfirm(true)}
           disabled={p.items.length === 0 || !p.alasan.trim() || p.submitting}
           variant="danger"
+          loading={p.submitting}
         >
-          {p.submitting ? "Please wait..." : "Confirm Adjustment"}
+          Confirm Adjustment
         </Button>
       </div>
 
@@ -116,7 +143,7 @@ export function PenyesuaianStokForm() {
         onClose={() => p.setConfirm(false)}
         onConfirm={p.handleSubmit}
         title="Konfirmasi Penyesuaian Stok"
-        message={`Stok ${p.items.length} barang akan BERKURANG sebanyak ${angka(p.totalQty)} unit total. Tindakan ini tidak bisa dibatalkan. Lanjutkan?`}
+        message={confirmMsg}
         tone="danger"
       />
 

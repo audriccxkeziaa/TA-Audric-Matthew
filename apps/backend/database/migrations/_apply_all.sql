@@ -26,6 +26,8 @@
 \i 020_enable_realtime.sql
 \i 021_fn_commit_purchase_add_merk.sql
 \i 022_stock_adjustments.sql
+\i 023_manager_override.sql
+\i 024_stock_adjustment_bidirectional.sql
 
 -- Catatan: \i hanya bekerja di psql, BUKAN di Supabase SQL Editor web.
 -- Untuk Supabase SQL Editor, paste isi tiap file secara berurutan,
