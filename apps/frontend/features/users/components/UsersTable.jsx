@@ -1,7 +1,7 @@
 "use client";
 // Tabel daftar user. Tombol mata membuka modal detail/edit.
 
-import { Card, Badge, Skeleton, EmptyState } from "@/components/ui";
+import { Card, Badge, Skeleton, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { tanggal, tanggalJam } from "@/lib/format";
 import { EyeIcon } from "./icons";
 
@@ -15,36 +15,34 @@ export function UsersTable({ users, isLoading, currentUserId, onView }) {
       ) : (
         <div className="min-h-0 flex-1 overflow-auto thin-scroll">
           {/* ===== Tampilan DESKTOP (md+) ===== */}
-          <table className="hidden w-full text-sm md:table">
-            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-2.5">Username</th>
-                <th className="px-4 py-2.5">Role</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5">Dibuat</th>
-                <th className="px-4 py-2.5">Terakhir Diubah</th>
-                <th className="px-4 py-2.5 text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <Table>
+            <THead>
+              <TH>Username</TH>
+              <TH>Role</TH>
+              <TH>Status</TH>
+              <TH>Dibuat</TH>
+              <TH>Terakhir Diubah</TH>
+              <TH className="text-center">Aksi</TH>
+            </THead>
+            <TBody>
               {users.map((u) => {
                 const isSelf = u.id === currentUserId;
                 const active = u.is_active !== false;
                 return (
-                  <tr key={u.id} className="transition-colors hover:bg-brand-50/40">
-                    <td className="px-4 py-2.5 font-medium">
+                  <TR key={u.id}>
+                    <TD className="font-medium">
                       {u.username}
                       {isSelf && <span className="ml-1 text-xs text-slate-400">(Anda)</span>}
-                    </td>
-                    <td className="px-4 py-2.5">
+                    </TD>
+                    <TD>
                       <Badge tone={u.role === "superadmin" ? "indigo" : "slate"}>{u.role}</Badge>
-                    </td>
-                    <td className="px-4 py-2.5">
+                    </TD>
+                    <TD>
                       <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-500">{tanggal(u.created_at)}</td>
-                    <td className="px-4 py-2.5 text-slate-500">{tanggalJam(u.updated_at)}</td>
-                    <td className="px-4 py-2.5 text-center">
+                    </TD>
+                    <TD className="text-slate-500">{tanggal(u.created_at)}</TD>
+                    <TD className="text-slate-500">{tanggalJam(u.updated_at)}</TD>
+                    <TD className="text-center">
                       <button
                         onClick={() => onView(u)}
                         className="inline-flex items-center justify-center rounded p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
@@ -52,12 +50,12 @@ export function UsersTable({ users, isLoading, currentUserId, onView }) {
                       >
                         <EyeIcon />
                       </button>
-                    </td>
-                  </tr>
+                    </TD>
+                  </TR>
                 );
               })}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
 
           {/* ===== Tampilan HP (< md) — kartu per user ===== */}
           <ul className="divide-y divide-slate-100 md:hidden">

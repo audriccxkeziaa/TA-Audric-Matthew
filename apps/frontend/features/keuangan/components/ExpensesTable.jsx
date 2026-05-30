@@ -1,7 +1,7 @@
 "use client";
 // Tabel pengeluaran operasional. Tombol mata membuka form edit.
 
-import { Card, Badge, Spinner, EmptyState } from "@/components/ui";
+import { Card, Badge, Spinner, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { rupiah, tanggal } from "@/lib/format";
 import { JENIS_OPTIONS, JENIS_TONE } from "../lib/constants";
 
@@ -20,32 +20,30 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
           {/* ===== Tampilan DESKTOP (md+) ===== */}
-          <table className="hidden w-full min-w-[500px] text-sm md:table">
-            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-2.5">Tanggal</th>
-                <th className="px-4 py-2.5">Jenis</th>
-                <th className="px-4 py-2.5">Deskripsi</th>
-                <th className="px-4 py-2.5">Dicatat oleh</th>
-                <th className="px-4 py-2.5 text-right">Nominal</th>
-                <th className="px-4 py-2.5 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <Table className="min-w-[500px]">
+            <THead>
+              <TH>Tanggal</TH>
+              <TH>Jenis</TH>
+              <TH>Deskripsi</TH>
+              <TH>Dicatat oleh</TH>
+              <TH className="text-right">Nominal</TH>
+              <TH className="text-right">Aksi</TH>
+            </THead>
+            <TBody>
               {rows.map((r) => (
-                <tr key={r.id} className="transition-colors hover:bg-brand-50/40">
-                  <td className="px-4 py-2.5 text-xs">{tanggal(r.tanggal)}</td>
-                  <td className="px-4 py-2.5">
+                <TR key={r.id}>
+                  <TD className="text-xs">{tanggal(r.tanggal)}</TD>
+                  <TD>
                     <Badge tone={JENIS_TONE[r.jenis] || "slate"}>
                       {JENIS_OPTIONS.find((o) => o.value === r.jenis)?.label || r.jenis}
                     </Badge>
-                  </td>
-                  <td className="px-4 py-2.5">{r.deskripsi}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{r.username || "-"}</td>
-                  <td className="px-4 py-2.5 text-right font-semibold text-red-600">
+                  </TD>
+                  <TD>{r.deskripsi}</TD>
+                  <TD className="text-slate-500">{r.username || "-"}</TD>
+                  <TD className="text-right font-semibold text-red-600">
                     − {rupiah(r.nominal)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
+                  </TD>
+                  <TD className="text-right">
                     <button
                       onClick={() => onEdit(r)}
                       className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
@@ -55,11 +53,11 @@ export function ExpensesTable({ rows, isLoading, onEdit }) {
                         <path d="M12 5C7 5 2.73 8.11 1 12.46c1.73 4.35 6 7.54 11 7.54s9.27-3.19 11-7.54C21.27 8.11 17 5 12 5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
                       </svg>
                     </button>
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
 
           {/* ===== Tampilan HP (< md) — kartu per pengeluaran ===== */}
           <ul className="divide-y divide-slate-100 md:hidden">

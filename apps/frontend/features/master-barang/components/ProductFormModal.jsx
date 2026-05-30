@@ -3,7 +3,7 @@
 // hook useProductForm. Kolom stok TIDAK bisa diedit manual (R3); min_stock
 // hanya bisa diubah admin.
 
-import { Modal, Button, Input } from "@/components/ui";
+import { Modal, Button, Input, Textarea } from "@/components/ui";
 import { useProductForm } from "../hooks/useProductForm";
 
 export function ProductFormModal({ open, onClose, editing, isAdmin }) {
@@ -62,18 +62,17 @@ export function ProductFormModal({ open, onClose, editing, isAdmin }) {
 
         {/* Alasan perubahan — WAJIB saat edit (admin) untuk audit trail */}
         {isEdit && isAdmin && (
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              Alasan Perubahan <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              value={alasan}
-              onChange={(e) => setAlasan(e.target.value)}
-              rows={3}
-              placeholder="mis. Penyesuaian harga jual karena harga supplier naik / Koreksi nama barang typo"
-              className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </div>
+          <Textarea
+            label={
+              <>
+                Alasan Perubahan <span className="text-red-500">*</span>
+              </>
+            }
+            value={alasan}
+            onChange={(e) => setAlasan(e.target.value)}
+            rows={3}
+            placeholder="mis. Penyesuaian harga jual karena harga supplier naik / Koreksi nama barang typo"
+          />
         )}
 
         {err && (

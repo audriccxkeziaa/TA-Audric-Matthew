@@ -3,7 +3,7 @@
 // State & mutation di hook useRestockDetail; init value dari item.min_stock
 // dipertahankan apa adanya (via setTimeout saat pertama render).
 
-import { Modal, Button } from "@/components/ui";
+import { Modal, Button, Input } from "@/components/ui";
 import { angka } from "@/lib/format";
 import { UrgensiBadge } from "./UrgensiBadge";
 import { useRestockDetail } from "../hooks/useRestockDetail";
@@ -87,26 +87,24 @@ export function RestockDetailModal({ item, onClose }) {
 
         <div className="border-t border-slate-100 pt-3 space-y-3">
           <h4 className="text-sm font-semibold text-slate-700">Ubah Min. Stok</h4>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Min Stok Baru</label>
-            <input
-              type="number"
-              min="0"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Alasan Perubahan <span className="text-red-500">*</span></label>
-            <input
-              type="text"
-              placeholder="Alasan perubahan min. stok..."
-              value={alasan}
-              onChange={(e) => setAlasan(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-slate-400"
-            />
-          </div>
+          <Input
+            label="Min Stok Baru"
+            type="number"
+            min="0"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+          />
+          <Input
+            label={
+              <>
+                Alasan Perubahan <span className="text-red-500">*</span>
+              </>
+            }
+            type="text"
+            placeholder="Alasan perubahan min. stok..."
+            value={alasan}
+            onChange={(e) => setAlasan(e.target.value)}
+          />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={close}>
               Batal

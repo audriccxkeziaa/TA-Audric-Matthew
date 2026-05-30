@@ -1,7 +1,7 @@
 "use client";
 // Tabel rekomendasi restock. Kolom Aksi (detail) hanya untuk admin.
 
-import { Card, Spinner, EmptyState } from "@/components/ui";
+import { Card, Spinner, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { angka } from "@/lib/format";
 import { UrgensiBadge } from "./UrgensiBadge";
 
@@ -28,41 +28,39 @@ export function RestockTable({
       ) : (
         <div className="min-h-0 flex-1 overflow-auto thin-scroll">
           {/* ===== Tampilan DESKTOP (md+) ===== */}
-          <table className="hidden w-full text-sm md:table">
-            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-2.5 w-8">No</th>
-                <th className="px-4 py-2.5">Kode Barang</th>
-                <th className="px-4 py-2.5">Nama Barang</th>
-                <th className="px-4 py-2.5 text-right">Stok</th>
-                <th className="px-4 py-2.5 text-right">Min Stok</th>
-                <th className="px-4 py-2.5 text-right">Perlu Beli</th>
-                <th className="px-4 py-2.5 text-right" title="Total terjual 30 hari terakhir ÷ 30">Laju Jual/Hari</th>
-                <th className="px-4 py-2.5 text-right" title="Prediksi berapa hari lagi stok akan habis jika laju jual tetap sama (= Stok ÷ Laju Jual/Hari). Merah <7 hari, kuning <14 hari.">Estimasi Habis</th>
-                <th className="px-4 py-2.5">Status</th>
-                {isAdmin && <th className="px-4 py-2.5 text-right">Aksi</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <Table>
+            <THead>
+              <TH className="w-8">No</TH>
+              <TH>Kode Barang</TH>
+              <TH>Nama Barang</TH>
+              <TH className="text-right">Stok</TH>
+              <TH className="text-right">Min Stok</TH>
+              <TH className="text-right">Perlu Beli</TH>
+              <TH className="text-right" title="Total terjual 30 hari terakhir ÷ 30">Laju Jual/Hari</TH>
+              <TH className="text-right" title="Prediksi berapa hari lagi stok akan habis jika laju jual tetap sama (= Stok ÷ Laju Jual/Hari). Merah <7 hari, kuning <14 hari.">Estimasi Habis</TH>
+              <TH>Status</TH>
+              {isAdmin && <TH className="text-right">Aksi</TH>}
+            </THead>
+            <TBody>
               {rows.map((it, index) => (
-                <tr key={it.id} className="transition-colors hover:bg-brand-50/40">
-                  <td className="px-4 py-2.5 text-xs text-slate-400">{(page - 1) * pageSize + index + 1}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{it.kode_barang}</td>
-                  <td className="px-4 py-2.5">
+                <TR key={it.id}>
+                  <TD className="text-xs text-slate-400">{(page - 1) * pageSize + index + 1}</TD>
+                  <TD className="font-mono text-xs">{it.kode_barang}</TD>
+                  <TD>
                     {it.nama_barang}
                     <span className="block text-xs text-slate-400">{it.merk || "-"}</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-semibold">{angka(it.stok)}</td>
-                  <td className="px-4 py-2.5 text-right">{angka(it.min_stock)}</td>
-                  <td className="px-4 py-2.5 text-right font-semibold text-red-600">{angka(it.kekurangan)} unit</td>
-                  <td className="px-4 py-2.5 text-right">
+                  </TD>
+                  <TD className="text-right font-semibold">{angka(it.stok)}</TD>
+                  <TD className="text-right">{angka(it.min_stock)}</TD>
+                  <TD className="text-right font-semibold text-red-600">{angka(it.kekurangan)} unit</TD>
+                  <TD className="text-right">
                     {Number(it.avg_sales_30d || 0) === 0 ? (
                       <span className="text-slate-400 text-xs">Belum ada data</span>
                     ) : (
                       <span>{Number(it.avg_sales_30d).toFixed(2)}<span className="text-slate-400 text-xs"> unit/hr</span></span>
                     )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
+                  </TD>
+                  <TD className="text-right">
                     {it.estimasi_hari_habis == null ? (
                       <span className="text-slate-400 text-xs">Belum terjual 30h</span>
                     ) : Number(it.estimasi_hari_habis) <= 7 ? (
@@ -72,10 +70,10 @@ export function RestockTable({
                     ) : (
                       <span className="text-slate-700">{it.estimasi_hari_habis} hari</span>
                     )}
-                  </td>
-                  <td className="px-4 py-2.5"><UrgensiBadge level={it.tingkat_urgensi} /></td>
+                  </TD>
+                  <TD><UrgensiBadge level={it.tingkat_urgensi} /></TD>
                   {isAdmin && (
-                    <td className="px-4 py-2.5">
+                    <TD>
                       <div className="flex justify-end">
                         <button
                           onClick={() => onDetail(it)}
@@ -88,12 +86,12 @@ export function RestockTable({
                           </svg>
                         </button>
                       </div>
-                    </td>
+                    </TD>
                   )}
-                </tr>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
 
           {/* ===== Tampilan HP (< md) — kartu per barang ===== */}
           <ul className="divide-y divide-slate-100 md:hidden">

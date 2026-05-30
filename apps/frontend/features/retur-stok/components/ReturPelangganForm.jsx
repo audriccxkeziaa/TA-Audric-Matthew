@@ -2,7 +2,7 @@
 // Tab "Retur Pelanggan" — cari transaksi, set item + kondisi, submit. Bila
 // dibuat kasir → menunggu persetujuan admin (PIN on-site / remote).
 
-import { Card, Button, Input, Badge, ConfirmDialog, Spinner } from "@/components/ui";
+import { Card, Button, Input, Textarea, Badge, ConfirmDialog, Spinner } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
 import { useReturPelanggan } from "../hooks/useReturPelanggan";
 
@@ -95,33 +95,23 @@ export function ReturPelangganForm() {
               Opsi A: Admin di Toko (Input Password)
             </h4>
             <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">
-                  Username Admin
-                </label>
-                <input
-                  type="text"
-                  value={r.pinUsername}
-                  onChange={(e) => r.setPinUsername(e.target.value)}
-                  placeholder="Username admin..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">
-                  Password Admin
-                </label>
-                <input
-                  type="password"
-                  value={r.pinPassword}
-                  onChange={(e) => r.setPinPassword(e.target.value)}
-                  placeholder="Password admin..."
-                  onKeyDown={(e) => e.key === "Enter" && r.handlePinApprove()}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-                  autoComplete="off"
-                />
-              </div>
+              <Input
+                label="Username Admin"
+                type="text"
+                value={r.pinUsername}
+                onChange={(e) => r.setPinUsername(e.target.value)}
+                placeholder="Username admin..."
+                autoComplete="off"
+              />
+              <Input
+                label="Password Admin"
+                type="password"
+                value={r.pinPassword}
+                onChange={(e) => r.setPinPassword(e.target.value)}
+                placeholder="Password admin..."
+                onKeyDown={(e) => e.key === "Enter" && r.handlePinApprove()}
+                autoComplete="off"
+              />
               {r.pinError && (
                 <p className="text-xs font-medium text-red-600">{r.pinError}</p>
               )}
@@ -248,18 +238,17 @@ export function ReturPelangganForm() {
       </div>
 
       <div className="mt-4 space-y-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Alasan Retur <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            value={r.alasan}
-            onChange={(e) => r.setAlasan(e.target.value)}
-            placeholder="Contoh: Pelanggan mengembalikan karena salah ukuran..."
-            rows={2}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
+        <Textarea
+          label={
+            <>
+              Alasan Retur <span className="text-red-500">*</span>
+            </>
+          }
+          value={r.alasan}
+          onChange={(e) => r.setAlasan(e.target.value)}
+          placeholder="Contoh: Pelanggan mengembalikan karena salah ukuran..."
+          rows={2}
+        />
         <Input
           label="Catatan (opsional)"
           value={r.catatan}

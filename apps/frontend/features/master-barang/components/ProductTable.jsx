@@ -6,7 +6,7 @@
 //   - Desktop (md+) : tabel penuh seperti semula (tidak diubah).
 //   - HP (< md)     : tiap barang jadi "kartu" ringkas (tanpa geser samping).
 
-import { Card, Badge, Skeleton, EmptyState } from "@/components/ui";
+import { Card, Badge, Skeleton, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
 
 // Badge kondisi stok berdasarkan stok vs min_stock.
@@ -50,54 +50,52 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
       ) : (
         <div className="overflow-auto thin-scroll md:min-h-0 md:flex-1">
           {/* ===== Tampilan DESKTOP (md+) ===== */}
-          <table className="hidden w-full min-w-[640px] text-sm md:table">
-            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-2.5 w-8">No</th>
-                <th className="px-4 py-2.5">Kode</th>
-                <th className="px-4 py-2.5">Nama Barang</th>
-                <th className="px-4 py-2.5">Merk</th>
-                <th className="px-4 py-2.5 text-right">Harga Beli</th>
-                <th className="px-4 py-2.5 text-right">Harga Jual</th>
-                <th className="px-4 py-2.5 text-right">Stok</th>
-                <th className="px-4 py-2.5 text-right">Min Stok</th>
-                <th className="px-4 py-2.5">Kondisi</th>
-                {isAdmin && <th className="px-4 py-2.5 text-center">Aksi</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
+          <Table className="min-w-[640px]">
+            <THead>
+              <TH className="w-8">No</TH>
+              <TH>Kode</TH>
+              <TH>Nama Barang</TH>
+              <TH>Merk</TH>
+              <TH className="text-right">Harga Beli</TH>
+              <TH className="text-right">Harga Jual</TH>
+              <TH className="text-right">Stok</TH>
+              <TH className="text-right">Min Stok</TH>
+              <TH>Kondisi</TH>
+              {isAdmin && <TH className="text-center">Aksi</TH>}
+            </THead>
+            <TBody>
               {products.map((p, index) => (
-                <tr key={p.id} className="transition-colors hover:bg-brand-50/40">
-                  <td className="px-4 py-2.5 text-xs text-slate-400">
+                <TR key={p.id}>
+                  <TD className="text-xs text-slate-400">
                     {(page - 1) * 20 + index + 1}
-                  </td>
-                  <td className="px-4 py-2.5 font-mono text-xs">
+                  </TD>
+                  <TD className="font-mono text-xs">
                     {p.kode_barang}
-                  </td>
-                  <td className="px-4 py-2.5">
+                  </TD>
+                  <TD>
                     {p.nama_barang}
                     {p.status === "nonaktif" && (
                       <span className="ml-2">
                         <Badge tone="slate">nonaktif</Badge>
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-500">{p.merk || "-"}</td>
-                  <td className="px-4 py-2.5 text-right">
+                  </TD>
+                  <TD className="text-slate-500">{p.merk || "-"}</TD>
+                  <TD className="text-right">
                     {rupiah(p.harga_beli)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
+                  </TD>
+                  <TD className="text-right">
                     {rupiah(p.harga_jual)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-semibold">
+                  </TD>
+                  <TD className="text-right font-semibold">
                     {angka(p.stok)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right text-slate-500">
+                  </TD>
+                  <TD className="text-right text-slate-500">
                     {angka(p.min_stock)}
-                  </td>
-                  <td className="px-4 py-2.5">{stokBadge(p)}</td>
+                  </TD>
+                  <TD>{stokBadge(p)}</TD>
                   {isAdmin && (
-                    <td className="px-4 py-2.5 text-center">
+                    <TD className="text-center">
                       <button
                         onClick={() => onEdit(p)}
                         className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
@@ -105,12 +103,12 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
                       >
                         <EditIcon />
                       </button>
-                    </td>
+                    </TD>
                   )}
-                </tr>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
 
           {/* ===== Tampilan HP (< md) — kartu per barang ===== */}
           <ul className="divide-y divide-slate-100 md:hidden">

@@ -33,6 +33,20 @@ Thumbs.db
 # Coverage
 coverage/
 
+# Cache
+.cache/
+*.cache
+.eslintcache
+
 # Temp files
 *.tmp
 tmp/
+
+# Python (thesis doc generators in docs/scripts)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# TypeScript build info
+*.tsbuildinfo

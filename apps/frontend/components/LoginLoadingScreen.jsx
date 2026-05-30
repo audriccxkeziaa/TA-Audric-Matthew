@@ -2,13 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const STEPS = [
-  "Memverifikasi kredensial",
-  "Membangun sesi",
-  "Memuat modul POS",
-  "Sistem siap",
-];
-
 export default function LoginLoadingScreen({
   role,
   userName,
@@ -16,7 +9,6 @@ export default function LoginLoadingScreen({
   onDone,
 }) {
   const [progress, setProgress] = useState(0);
-  const [stepIdx, setStepIdx] = useState(0);
   const startedAt = useRef(Date.now());
 
   const tagline =
@@ -31,9 +23,6 @@ export default function LoginLoadingScreen({
       const elapsed = Date.now() - startedAt.current;
       const pct = Math.min(100, (elapsed / durationMs) * 100);
       setProgress(pct);
-      setStepIdx(
-        Math.min(STEPS.length - 1, Math.floor((pct / 100) * STEPS.length))
-      );
       if (pct >= 100) {
         clearInterval(tick);
         setTimeout(() => onDone?.(), 200);

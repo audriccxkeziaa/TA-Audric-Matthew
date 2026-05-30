@@ -1,7 +1,7 @@
 "use client";
 // Tab "Penyesuaian Stok" (admin) — catat penyusutan: stok berkurang.
 
-import { Card, Button, Input, ConfirmDialog, EmptyState } from "@/components/ui";
+import { Card, Button, Input, Textarea, ConfirmDialog, EmptyState } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
 import ProductPicker from "@/components/ProductPicker";
 import { usePenyesuaianStok } from "../hooks/usePenyesuaianStok";
@@ -79,18 +79,17 @@ export function PenyesuaianStokForm() {
       )}
 
       <div className="mt-4 space-y-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Alasan Penyesuaian <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            value={p.alasan}
-            onChange={(e) => p.setAlasan(e.target.value)}
-            placeholder="Contoh: Barang pecah tersenggol, rusak karena kelembaban, hilang saat stock opname..."
-            rows={2}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
+        <Textarea
+          label={
+            <>
+              Alasan Penyesuaian <span className="text-red-500">*</span>
+            </>
+          }
+          value={p.alasan}
+          onChange={(e) => p.setAlasan(e.target.value)}
+          placeholder="Contoh: Barang pecah tersenggol, rusak karena kelembaban, hilang saat stock opname..."
+          rows={2}
+        />
         <Input
           label="Catatan (opsional)"
           value={p.catatan}

@@ -1,7 +1,7 @@
 "use client";
 // Tab "Retur ke Supplier" — pilih nota, centang item, isi qty retur & alasan.
 
-import { Card, Button, Input, ConfirmDialog, Spinner } from "@/components/ui";
+import { Card, Button, Input, Textarea, ConfirmDialog, Spinner } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
 import { useReturSupplier } from "../hooks/useReturSupplier";
 
@@ -120,18 +120,17 @@ export function ReturSupplierForm() {
       </div>
 
       <div className="mt-4 space-y-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
-            Alasan Retur <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            value={r.alasan}
-            onChange={(e) => r.setAlasan(e.target.value)}
-            placeholder="Contoh: Barang tidak sesuai tipe, jumlah kurang dari nota..."
-            rows={2}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
+        <Textarea
+          label={
+            <>
+              Alasan Retur <span className="text-red-500">*</span>
+            </>
+          }
+          value={r.alasan}
+          onChange={(e) => r.setAlasan(e.target.value)}
+          placeholder="Contoh: Barang tidak sesuai tipe, jumlah kurang dari nota..."
+          rows={2}
+        />
         <Input
           label="Catatan (opsional)"
           value={r.catatan}

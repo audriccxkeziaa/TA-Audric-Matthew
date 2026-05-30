@@ -163,7 +163,7 @@ Uji RBAC & JWT otomatis: `node tests/security/rbac-jwt-test.js`
 - **Database & Storage**: Supabase (cukup project gratis untuk skala
   toko kecil).
 
-Untuk deploy ke Railway, lihat `DEPLOY_RAILWAY.md` di root repository.
+Untuk deploy ke Railway, lihat `docs/DEPLOY_RAILWAY.md`.
 
 Untuk produksi:
 1. Update `FRONTEND_URL` di backend dengan domain Vercel atau Railway.

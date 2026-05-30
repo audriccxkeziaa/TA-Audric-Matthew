@@ -1,7 +1,7 @@
 "use client";
 // /laporan — Laporan Penjualan & Pembelian (admin). Orkestrator UI.
 
-import { PageShell, PageHeader, Card, Button, Input } from "@/components/ui";
+import { PageShell, PageHeader, Card, Button, Input, Select } from "@/components/ui";
 import { tanggal } from "@/lib/format";
 import { useLaporan } from "../hooks/useLaporan";
 import { LaporanSummary } from "./LaporanSummary";
@@ -67,24 +67,19 @@ export default function LaporanPage() {
             value={l.to}
             onChange={(e) => l.setTo(e.target.value)}
           />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
-              {l.isSales ? "Kasir" : "Input Oleh"}
-            </label>
-            <select
-              value={l.kasirFilter}
-              onChange={(e) => {
-                l.setKasirFilter(e.target.value);
-                l.setPage(1);
-              }}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option value="">Semua {l.isSales ? "Kasir" : "User"}</option>
-              {l.kasirOptions.map((k) => (
-                <option key={k} value={k}>{k}</option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label={l.isSales ? "Kasir" : "Input Oleh"}
+            value={l.kasirFilter}
+            onChange={(e) => {
+              l.setKasirFilter(e.target.value);
+              l.setPage(1);
+            }}
+          >
+            <option value="">Semua {l.isSales ? "Kasir" : "User"}</option>
+            {l.kasirOptions.map((k) => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </Select>
           <div className="flex items-end">
             <button
               onClick={l.resetFilter}
