@@ -128,6 +128,25 @@ export function Select({ label, children, className = "", ...props }) {
   );
 }
 
+// ---------- Textarea ----------
+export function Textarea({ label, error, className = "", rows = 3, ...props }) {
+  return (
+    <label className="block">
+      {label && (
+        <span className="mb-1.5 block text-sm font-medium text-slate-700">
+          {label}
+        </span>
+      )}
+      <textarea
+        rows={rows}
+        className={`${FIELD_BASE} resize-y ${error ? "border-red-400 focus:border-red-500 focus:ring-red-500/30" : "border-slate-300"} ${className}`}
+        {...props}
+      />
+      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+    </label>
+  );
+}
+
 // ---------- Kartu ----------
 export function Card({ children, className = "", hover = false }) {
   return (
@@ -295,7 +314,7 @@ export function PageHeader({ title, description, actions }) {
 }
 
 // ---------- Modal ----------
-export function Modal({ open, onClose, title, children, maxWidth = "max-w-lg" }) {
+export function Modal({ open, onClose, title, children, width = "max-w-lg" }) {
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") onClose?.();
@@ -308,11 +327,11 @@ export function Modal({ open, onClose, title, children, maxWidth = "max-w-lg" })
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm "transition-opacity
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${maxWidth} transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all sm:my-8`}
+        className={`relative w-full ${width} transform overflow-hidden rounded-xl bg-white text-left shadow-2xl transition-all sm:my-8`}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-3.5 backdrop-blur">
           <h2 className="font-semibold text-slate-900">{title}</h2>
@@ -368,5 +387,65 @@ export function Skeleton({ rows = 5 }) {
         />
       ))}
     </div>
+  );
+}
+
+
+// ---------- Tabel (design system) ----------
+// Membungkus pola tabel data yang berulang (header sticky + hover row) sesuai
+// design system. Pemakaian dual-view: <Table> (default desktopOnly) untuk tabel
+// yang disandingkan dengan kartu mobile (md:hidden). Set desktopOnly={false}
+// untuk tabel yang tampil di semua ukuran (mis. di dalam modal).
+export function Table({ children, className = "", desktopOnly = true }) {
+  return (
+    <table
+      className={`w-full text-sm ${desktopOnly ? "hidden md:table" : ""} ${className}`}
+    >
+      {children}
+    </table>
+  );
+}
+
+export function THead({ children, className = "" }) {
+  return (
+    <thead
+      className={`sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 ${className}`}
+    >
+      <tr>{children}</tr>
+    </thead>
+  );
+}
+
+export function TH({ children, className = "", ...props }) {
+  return (
+    <th className={`px-4 py-2.5 ${className}`} {...props}>
+      {children}
+    </th>
+  );
+}
+
+export function TBody({ children, className = "" }) {
+  return (
+    <tbody className={`divide-y divide-slate-100 ${className}`}>{children}</tbody>
+  );
+}
+
+export function TR({ children, className = "", onClick, ...props }) {
+  return (
+    <tr
+      onClick={onClick}
+      className={`transition-colors hover:bg-brand-50/40 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      {...props}
+    >
+      {children}
+    </tr>
+  );
+}
+
+export function TD({ children, className = "", ...props }) {
+  return (
+    <td className={`px-4 py-2.5 ${className}`} {...props}>
+      {children}
+    </td>
   );
 }
