@@ -4,6 +4,8 @@ const adjustmentRepository = require("../repositories/adjustmentRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
 const ruleEngine = require("./ruleEngine");
 
+const { nextDocumentNumber } = require("../utils/documentCounter");
+
 // Catat refund retur pelanggan sebagai pengeluaran agar saldo kas/omset berkurang.
 async function recordRefundExpense({ kode, items, userId }) {
   const refundTotal = items
@@ -22,23 +24,6 @@ async function recordRefundExpense({ kode, items, userId }) {
   }
 }
 
-function generateKode(type) {
-  const prefixes = {
-    return_supplier: "RTS",
-    sales_return: "RTP",
-    stock_adjustment: "ADJ",
-  };
-  const prefix = prefixes[type] || "ADJ";
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const rnd = Math.floor(Math.random() * 0xffffff)
-    .toString(16)
-    .toUpperCase()
-    .padStart(6, "0");
-  return `${prefix}-${yyyy}${mm}${dd}-${rnd}`;
-}
 
 function validatePayload({ type, alasan, items, reference_sale_id, reference_purchase_id }) {
   if (!["return_supplier", "sales_return", "stock_adjustment"].includes(type)) {
@@ -111,7 +96,7 @@ async function createAdjustment({ user, payload }) {
     harga_satuan: Number(it.harga_satuan || 0),
   }));
 
-  const kode = generateKode(type);
+  const kode = await nextDocumentNumber(type);
 
   // Manager Override: sales_return dibuat kasir → pending
   // sales_return dibuat admin → langsung approved (auto-approve)

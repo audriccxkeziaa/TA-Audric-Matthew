@@ -2,19 +2,7 @@ const productRepository = require("../repositories/productRepository");
 const salesRepository = require("../repositories/salesRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
 const ruleEngine = require("./ruleEngine");
-
-// Bentuk kode_transaksi: INV-YYYYMMDD-XXXXXX (6 char hex acak)
-function generateKodeTransaksi() {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const rnd = Math.floor(Math.random() * 0xffffff)
-    .toString(16)
-    .toUpperCase()
-    .padStart(6, "0");
-  return `INV-${yyyy}${mm}${dd}-${rnd}`;
-}
+const { nextDocumentNumber } = require("../utils/documentCounter");
 
 function validatePayload(items, productsFromDb = []) { // Tambahkan parameter kedua, yaitu products dari Supabase
   if (!Array.isArray(items) || items.length === 0) {
@@ -94,7 +82,7 @@ async function createSale({ user, items }) {
     throw e;
   }
 
-  const kodeTransaksi = generateKodeTransaksi();
+  const kodeTransaksi = await nextDocumentNumber("sale");
   const productMap = new Map(products.map((p) => [p.id, p]));
 
   // Harga diambil dari DB, bukan dari request — mencegah manipulasi harga

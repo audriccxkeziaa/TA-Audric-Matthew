@@ -121,6 +121,106 @@ export function printReceipt(receipt) {
   w.document.close();
 }
 
+export function printReturnReceipt(detail) {
+  if (typeof window === "undefined") return;
+
+  const typeLabel = {
+    sales_return:     "RETUR PELANGGAN",
+    return_supplier:  "RETUR SUPPLIER",
+    stock_adjustment: "PENYESUAIAN STOK",
+  }[detail.type] || "RETUR";
+
+  const rows = (detail.items || [])
+    .map(
+      (it) => `
+      <tr>
+        <td class="item-name" colspan="3">${escapeHtml(it.nama_barang || "")}</td>
+      </tr>
+      <tr>
+        <td class="item-detail">${it.qty} x ${rupiah(it.harga_satuan)}</td>
+        <td></td>
+        <td class="item-subtotal">${rupiah(Number(it.qty) * Number(it.harga_satuan))}</td>
+      </tr>`
+    )
+    .join("");
+
+  const totalNilai = (detail.items || []).reduce(
+    (s, it) => s + Number(it.qty) * Number(it.harga_satuan),
+    0
+  );
+
+  const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"/>
+<title>Struk ${escapeHtml(detail.kode_adjustment || "")}</title>
+<style>
+  @page { size: 80mm auto; margin: 3mm 5mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', 'Consolas', monospace; width: 70mm; max-width: 70mm; margin: 0 auto; padding: 0; color: #000; font-size: 9pt; line-height: 1.3; -webkit-print-color-adjust: exact; }
+  .header { text-align: center; margin-bottom: 2mm; }
+  .shop-name { font-size: 12pt; font-weight: bold; }
+  .shop-sub { font-size: 8pt; }
+  .type-label { font-size: 10pt; font-weight: bold; text-align: center; letter-spacing: 1px; margin: 1.5mm 0; }
+  .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
+  .meta { font-size: 8pt; }
+  .meta td { padding: 0.5mm 0; }
+  .meta .label { width: 22mm; }
+  table.items { width: 100%; border-collapse: collapse; margin: 1mm 0; }
+  .items .item-name { font-size: 8.5pt; font-weight: bold; padding-top: 1.5mm; }
+  .items .item-detail { font-size: 8pt; padding-left: 3mm; color: #333; }
+  .items .item-subtotal { font-size: 8pt; text-align: right; }
+  table.totals { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .totals td { padding: 0.5mm 0; }
+  .totals .val { text-align: right; }
+  .totals .grand { font-size: 11pt; font-weight: bold; border-top: 1px solid #000; padding-top: 1mm; }
+  .footer { text-align: center; font-size: 7.5pt; margin-top: 3mm; color: #333; }
+  @media screen { body { width: 80mm; max-width: 80mm; padding: 3mm 4mm; border: 1px solid #ccc; background: #fff; margin-top: 10px; } }
+</style></head><body>
+
+  <div class="header">
+    <div class="shop-name">CV ASIA JAYA MAJU</div>
+    <div class="shop-sub">Suku Cadang Sepeda Motor</div>
+  </div>
+
+  <div class="type-label">— ${typeLabel} —</div>
+
+  <hr class="divider"/>
+
+  <table class="meta">
+    <tr><td class="label">No</td><td>: ${escapeHtml(detail.kode_adjustment || "")}</td></tr>
+    <tr><td class="label">Tanggal</td><td>: ${tanggalJam(detail.created_at)}</td></tr>
+    ${detail.username ? `<tr><td class="label">User</td><td>: ${escapeHtml(detail.username)}</td></tr>` : ""}
+    ${detail.alasan ? `<tr><td class="label">Alasan</td><td>: ${escapeHtml(detail.alasan)}</td></tr>` : ""}
+  </table>
+
+  <hr class="divider"/>
+
+  <table class="items">${rows}</table>
+
+  <hr class="divider"/>
+
+  <table class="totals">
+    <tr class="grand">
+      <td>TOTAL NILAI</td><td></td>
+      <td class="val">${rupiah(totalNilai)}</td>
+    </tr>
+  </table>
+
+  <hr class="divider"/>
+
+  <div class="footer">
+    Dokumen resmi retur — CV Asia Jaya Maju<br/>
+    Sistem POS Suku Cadang Sepeda Motor
+  </div>
+
+  <script>window.onload = function(){ window.print(); }</script>
+</body></html>`;
+
+  const w = window.open("", "_blank", "width=400,height=650");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+}
+
 function escapeHtml(s) {
   return String(s).replace(
     /[&<>"']/g,

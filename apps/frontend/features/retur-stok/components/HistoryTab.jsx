@@ -3,7 +3,8 @@
 
 import { Card, Button, Badge, Modal, Spinner, EmptyState } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
-import { TYPE_BADGES, STATUS_BADGES, getStatusBadge } from "../lib/badges";
+import { TYPE_BADGES, getStatusBadge } from "../lib/badges";
+import { printReturnReceipt } from "@/lib/receipt";
 import { useHistory } from "../hooks/useHistory";
 
 export function HistoryTab() {
@@ -253,6 +254,17 @@ export function HistoryTab() {
                 ))}
               </tbody>
             </table>
+            {["sales_return", "return_supplier"].includes(h.detail.type) && (
+              <div className="flex justify-end border-t border-slate-100 pt-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => printReturnReceipt(h.detail)}
+                >
+                  Cetak Struk
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Modal>

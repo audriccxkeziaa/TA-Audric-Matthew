@@ -29,6 +29,8 @@
 \i 023_manager_override.sql
 \i 024_stock_adjustment_bidirectional.sql
 \i 025_supplier_return_resolve.sql
+\i 026_document_counters.sql
+\i 027_performance_indexes.sql
 
 -- Catatan: \i hanya bekerja di psql, BUKAN di Supabase SQL Editor web.
 -- Untuk Supabase SQL Editor, paste isi tiap file secara berurutan,
