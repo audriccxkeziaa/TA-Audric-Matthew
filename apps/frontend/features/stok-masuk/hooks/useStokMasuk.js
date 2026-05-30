@@ -268,6 +268,7 @@ export function useStokMasuk() {
   // ---------- Validasi siap commit (R2 sisi klien) ----------
   const canCommit = useMemo(() => {
     if (rows.length === 0) return false;
+    if (!noNota.trim()) return false; // No. Nota Supplier wajib diisi
     return rows.every((r) => {
       const qtyOk = Number(r.qty) > 0;
       const hargaOk = Number(r.harga_beli) > 0; // wajib > 0
@@ -301,6 +302,10 @@ export function useStokMasuk() {
   // ---------- Commit (R2) ----------
   async function commit() {
     if (!canCommit) return;
+    if (!noNota.trim()) {
+      toast.error("No. Nota Supplier wajib diisi sebelum menyimpan");
+      return;
+    }
     setCommitting(true);
     try {
       const items = rows.map((r) => {

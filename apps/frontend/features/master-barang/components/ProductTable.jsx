@@ -3,30 +3,13 @@
 
 import { Card, Badge, Skeleton, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
+import { Eye, Pencil } from "lucide-react";
 
 function stokBadge(p) {
   if (Number(p.stok) === 0) return <Badge tone="red">Stok Habis</Badge>;
   if (Number(p.stok) <= Number(p.min_stock))
     return <Badge tone="amber">Stok Menipis</Badge>;
   return <Badge tone="green">Normal</Badge>;
-}
-
-function EyeIcon() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function PencilIcon() {
-  return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
 }
 
 export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdit }) {
@@ -82,18 +65,18 @@ export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdi
                     <div className="flex items-center justify-center gap-0.5">
                       <button
                         onClick={() => onView(p)}
-                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-slate-500 hover:text-brand-600"
+                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-blue-600 hover:text-blue-800"
                         title="Lihat detail barang"
                       >
-                        <EyeIcon />
+                        <Eye className="h-4 w-4" />
                       </button>
                       {isAdmin && (
                         <button
                           onClick={() => onEdit(p)}
-                          className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-slate-500 hover:text-blue-600"
+                          className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
                           title="Edit barang"
                         >
-                          <PencilIcon />
+                          <Pencil className="h-4 w-4" />
                         </button>
                       )}
                     </div>
@@ -137,11 +120,11 @@ export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdi
                     {isAdmin && (
                       <button
                         onClick={() => onEdit(p)}
-                        className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-slate-500 hover:text-blue-600"
+                        className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
                         title="Edit barang"
                         aria-label="Edit barang"
                       >
-                        <PencilIcon />
+                        <Pencil className="h-4 w-4" />
                       </button>
                     )}
                   </div>

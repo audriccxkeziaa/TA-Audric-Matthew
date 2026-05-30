@@ -66,7 +66,7 @@ export function UploadStep({ m }) {
         <Card className="p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
-              label="No. Nota Supplier (opsional)"
+              label="No. Nota Supplier *"
               value={m.noNota}
               onChange={(e) => m.setNoNota(e.target.value)}
               placeholder="mis. INV-2026-0481"

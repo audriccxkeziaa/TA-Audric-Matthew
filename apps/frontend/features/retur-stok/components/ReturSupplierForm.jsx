@@ -33,6 +33,11 @@ export function ReturSupplierForm() {
                   <p className="font-mono text-sm font-medium text-slate-800">
                     {ret.kode_adjustment}
                   </p>
+                  {ret.no_nota_ref && (
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Nota: <span className="font-medium text-slate-700">{ret.no_nota_ref}</span>
+                    </p>
+                  )}
                   <p className="mt-0.5 text-xs text-slate-500">
                     {tanggalJam(ret.created_at)} · {angka(ret.total_qty)} unit total
                   </p>
@@ -54,7 +59,7 @@ export function ReturSupplierForm() {
                 <Button
                   size="sm"
                   variant="success"
-                  onClick={() => r.setResolveId(ret.id)}
+                  onClick={() => r.initiateResolve(ret)}
                   disabled={r.resolveSubmitting}
                 >
                   Complete Return
@@ -229,7 +234,7 @@ export function ReturSupplierForm() {
       {/* Dialog Tahap 2: konfirmasi barang ganti diterima */}
       <ConfirmDialog
         open={!!r.resolveId}
-        onClose={() => r.setResolveId(null)}
+        onClose={() => { r.setResolveId(null); }}
         onConfirm={r.handleResolve}
         title="Konfirmasi Barang Ganti Diterima"
         message="Pastikan barang pengganti dari supplier sudah masuk ke gudang. Stok akan bertambah sesuai jumlah retur semula. Lanjutkan?"

@@ -36,8 +36,8 @@ function ReceiptPreview({ data }) {
         <div className="text-[12px] font-bold">CV ASIA JAYA MAJU</div>
         <div className="text-[9px] text-slate-500">Suku Cadang Sepeda Motor</div>
         <div className="text-[7.5px] text-slate-400">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
-        <div className="text-[7.5px] text-slate-400">Banjarbaru, Kalimantan Selatan 70714</div>
-        <div className="text-[7.5px] text-slate-400">Telp: 0851-0262-6289</div>
+        <div className="text-[7.5px] text-slate-400">Banjarbaru, Kalsel 70714</div>
+        <div className="text-[7.5px] text-slate-400">No. Telp: 0851-0262-6289</div>
       </div>
 
       <DashLine />

@@ -98,8 +98,8 @@ export function printReceipt(receipt) {
     <div class="shop-name">CV ASIA JAYA MAJU</div>
     <div class="shop-sub">Suku Cadang Sepeda Motor</div>
     <div class="shop-addr">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
-    <div class="shop-addr">Banjarbaru, Kalimantan Selatan 70714</div>
-    <div class="shop-addr">Telp: 0851-0262-6289</div>
+    <div class="shop-addr">Banjarbaru, Kalsel 70714</div>
+    <div class="shop-addr">No. Telp: 0851-0262-6289</div>
   </div>
 
   <hr class="divider"/>
@@ -200,8 +200,8 @@ export function printReturnReceipt(detail) {
     <div class="shop-name">CV ASIA JAYA MAJU</div>
     <div class="shop-sub">Suku Cadang Sepeda Motor</div>
     <div class="shop-addr">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
-    <div class="shop-addr">Banjarbaru, Kalimantan Selatan 70714</div>
-    <div class="shop-addr">Telp: 0851-0262-6289</div>
+    <div class="shop-addr">Banjarbaru, Kalsel 70714</div>
+    <div class="shop-addr">No. Telp: 0851-0262-6289</div>
   </div>
 
   <div class="type-label">— ${typeLabel} —</div>

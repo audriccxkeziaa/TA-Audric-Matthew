@@ -3,7 +3,7 @@
 
 import { Card, Badge, Skeleton, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { tanggal } from "@/lib/format";
-import { EyeIcon, PencilIcon, TrashIcon, PowerOffIcon } from "./icons";
+import { Eye, Pencil, Trash2, Power } from "lucide-react";
 
 function ActionBtn({ onClick, title, colorClass, children }) {
   return (
@@ -61,23 +61,23 @@ export function UsersTable({ users, isLoading, currentUserId, onView, onEdit, on
                     <TD className="text-right text-slate-700">{u.total_transaksi ?? 0}</TD>
                     <TD>
                       <div className="flex items-center justify-center gap-0.5">
-                        <ActionBtn onClick={() => onView(u)} title="Lihat detail" colorClass="text-slate-500 hover:text-brand-600">
-                          <EyeIcon />
+                        <ActionBtn onClick={() => onView(u)} title="Lihat detail" colorClass="text-blue-600 hover:text-blue-800">
+                          <Eye className="h-4 w-4" />
                         </ActionBtn>
-                        <ActionBtn onClick={() => onEdit(u)} title="Edit user" colorClass="text-slate-500 hover:text-blue-600">
-                          <PencilIcon />
+                        <ActionBtn onClick={() => onEdit(u)} title="Edit user" colorClass="text-amber-500 hover:text-amber-700">
+                          <Pencil className="h-4 w-4" />
                         </ActionBtn>
                         {!isSelf && (
                           <>
                             <ActionBtn
                               onClick={() => onToggle(u)}
                               title={active ? "Deactivate user" : "Activate user"}
-                              colorClass={active ? "text-amber-500 hover:text-amber-700" : "text-emerald-500 hover:text-emerald-700"}
+                              colorClass="text-gray-500 hover:text-gray-700"
                             >
-                              <PowerOffIcon />
+                              <Power className="h-4 w-4" />
                             </ActionBtn>
-                            <ActionBtn onClick={() => onDelete(u)} title="Hapus user" colorClass="text-slate-400 hover:text-red-600">
-                              <TrashIcon />
+                            <ActionBtn onClick={() => onDelete(u)} title="Hapus user" colorClass="text-red-600 hover:text-red-800">
+                              <Trash2 className="h-4 w-4" />
                             </ActionBtn>
                           </>
                         )}
@@ -113,23 +113,23 @@ export function UsersTable({ users, isLoading, currentUserId, onView, onEdit, on
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5">
-                    <ActionBtn onClick={() => onView(u)} title="Lihat detail" colorClass="text-slate-500 hover:text-brand-600">
-                      <EyeIcon />
+                    <ActionBtn onClick={() => onView(u)} title="Lihat detail" colorClass="text-blue-600 hover:text-blue-800">
+                      <Eye className="h-4 w-4" />
                     </ActionBtn>
-                    <ActionBtn onClick={() => onEdit(u)} title="Edit user" colorClass="text-slate-500 hover:text-blue-600">
-                      <PencilIcon />
+                    <ActionBtn onClick={() => onEdit(u)} title="Edit user" colorClass="text-amber-500 hover:text-amber-700">
+                      <Pencil className="h-4 w-4" />
                     </ActionBtn>
                     {!isSelf && (
                       <>
                         <ActionBtn
                           onClick={() => onToggle(u)}
                           title={active ? "Deactivate" : "Activate"}
-                          colorClass={active ? "text-amber-500 hover:text-amber-700" : "text-emerald-500 hover:text-emerald-700"}
+                          colorClass="text-gray-500 hover:text-gray-700"
                         >
-                          <PowerOffIcon />
+                          <Power className="h-4 w-4" />
                         </ActionBtn>
-                        <ActionBtn onClick={() => onDelete(u)} title="Hapus user" colorClass="text-slate-400 hover:text-red-600">
-                          <TrashIcon />
+                        <ActionBtn onClick={() => onDelete(u)} title="Hapus user" colorClass="text-red-600 hover:text-red-800">
+                          <Trash2 className="h-4 w-4" />
                         </ActionBtn>
                       </>
                     )}

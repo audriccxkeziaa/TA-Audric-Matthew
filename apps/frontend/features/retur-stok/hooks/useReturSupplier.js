@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { adjustmentsApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
+import { printReturnReceipt } from "@/lib/receipt";
 
 export function useReturSupplier() {
   const toast = useToast();
@@ -21,6 +22,7 @@ export function useReturSupplier() {
   const [confirm, setConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [resolveId, setResolveId] = useState(null);
+  const [resolveTarget, setResolveTarget] = useState(null);
   const [resolveSubmitting, setResolveSubmitting] = useState(false);
   const listRef = useRef(null);
 
@@ -41,10 +43,19 @@ export function useReturSupplier() {
       staleTime: 60_000,
     })),
   });
-  const pendingWithItems = pendingReturns.map((ret, idx) => ({
-    ...ret,
-    items: detailQueries[idx]?.data?.data?.items || [],
-  }));
+  const pendingWithItems = pendingReturns.map((ret, idx) => {
+    const detailData = detailQueries[idx]?.data?.data;
+    const refPurchaseId = detailData?.reference_purchase_id;
+    const linkedPurchase = refPurchaseId
+      ? allPurchases.find((p) => p.id === refPurchaseId)
+      : null;
+    return {
+      ...ret,
+      items: detailData?.items || [],
+      no_nota_ref: linkedPurchase?.no_nota_supplier || null,
+      reference_purchase_id: refPurchaseId || null,
+    };
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -131,14 +142,34 @@ export function useReturSupplier() {
     }
   }
 
-  // Tahap 2: barang ganti sudah datang, stok bertambah kembali
+  function initiateResolve(ret) {
+    setResolveId(ret.id);
+    setResolveTarget(ret);
+  }
+
+  // Tahap 2: barang ganti sudah datang, stok bertambah kembali + auto-print struk
   async function handleResolve() {
     if (!resolveId) return;
     setResolveSubmitting(true);
     try {
       await adjustmentsApi.resolveSupplier(resolveId);
       toast.success("Barang ganti diterima — stok sudah ditambahkan!");
+      if (resolveTarget) {
+        printReturnReceipt({
+          kode_adjustment: resolveTarget.kode_adjustment,
+          type: resolveTarget.type,
+          created_at: resolveTarget.created_at,
+          username: resolveTarget.username,
+          alasan: resolveTarget.alasan,
+          items: (resolveTarget.items || []).map((it) => ({
+            nama_barang: it.nama_barang,
+            qty: it.qty,
+            harga_satuan: it.harga_satuan || it.harga_beli || 0,
+          })),
+        });
+      }
       setResolveId(null);
+      setResolveTarget(null);
       refetchPending();
       qc.invalidateQueries({ queryKey: ["adjustments"] });
     } catch (err) {
@@ -158,7 +189,9 @@ export function useReturSupplier() {
     checkedItems, handleSubmit,
     pendingReturns,
     pendingWithItems,
+    allPurchases,
     resolveId, setResolveId,
+    resolveTarget, initiateResolve,
     resolveSubmitting, handleResolve,
   };
 }

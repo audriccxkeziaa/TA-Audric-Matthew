@@ -29,7 +29,7 @@ export function ValidateStep({ m }) {
           <Badge tone="green">Input Manual</Badge>
           <div className="flex-1 min-w-[200px]">
             <Input
-              label="No. Nota Supplier (opsional)"
+              label="No. Nota Supplier *"
               value={m.noNota}
               onChange={(e) => m.setNoNota(e.target.value)}
               placeholder="mis. INV-2026-0481"
@@ -153,6 +153,8 @@ export function ValidateStep({ m }) {
         <div className="text-sm text-slate-500">
           {m.canCommit ? (
             <span className="text-emerald-600">Semua item siap dikonfirmasi.</span>
+          ) : !m.noNota.trim() ? (
+            <span className="text-red-600">No. Nota Supplier wajib diisi sebelum menyimpan.</span>
           ) : (
             <span>
               Pastikan semua kolom sudah terisi agar tombol 'Confirm & Save' aktif.

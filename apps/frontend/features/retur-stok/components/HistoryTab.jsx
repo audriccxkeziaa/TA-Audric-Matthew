@@ -35,8 +35,8 @@ function ReturnReceiptPreview({ detail }) {
         <div className="text-[12px] font-bold">CV ASIA JAYA MAJU</div>
         <div className="text-[9px] text-slate-500">Suku Cadang Sepeda Motor</div>
         <div className="text-[7.5px] text-slate-400">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
-        <div className="text-[7.5px] text-slate-400">Banjarbaru, Kalimantan Selatan 70714</div>
-        <div className="text-[7.5px] text-slate-400">Telp: 0851-0262-6289</div>
+        <div className="text-[7.5px] text-slate-400">Banjarbaru, Kalsel 70714</div>
+        <div className="text-[7.5px] text-slate-400">No. Telp: 0851-0262-6289</div>
       </div>
 
       <div className="mb-2 text-center text-[10px] font-bold tracking-wide">
@@ -262,128 +262,141 @@ export function HistoryTab() {
         )}
       </Card>
 
-      {/* Detail Modal — Dual Panel */}
+      {/* Detail Modal — Dual-Panel untuk return_supplier, single-panel untuk lainnya */}
       <Modal
         open={!!h.detail || h.detailLoading}
         onClose={() => h.setDetail(null)}
         title={h.detail ? `Detail ${h.detail.kode_adjustment}` : "Memuat..."}
-        width="max-w-5xl"
+        width={h.detail?.type === "return_supplier" ? "max-w-5xl" : "max-w-2xl"}
       >
         {h.detailLoading && <Spinner label="Memuat detail..." />}
-        {h.detail && (
-          <div className="flex gap-6">
-            {/* ════════════ PANEL KIRI: Info & Items ════════════ */}
-            <div className="flex w-1/2 min-w-0 flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm">
-                <div>
-                  <span className="text-xs text-slate-400">Tipe</span>
-                  <div className="mt-0.5">
-                    <Badge tone={TYPE_BADGES[h.detail.type]?.tone || "slate"}>
-                      {TYPE_BADGES[h.detail.type]?.label || h.detail.type}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400">Status</span>
-                  <div className="mt-0.5">
-                    <Badge tone={getStatusBadge(h.detail.type, h.detail.status).tone}>
-                      {getStatusBadge(h.detail.type, h.detail.status).label}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400">Dibuat Oleh</span>
-                  <p className="font-medium">{h.detail.username || "-"}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400">Tanggal (WITA)</span>
-                  <p className="font-medium">{fmtWita(h.detail.created_at)}</p>
-                </div>
-                {h.detail.approved_by_username && (
-                  <div>
-                    <span className="text-xs text-slate-400">
-                      {h.detail.status === "approved" ? "Disetujui" : "Ditolak"} Oleh
-                    </span>
-                    <p className="font-medium">{h.detail.approved_by_username}</p>
-                  </div>
-                )}
-                {h.detail.approved_at && (
-                  <div>
-                    <span className="text-xs text-slate-400">Tanggal Keputusan</span>
-                    <p className="font-medium">{fmtWita(h.detail.approved_at)}</p>
-                  </div>
-                )}
-                <div>
-                  <span className="text-xs text-slate-400">Total Qty</span>
-                  <p className="font-medium">{angka(h.detail.total_qty)}</p>
-                </div>
-                <div className={h.detail.catatan ? "" : "col-span-2"}>
-                  <span className="text-xs text-slate-400">Alasan</span>
-                  <p className="font-medium">{h.detail.alasan}</p>
-                </div>
-                {h.detail.catatan && (
-                  <div>
-                    <span className="text-xs text-slate-400">Catatan</span>
-                    <p className="font-medium">{h.detail.catatan}</p>
-                  </div>
-                )}
-              </div>
+        {h.detail && (() => {
+          const isRTS = h.detail.type === "return_supplier";
 
-              <div className="max-h-60 overflow-auto rounded-lg border border-slate-200">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="px-3 py-2">Barang</th>
-                      <th className="px-3 py-2 text-right">Qty</th>
-                      {h.detail.type === "sales_return" && <th className="px-3 py-2">Kondisi</th>}
-                      <th className="px-3 py-2 text-right">Harga</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {h.detail.items?.map((it) => (
-                      <tr key={it.id} className="hover:bg-slate-50/50">
-                        <td className="px-3 py-2">
-                          <p className="font-medium text-slate-800">{it.nama_barang}</p>
-                          <p className="font-mono text-xs text-slate-400">{it.kode_barang}</p>
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums">{angka(it.qty)}</td>
-                        {h.detail.type === "sales_return" && (
-                          <td className="px-3 py-2">
-                            <Badge tone={it.kondisi === "bagus" ? "green" : "red"}>
-                              {it.kondisi === "bagus" ? "Bagus" : "Rusak"}
-                            </Badge>
-                          </td>
-                        )}
-                        <td className="px-3 py-2 text-right tabular-nums">{rupiah(it.harga_satuan)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          const InfoGrid = () => (
+            <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm">
+              <div>
+                <span className="text-xs text-slate-400">Tipe</span>
+                <div className="mt-0.5">
+                  <Badge tone={TYPE_BADGES[h.detail.type]?.tone || "slate"}>
+                    {TYPE_BADGES[h.detail.type]?.label || h.detail.type}
+                  </Badge>
+                </div>
               </div>
-
-              <div className="flex justify-end">
-                <Button variant="secondary" onClick={() => h.setDetail(null)}>
-                  Tutup
-                </Button>
+              <div>
+                <span className="text-xs text-slate-400">Status</span>
+                <div className="mt-0.5">
+                  <Badge tone={getStatusBadge(h.detail.type, h.detail.status).tone}>
+                    {getStatusBadge(h.detail.type, h.detail.status).label}
+                  </Badge>
+                </div>
               </div>
-            </div>
-
-            {/* ════════════ PANEL KANAN: Preview Struk ════════════ */}
-            <div className="flex w-1/2 flex-col gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                Preview Struk
-              </p>
-              <div className="max-h-[420px] flex-1 overflow-y-auto">
-                <ReturnReceiptPreview detail={h.detail} />
+              <div>
+                <span className="text-xs text-slate-400">Dibuat Oleh</span>
+                <p className="font-medium">{h.detail.username || "-"}</p>
               </div>
-              {["sales_return", "return_supplier"].includes(h.detail.type) && (
-                <Button className="w-full" onClick={() => printReturnReceipt(h.detail)}>
-                  🖨️ Cetak Struk
-                </Button>
+              <div>
+                <span className="text-xs text-slate-400">Tanggal (WITA)</span>
+                <p className="font-medium">{fmtWita(h.detail.created_at)}</p>
+              </div>
+              {h.detail.approved_by_username && (
+                <div>
+                  <span className="text-xs text-slate-400">
+                    {h.detail.status === "approved" ? "Disetujui" : "Ditolak"} Oleh
+                  </span>
+                  <p className="font-medium">{h.detail.approved_by_username}</p>
+                </div>
+              )}
+              {h.detail.approved_at && (
+                <div>
+                  <span className="text-xs text-slate-400">Tanggal Keputusan</span>
+                  <p className="font-medium">{fmtWita(h.detail.approved_at)}</p>
+                </div>
+              )}
+              <div>
+                <span className="text-xs text-slate-400">Total Qty</span>
+                <p className="font-medium">{angka(h.detail.total_qty)}</p>
+              </div>
+              <div className={h.detail.catatan ? "" : "col-span-2"}>
+                <span className="text-xs text-slate-400">Alasan</span>
+                <p className="font-medium">{h.detail.alasan}</p>
+              </div>
+              {h.detail.catatan && (
+                <div>
+                  <span className="text-xs text-slate-400">Catatan</span>
+                  <p className="font-medium">{h.detail.catatan}</p>
+                </div>
               )}
             </div>
-          </div>
-        )}
+          );
+
+          const ItemsTable = () => (
+            <div className="max-h-60 overflow-auto rounded-lg border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2">Barang</th>
+                    <th className="px-3 py-2 text-right">Qty</th>
+                    {h.detail.type === "sales_return" && <th className="px-3 py-2">Kondisi</th>}
+                    <th className="px-3 py-2 text-right">Harga</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {h.detail.items?.map((it) => (
+                    <tr key={it.id} className="hover:bg-slate-50/50">
+                      <td className="px-3 py-2">
+                        <p className="font-medium text-slate-800">{it.nama_barang}</p>
+                        <p className="font-mono text-xs text-slate-400">{it.kode_barang}</p>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">{angka(it.qty)}</td>
+                      {h.detail.type === "sales_return" && (
+                        <td className="px-3 py-2">
+                          <Badge tone={it.kondisi === "bagus" ? "green" : "red"}>
+                            {it.kondisi === "bagus" ? "Bagus" : "Rusak"}
+                          </Badge>
+                        </td>
+                      )}
+                      <td className="px-3 py-2 text-right tabular-nums">{rupiah(it.harga_satuan)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+
+          if (isRTS) {
+            return (
+              <div className="flex gap-6">
+                <div className="flex w-1/2 min-w-0 flex-col gap-4">
+                  <InfoGrid />
+                  <ItemsTable />
+                  <div className="flex justify-end">
+                    <Button variant="secondary" onClick={() => h.setDetail(null)}>Tutup</Button>
+                  </div>
+                </div>
+                <div className="flex w-1/2 flex-col gap-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Preview Struk</p>
+                  <div className="max-h-[420px] flex-1 overflow-y-auto">
+                    <ReturnReceiptPreview detail={h.detail} />
+                  </div>
+                  <Button className="w-full" onClick={() => printReturnReceipt(h.detail)}>
+                    🖨️ Cetak Struk
+                  </Button>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="space-y-4">
+              <InfoGrid />
+              <ItemsTable />
+              <div className="flex justify-end">
+                <Button variant="secondary" onClick={() => h.setDetail(null)}>Tutup</Button>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
     </>
   );
