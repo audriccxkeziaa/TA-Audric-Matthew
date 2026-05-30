@@ -2,7 +2,22 @@
 // Lebar 80mm thermal printer (~302px pada 96dpi).
 // @media print mengatur ukuran kertas 80mm × continuous.
 
-import { rupiah, tanggalJam } from "./format";
+import { rupiah } from "./format";
+
+// Waktu WITA (UTC+8) eksplisit untuk struk cetak, agar akurat di seluruh zona WITA.
+function tanggalJamWita(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("id-ID", {
+    timeZone: "Asia/Makassar",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export function printReceipt(receipt) {
   if (typeof window === "undefined") return;
@@ -87,7 +102,7 @@ export function printReceipt(receipt) {
 
   <table class="meta">
     <tr><td class="label">No</td><td>: ${escapeHtml(receipt.kode_transaksi || "")}</td></tr>
-    <tr><td class="label">Tanggal</td><td>: ${tanggalJam(receipt.created_at)}</td></tr>
+    <tr><td class="label">Tanggal</td><td>: ${tanggalJamWita(receipt.created_at)}</td></tr>
     ${kasir ? `<tr><td class="label">Kasir</td><td>: ${escapeHtml(kasir)}</td></tr>` : ""}
   </table>
 
@@ -187,7 +202,7 @@ export function printReturnReceipt(detail) {
 
   <table class="meta">
     <tr><td class="label">No</td><td>: ${escapeHtml(detail.kode_adjustment || "")}</td></tr>
-    <tr><td class="label">Tanggal</td><td>: ${tanggalJam(detail.created_at)}</td></tr>
+    <tr><td class="label">Tanggal</td><td>: ${tanggalJamWita(detail.created_at)}</td></tr>
     ${detail.username ? `<tr><td class="label">User</td><td>: ${escapeHtml(detail.username)}</td></tr>` : ""}
     ${detail.alasan ? `<tr><td class="label">Alasan</td><td>: ${escapeHtml(detail.alasan)}</td></tr>` : ""}
   </table>

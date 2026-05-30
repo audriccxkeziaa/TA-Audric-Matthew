@@ -7,10 +7,10 @@ const {
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
-//  laporan admin-only
-router.use(authMiddleware, roleMiddleware("admin"));
+router.use(authMiddleware);
 
-router.get("/sales", getSalesReport);
-router.get("/purchases", getPurchaseReport);
+// Kasir boleh lihat laporan penjualan (transaksi sendiri); pembelian admin-only.
+router.get("/sales", roleMiddleware("admin", "kasir"), getSalesReport);
+router.get("/purchases", roleMiddleware("admin"), getPurchaseReport);
 
 module.exports = router;

@@ -24,19 +24,30 @@ export function ReturSupplierForm() {
             <strong>Selesaikan Retur</strong> saat barang pengganti sudah tiba di gudang.
           </p>
           <div className="space-y-2">
-            {r.pendingReturns.map((ret) => (
+            {r.pendingWithItems.map((ret) => (
               <div
                 key={ret.id}
-                className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-mono text-sm font-medium text-slate-800">
                     {ret.kode_adjustment}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    {tanggalJam(ret.created_at)} · {angka(ret.total_qty)} unit
+                    {tanggalJam(ret.created_at)} · {angka(ret.total_qty)} unit total
                   </p>
-                  <p className="mt-0.5 max-w-sm truncate text-xs text-slate-400">
+                  {ret.items.length > 0 && (
+                    <ul className="mt-1.5 space-y-0.5">
+                      {ret.items.map((it) => (
+                        <li key={it.id} className="flex items-center gap-1.5 text-xs text-slate-700">
+                          <span className="h-1 w-1 shrink-0 rounded-full bg-amber-500" />
+                          <span className="font-medium">{it.nama_barang}</span>
+                          <span className="text-slate-400">({angka(it.qty)} unit)</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-1 max-w-sm truncate text-xs text-slate-400 italic">
                     {ret.alasan}
                   </p>
                 </div>

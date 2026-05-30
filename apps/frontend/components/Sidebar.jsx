@@ -35,7 +35,7 @@ const NAV = [
     icon: "alert",
   },
   { href: "/keuangan", label: "Keuangan", roles: ["admin"], icon: "money" },
-  { href: "/laporan", label: "Laporan", roles: ["admin"], icon: "doc" },
+  { href: "/laporan", label: "Laporan", roles: ["admin", "kasir"], icon: "doc" },
   {
     href: "/audit-trail",
     label: "Audit Trail",

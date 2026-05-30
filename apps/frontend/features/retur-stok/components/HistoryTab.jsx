@@ -58,7 +58,7 @@ export function HistoryTab() {
                     <th className="py-2 pr-2">Status</th>
                     <th className="py-2 pr-2">User</th>
                     <th className="py-2 pr-2">Alasan</th>
-                    <th className="py-2 pr-2 text-right">Total Qty</th>
+                    <th className="py-2 px-4 text-right">Total Qty</th>
                     <th className="py-2 pr-2">Tanggal</th>
                     <th className="py-2"></th>
                   </tr>
@@ -89,7 +89,7 @@ export function HistoryTab() {
                         <td className="py-2 pr-2 max-w-[200px] truncate" title={row.alasan}>
                           {row.alasan}
                         </td>
-                        <td className="py-2 pr-2 text-right">{angka(row.total_qty)}</td>
+                        <td className="py-2 px-4 text-right">{angka(row.total_qty)}</td>
                         <td className="py-2 pr-2 text-xs text-slate-500">{tanggalJam(row.created_at)}</td>
                         <td className="py-2">
                           <button

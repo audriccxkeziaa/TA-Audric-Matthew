@@ -4,7 +4,7 @@
 // Tahap 2 (Ganti): resolveSupplier → stok bertambah, status='selesai'
 
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { adjustmentsApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 
@@ -32,6 +32,19 @@ export function useReturSupplier() {
     refetchInterval: 30000,
   });
   const pendingReturns = pendingData?.data || [];
+
+  // Fetch detail (dengan items) untuk setiap pending return agar bisa tampil nama barang
+  const detailQueries = useQueries({
+    queries: pendingReturns.map((ret) => ({
+      queryKey: ["adjustment-detail", ret.id],
+      queryFn: () => adjustmentsApi.get(ret.id),
+      staleTime: 60_000,
+    })),
+  });
+  const pendingWithItems = pendingReturns.map((ret, idx) => ({
+    ...ret,
+    items: detailQueries[idx]?.data?.data?.items || [],
+  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -144,6 +157,7 @@ export function useReturSupplier() {
     confirm, setConfirm, submitting,
     checkedItems, handleSubmit,
     pendingReturns,
+    pendingWithItems,
     resolveId, setResolveId,
     resolveSubmitting, handleResolve,
   };

@@ -28,7 +28,7 @@ export default function LaporanPage() {
         }
       />
 
-      {/* Tab */}
+      {/* Tab — kasir hanya lihat penjualan */}
       <div className="mb-3 flex shrink-0 gap-1 no-print">
         <button
           onClick={() => l.changeTab("penjualan")}
@@ -40,16 +40,18 @@ export default function LaporanPage() {
         >
           Transaction (Stock Out)
         </button>
-        <button
-          onClick={() => l.changeTab("pembelian")}
-          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-            !l.isSales
-              ? "bg-brand-600 text-white shadow-sm"
-              : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          Purchase (Stock In)
-        </button>
+        {!l.isKasir && (
+          <button
+            onClick={() => l.changeTab("pembelian")}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              !l.isSales
+                ? "bg-brand-600 text-white shadow-sm"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            Purchase (Stock In)
+          </button>
+        )}
       </div>
 
       {/* Filter tanggal + kasir */}
@@ -101,10 +103,11 @@ export default function LaporanPage() {
         </p>
       </div>
 
-      <LaporanSummary isSales={l.isSales} summary={l.summary} />
+      <LaporanSummary isSales={l.isSales} summary={l.summary} isKasir={l.isKasir} />
 
       <LaporanTable
         isSales={l.isSales}
+        isKasir={l.isKasir}
         isLoading={l.isLoading}
         isEmpty={l.filteredGrouped.length === 0}
         rows={l.paginatedGrouped}

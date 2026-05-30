@@ -4,7 +4,7 @@
 import { StatCard } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
 
-export function LaporanSummary({ isSales, summary }) {
+export function LaporanSummary({ isSales, summary, isKasir = false }) {
   return (
     <div className="mb-3 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
       {isSales ? (
@@ -12,7 +12,10 @@ export function LaporanSummary({ isSales, summary }) {
           <StatCard label="Total Transaksi" value={angka(summary.total_transactions || 0)} />
           <StatCard label="Total Item Terjual" value={angka(summary.total_qty || 0)} />
           <StatCard label="Total Baris" value={angka(summary.total_items || 0)} />
-          <StatCard label="Total Revenue" value={rupiah(summary.total_revenue || 0)} tone="good" />
+          {/* Revenue disembunyikan untuk kasir — data sensitif hanya untuk admin */}
+          {!isKasir && (
+            <StatCard label="Total Revenue" value={rupiah(summary.total_revenue || 0)} tone="good" />
+          )}
         </>
       ) : (
         <>

@@ -9,11 +9,14 @@ import { downloadFile } from "@/lib/api-client";
 import { useToast } from "@/hooks/useToast";
 import { isoDate } from "@/lib/format";
 import { groupSalesRows, groupPurchaseRows } from "../lib/groupRows";
+import { useAuth } from "@/hooks/useAuth";
 
 export const PAGE_SIZE = 10;
 
 export function useLaporan() {
   const toast = useToast();
+  const { user } = useAuth();
+  const isKasir = user?.role === "kasir";
   const [tab, setTab] = useState("penjualan");
   const [from, setFrom] = useState(isoDate(-30));
   const [to, setTo] = useState(isoDate(0));
@@ -91,6 +94,7 @@ export function useLaporan() {
   }
 
   function changeTab(next) {
+    if (isKasir && next === "pembelian") return; // kasir tidak boleh akses tab pembelian
     setTab(next);
     setDetailData(null);
   }
@@ -103,6 +107,7 @@ export function useLaporan() {
   }
 
   return {
+    isKasir,
     tab,
     changeTab,
     isSales,

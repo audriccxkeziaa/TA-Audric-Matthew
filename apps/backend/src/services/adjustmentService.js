@@ -94,6 +94,9 @@ async function createAdjustment({ user, payload }) {
     // sales_return selalu kondisi 'bagus': stok kembali + refund dicatat ke expenses
     kondisi: type === "sales_return" ? "bagus" : null,
     harga_satuan: Number(it.harga_satuan || 0),
+    // stock_adjustment dikunci ke 'kurang' (penyusutan) — tambah tidak diizinkan
+    ...(type === "stock_adjustment" && { arah: "kurang" }),
+    ...(type !== "stock_adjustment" && it.arah && { arah: it.arah }),
   }));
 
   const kode = await nextDocumentNumber(type);
