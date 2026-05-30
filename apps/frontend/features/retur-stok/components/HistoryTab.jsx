@@ -7,6 +7,101 @@ import { TYPE_BADGES, getStatusBadge } from "../lib/badges";
 import { printReturnReceipt } from "@/lib/receipt";
 import { useHistory } from "../hooks/useHistory";
 
+function fmtWita(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("id-ID", {
+    timeZone: "Asia/Makassar",
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function DashLine() {
+  return <div className="my-2 border-t border-dashed border-slate-300" />;
+}
+
+function ReturnReceiptPreview({ detail }) {
+  const tb = TYPE_BADGES[detail.type] || { label: detail.type, tone: "slate" };
+  const totalNilai = (detail.items || []).reduce(
+    (s, it) => s + Number(it.qty) * Number(it.harga_satuan),
+    0
+  );
+  return (
+    <div className="rounded border border-slate-200 bg-white p-3 font-mono text-[10px] leading-snug text-slate-900 shadow-inner">
+      {/* Header toko */}
+      <div className="mb-2 text-center">
+        <div className="text-[12px] font-bold">CV ASIA JAYA MAJU</div>
+        <div className="text-[9px] text-slate-500">Suku Cadang Sepeda Motor</div>
+        <div className="text-[7.5px] text-slate-400">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
+        <div className="text-[7.5px] text-slate-400">Banjarbaru, Kalimantan Selatan 70714</div>
+        <div className="text-[7.5px] text-slate-400">Telp: 0851-0262-6289</div>
+      </div>
+
+      <div className="mb-2 text-center text-[10px] font-bold tracking-wide">
+        — {tb.label.toUpperCase()} —
+      </div>
+
+      <DashLine />
+
+      {/* Meta */}
+      <div className="space-y-0.5 text-[9.5px]">
+        <div className="flex gap-1">
+          <span className="w-14 shrink-0 text-slate-400">Kode</span>
+          <span className="break-all">: {detail.kode_adjustment}</span>
+        </div>
+        <div className="flex gap-1">
+          <span className="w-14 shrink-0 text-slate-400">Tanggal</span>
+          <span>: {fmtWita(detail.created_at)}</span>
+        </div>
+        {detail.username && (
+          <div className="flex gap-1">
+            <span className="w-14 shrink-0 text-slate-400">User</span>
+            <span>: {detail.username}</span>
+          </div>
+        )}
+        {detail.alasan && (
+          <div className="flex gap-1">
+            <span className="w-14 shrink-0 text-slate-400">Alasan</span>
+            <span className="break-words">: {detail.alasan}</span>
+          </div>
+        )}
+      </div>
+
+      <DashLine />
+
+      {/* Item-item */}
+      <div className="space-y-2">
+        {(detail.items || []).map((it, idx) => (
+          <div key={idx}>
+            <div className="truncate text-[10px] font-semibold">{it.nama_barang}</div>
+            <div className="flex justify-between text-[9px] text-slate-500">
+              <span>{it.qty} × {rupiah(it.harga_satuan)}</span>
+              <span className="font-medium text-slate-800">
+                {rupiah(Number(it.qty) * Number(it.harga_satuan))}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <DashLine />
+
+      <div className="flex justify-between text-[11px] font-bold">
+        <span>TOTAL NILAI</span>
+        <span>{rupiah(totalNilai)}</span>
+      </div>
+
+      <DashLine />
+
+      <div className="mt-1 text-center text-[8.5px] text-slate-400">
+        Dokumen resmi retur — CV Asia Jaya Maju
+      </div>
+    </div>
+  );
+}
+
 export function HistoryTab() {
   const h = useHistory();
 
@@ -167,104 +262,126 @@ export function HistoryTab() {
         )}
       </Card>
 
-      {/* Detail Modal */}
+      {/* Detail Modal — Dual Panel */}
       <Modal
         open={!!h.detail || h.detailLoading}
         onClose={() => h.setDetail(null)}
         title={h.detail ? `Detail ${h.detail.kode_adjustment}` : "Memuat..."}
-        width="max-w-2xl"
+        width="max-w-5xl"
       >
         {h.detailLoading && <Spinner label="Memuat detail..." />}
         {h.detail && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-slate-400">Tipe:</span>{" "}
-                <Badge tone={TYPE_BADGES[h.detail.type]?.tone || "slate"}>
-                  {TYPE_BADGES[h.detail.type]?.label || h.detail.type}
-                </Badge>
-              </div>
-              <div>
-                <span className="text-slate-400">Status:</span>{" "}
-                <Badge tone={getStatusBadge(h.detail.type, h.detail.status).tone}>
-                  {getStatusBadge(h.detail.type, h.detail.status).label}
-                </Badge>
-              </div>
-              <div>
-                <span className="text-slate-400">Dibuat oleh:</span>{" "}
-                {h.detail.username || "-"}
-              </div>
-              <div>
-                <span className="text-slate-400">Tanggal:</span>{" "}
-                {tanggalJam(h.detail.created_at)}
-              </div>
-              {h.detail.approved_by_username && (
+          <div className="flex gap-6">
+            {/* ════════════ PANEL KIRI: Info & Items ════════════ */}
+            <div className="flex w-1/2 min-w-0 flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm">
                 <div>
-                  <span className="text-slate-400">
-                    {h.detail.status === "approved" ? "Disetujui" : "Ditolak"} oleh:
-                  </span>{" "}
-                  {h.detail.approved_by_username}
+                  <span className="text-xs text-slate-400">Tipe</span>
+                  <div className="mt-0.5">
+                    <Badge tone={TYPE_BADGES[h.detail.type]?.tone || "slate"}>
+                      {TYPE_BADGES[h.detail.type]?.label || h.detail.type}
+                    </Badge>
+                  </div>
                 </div>
-              )}
-              {h.detail.approved_at && (
                 <div>
-                  <span className="text-slate-400">Tanggal keputusan:</span>{" "}
-                  {tanggalJam(h.detail.approved_at)}
+                  <span className="text-xs text-slate-400">Status</span>
+                  <div className="mt-0.5">
+                    <Badge tone={getStatusBadge(h.detail.type, h.detail.status).tone}>
+                      {getStatusBadge(h.detail.type, h.detail.status).label}
+                    </Badge>
+                  </div>
                 </div>
-              )}
-              <div className="col-span-2">
-                <span className="text-slate-400">Total Qty:</span> {angka(h.detail.total_qty)}
-              </div>
-              <div className="col-span-2">
-                <span className="text-slate-400">Alasan:</span> {h.detail.alasan}
-              </div>
-              {h.detail.catatan && (
-                <div className="col-span-2">
-                  <span className="text-slate-400">Catatan:</span> {h.detail.catatan}
+                <div>
+                  <span className="text-xs text-slate-400">Dibuat Oleh</span>
+                  <p className="font-medium">{h.detail.username || "-"}</p>
                 </div>
-              )}
-            </div>
+                <div>
+                  <span className="text-xs text-slate-400">Tanggal (WITA)</span>
+                  <p className="font-medium">{fmtWita(h.detail.created_at)}</p>
+                </div>
+                {h.detail.approved_by_username && (
+                  <div>
+                    <span className="text-xs text-slate-400">
+                      {h.detail.status === "approved" ? "Disetujui" : "Ditolak"} Oleh
+                    </span>
+                    <p className="font-medium">{h.detail.approved_by_username}</p>
+                  </div>
+                )}
+                {h.detail.approved_at && (
+                  <div>
+                    <span className="text-xs text-slate-400">Tanggal Keputusan</span>
+                    <p className="font-medium">{fmtWita(h.detail.approved_at)}</p>
+                  </div>
+                )}
+                <div>
+                  <span className="text-xs text-slate-400">Total Qty</span>
+                  <p className="font-medium">{angka(h.detail.total_qty)}</p>
+                </div>
+                <div className={h.detail.catatan ? "" : "col-span-2"}>
+                  <span className="text-xs text-slate-400">Alasan</span>
+                  <p className="font-medium">{h.detail.alasan}</p>
+                </div>
+                {h.detail.catatan && (
+                  <div>
+                    <span className="text-xs text-slate-400">Catatan</span>
+                    <p className="font-medium">{h.detail.catatan}</p>
+                  </div>
+                )}
+              </div>
 
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
-                  <th className="py-2 pr-2">Barang</th>
-                  <th className="py-2 pr-2 text-right">Qty</th>
-                  {h.detail.type === "sales_return" && <th className="py-2 pr-2">Kondisi</th>}
-                  <th className="py-2 text-right">Harga</th>
-                </tr>
-              </thead>
-              <tbody>
-                {h.detail.items?.map((it) => (
-                  <tr key={it.id} className="border-b border-slate-100">
-                    <td className="py-2 pr-2">
-                      <p className="font-medium text-slate-800">{it.nama_barang}</p>
-                      <p className="text-xs text-slate-400">{it.kode_barang}</p>
-                    </td>
-                    <td className="py-2 pr-2 text-right">{angka(it.qty)}</td>
-                    {h.detail.type === "sales_return" && (
-                      <td className="py-2 pr-2">
-                        <Badge tone={it.kondisi === "bagus" ? "green" : "red"}>
-                          {it.kondisi === "bagus" ? "Bagus" : "Rusak"}
-                        </Badge>
-                      </td>
-                    )}
-                    <td className="py-2 text-right">{rupiah(it.harga_satuan)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {["sales_return", "return_supplier"].includes(h.detail.type) && (
-              <div className="flex justify-end border-t border-slate-100 pt-3">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => printReturnReceipt(h.detail)}
-                >
-                  Cetak Struk
+              <div className="max-h-60 overflow-auto rounded-lg border border-slate-200">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">Barang</th>
+                      <th className="px-3 py-2 text-right">Qty</th>
+                      {h.detail.type === "sales_return" && <th className="px-3 py-2">Kondisi</th>}
+                      <th className="px-3 py-2 text-right">Harga</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {h.detail.items?.map((it) => (
+                      <tr key={it.id} className="hover:bg-slate-50/50">
+                        <td className="px-3 py-2">
+                          <p className="font-medium text-slate-800">{it.nama_barang}</p>
+                          <p className="font-mono text-xs text-slate-400">{it.kode_barang}</p>
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">{angka(it.qty)}</td>
+                        {h.detail.type === "sales_return" && (
+                          <td className="px-3 py-2">
+                            <Badge tone={it.kondisi === "bagus" ? "green" : "red"}>
+                              {it.kondisi === "bagus" ? "Bagus" : "Rusak"}
+                            </Badge>
+                          </td>
+                        )}
+                        <td className="px-3 py-2 text-right tabular-nums">{rupiah(it.harga_satuan)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="secondary" onClick={() => h.setDetail(null)}>
+                  Tutup
                 </Button>
               </div>
-            )}
+            </div>
+
+            {/* ════════════ PANEL KANAN: Preview Struk ════════════ */}
+            <div className="flex w-1/2 flex-col gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Preview Struk
+              </p>
+              <div className="max-h-[420px] flex-1 overflow-y-auto">
+                <ReturnReceiptPreview detail={h.detail} />
+              </div>
+              {["sales_return", "return_supplier"].includes(h.detail.type) && (
+                <Button className="w-full" onClick={() => printReturnReceipt(h.detail)}>
+                  🖨️ Cetak Struk
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </Modal>

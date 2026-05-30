@@ -71,6 +71,7 @@ export function printReceipt(receipt) {
   .header { text-align: center; margin-bottom: 2mm; }
   .shop-name { font-size: 12pt; font-weight: bold; }
   .shop-sub { font-size: 8pt; }
+  .shop-addr { font-size: 7pt; line-height: 1.4; }
   .divider {
     border: none;
     border-top: 1px dashed #000;
@@ -96,6 +97,9 @@ export function printReceipt(receipt) {
   <div class="header">
     <div class="shop-name">CV ASIA JAYA MAJU</div>
     <div class="shop-sub">Suku Cadang Sepeda Motor</div>
+    <div class="shop-addr">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
+    <div class="shop-addr">Banjarbaru, Kalimantan Selatan 70714</div>
+    <div class="shop-addr">Telp: 0851-0262-6289</div>
   </div>
 
   <hr class="divider"/>
@@ -174,6 +178,7 @@ export function printReturnReceipt(detail) {
   .header { text-align: center; margin-bottom: 2mm; }
   .shop-name { font-size: 12pt; font-weight: bold; }
   .shop-sub { font-size: 8pt; }
+  .shop-addr { font-size: 7pt; line-height: 1.4; }
   .type-label { font-size: 10pt; font-weight: bold; text-align: center; letter-spacing: 1px; margin: 1.5mm 0; }
   .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
   .meta { font-size: 8pt; }
@@ -194,6 +199,9 @@ export function printReturnReceipt(detail) {
   <div class="header">
     <div class="shop-name">CV ASIA JAYA MAJU</div>
     <div class="shop-sub">Suku Cadang Sepeda Motor</div>
+    <div class="shop-addr">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
+    <div class="shop-addr">Banjarbaru, Kalimantan Selatan 70714</div>
+    <div class="shop-addr">Telp: 0851-0262-6289</div>
   </div>
 
   <div class="type-label">— ${typeLabel} —</div>

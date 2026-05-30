@@ -35,6 +35,9 @@ function ReceiptPreview({ data }) {
       <div className="mb-2 text-center">
         <div className="text-[12px] font-bold">CV ASIA JAYA MAJU</div>
         <div className="text-[9px] text-slate-500">Suku Cadang Sepeda Motor</div>
+        <div className="text-[7.5px] text-slate-400">Jl. A. Yani KM 34 No. 56, Loktabat Selatan</div>
+        <div className="text-[7.5px] text-slate-400">Banjarbaru, Kalimantan Selatan 70714</div>
+        <div className="text-[7.5px] text-slate-400">Telp: 0851-0262-6289</div>
       </div>
 
       <DashLine />
@@ -108,7 +111,7 @@ export function LaporanDetailModal({ detailData, isSales, onClose }) {
     >
       <div className="flex gap-6">
         {/* ════════════════ PANEL KIRI: Detail & Items ════════════════ */}
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div className="flex w-1/2 min-w-0 flex-col gap-4">
 
           {/* Info ringkasan */}
           <div className="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm">
@@ -261,7 +264,7 @@ export function LaporanDetailModal({ detailData, isSales, onClose }) {
 
         {/* ════════════════ PANEL KANAN: Preview Struk (hanya penjualan) ════════════════ */}
         {isSales && (
-          <div className="flex w-52 shrink-0 flex-col gap-3">
+          <div className="flex w-1/2 flex-col gap-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Preview Struk
             </p>
