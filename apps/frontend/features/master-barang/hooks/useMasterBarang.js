@@ -26,6 +26,8 @@ export function useMasterBarang() {
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [showView, setShowView] = useState(false);
+  const [viewProduct, setViewProduct] = useState(null);
 
   const barcodeRef = useRef(null);
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -61,6 +63,16 @@ export function useMasterBarang() {
   function closeForm() {
     setShowForm(false);
     setEditing(null);
+  }
+
+  function openView(product) {
+    setViewProduct(product);
+    setShowView(true);
+  }
+
+  function closeView() {
+    setShowView(false);
+    setViewProduct(null);
   }
 
   const merksQ = useQuery({
@@ -103,10 +115,15 @@ export function useMasterBarang() {
     // data
     products: data?.data || [],
     isLoading,
-    // modal form
+    // modal form (edit)
     showForm,
     editing,
     openEdit,
     closeForm,
+    // modal view (read-only)
+    showView,
+    viewProduct,
+    openView,
+    closeView,
   };
 }

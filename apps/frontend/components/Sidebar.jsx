@@ -25,7 +25,7 @@ const NAV = [
   {
     href: "/retur-stok",
     label: "Retur & Penyesuaian",
-    roles: ["kasir", "admin"],
+    roles: ["admin"],
     icon: "undo",
   },
   {
@@ -35,7 +35,7 @@ const NAV = [
     icon: "alert",
   },
   { href: "/keuangan", label: "Keuangan", roles: ["admin"], icon: "money" },
-  { href: "/laporan", label: "Laporan", roles: ["admin", "kasir"], icon: "doc" },
+  { href: "/laporan", label: "Laporan", roles: ["admin"], icon: "doc" },
   {
     href: "/audit-trail",
     label: "Audit Trail",

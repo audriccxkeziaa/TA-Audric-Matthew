@@ -69,6 +69,7 @@ export const usersApi = {
   update: (id, body) => apiFetch(`/users/${id}`, { method: "PUT", body }),
   setStatus: (id, is_active) =>
     apiFetch(`/users/${id}/status`, { method: "PATCH", body: { is_active } }),
+  remove: (id) => apiFetch(`/users/${id}`, { method: "DELETE" }),
 };
 
 export const notificationsApi = {

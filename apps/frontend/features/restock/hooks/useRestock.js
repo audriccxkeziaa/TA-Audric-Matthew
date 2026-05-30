@@ -14,6 +14,7 @@ export function useRestock() {
   const isAdmin = user?.role === "admin";
   const [page, setPage] = useState(1);
   const [detailItem, setDetailItem] = useState(null);
+  const [editItem, setEditItem] = useState(null);
   const [stockFilter, setStockFilter] = useState("all");
 
   const { data, isLoading } = useQuery({
@@ -46,5 +47,7 @@ export function useRestock() {
     setStockFilter,
     detailItem,
     setDetailItem,
+    editItem,
+    setEditItem,
   };
 }

@@ -50,6 +50,7 @@ export default function RestockPage() {
         page={r.page}
         pageSize={r.pageSize}
         onDetail={r.setDetailItem}
+        onEdit={r.setEditItem}
       />
 
       {r.items.length > r.pageSize && (
@@ -99,7 +100,10 @@ export default function RestockPage() {
       </div>
 
       {r.isAdmin && (
-        <RestockDetailModal item={r.detailItem} onClose={() => r.setDetailItem(null)} />
+        <RestockDetailModal item={r.detailItem} onClose={() => r.setDetailItem(null)} viewOnly />
+      )}
+      {r.isAdmin && (
+        <RestockDetailModal item={r.editItem} onClose={() => r.setEditItem(null)} />
       )}
     </PageShell>
   );

@@ -10,7 +10,13 @@ export function useAddUser({ onClose }) {
   const qc = useQueryClient();
   const toast = useToast();
 
-  const [form, setForm] = useState({ username: "", password: "", role: "kasir" });
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+    role: "kasir",
+    nama_lengkap: "",
+    no_telepon: "",
+  });
   const [err, setErr] = useState("");
 
   function set(f, v) {
@@ -21,12 +27,13 @@ export function useAddUser({ onClose }) {
     mutationFn: async () => {
       if (!form.username.trim()) throw new Error("Username wajib diisi");
       if (!form.password) throw new Error("Password wajib diisi");
-      if (form.password.length < 6)
-        throw new Error("Password minimal 6 karakter");
+      if (form.password.length < 6) throw new Error("Password minimal 6 karakter");
       return usersApi.create({
         username: form.username.trim(),
         password: form.password,
         role: form.role,
+        ...(form.nama_lengkap.trim() && { nama_lengkap: form.nama_lengkap.trim() }),
+        ...(form.no_telepon.trim() && { no_telepon: form.no_telepon.trim() }),
       });
     },
     onSuccess: () => {

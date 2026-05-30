@@ -12,6 +12,18 @@ export function AddUserModal({ open, onClose }) {
     <Modal open={open} onClose={onClose} title="Tambah User Baru">
       <div className="space-y-3">
         <Input label="Username" value={form.username} onChange={(e) => set("username", e.target.value)} />
+        <Input
+          label="Nama Lengkap"
+          value={form.nama_lengkap}
+          onChange={(e) => set("nama_lengkap", e.target.value)}
+          placeholder="Nama lengkap (opsional)"
+        />
+        <Input
+          label="No Telepon"
+          value={form.no_telepon}
+          onChange={(e) => set("no_telepon", e.target.value)}
+          placeholder="Nomor telepon (opsional)"
+        />
         <PasswordInput label="Password" value={form.password} onChange={(e) => set("password", e.target.value)} />
         <Select label="Role" value={form.role} onChange={(e) => set("role", e.target.value)}>
           <option value="kasir">Kasir</option>

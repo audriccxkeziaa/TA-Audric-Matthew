@@ -1,15 +1,9 @@
 "use client";
-// Tabel daftar barang. Isi tabel yang scroll; kartu mengisi sisa tinggi.
-// Tombol edit hanya tampil untuk admin.
-//
-// Responsif:
-//   - Desktop (md+) : tabel penuh seperti semula (tidak diubah).
-//   - HP (< md)     : tiap barang jadi "kartu" ringkas (tanpa geser samping).
+// Tabel daftar barang. Eye → View detail (read-only), Pencil → Edit (admin).
 
 import { Card, Badge, Skeleton, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
 
-// Badge kondisi stok berdasarkan stok vs min_stock.
 function stokBadge(p) {
   if (Number(p.stok) === 0) return <Badge tone="red">Stok Habis</Badge>;
   if (Number(p.stok) <= Number(p.min_stock))
@@ -17,25 +11,25 @@ function stokBadge(p) {
   return <Badge tone="green">Normal</Badge>;
 }
 
-// Ikon mata (lihat/edit) — dipakai di tabel & kartu.
-function EditIcon() {
+function EyeIcon() {
   return (
-    <svg
-      className="h-4 w-4 text-slate-600 hover:text-brand-600"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }
 
-export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
+function PencilIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdit }) {
   return (
     <Card className="flex flex-col p-0 md:min-h-0 md:flex-1">
       {isLoading ? (
@@ -61,7 +55,7 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
               <TH className="text-right">Stok</TH>
               <TH className="text-right">Min Stok</TH>
               <TH>Kondisi</TH>
-              {isAdmin && <TH className="text-center">Aksi</TH>}
+              <TH className="text-center">Aksi</TH>
             </THead>
             <TBody>
               {products.map((p, index) => (
@@ -69,9 +63,7 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
                   <TD className="text-xs text-slate-400">
                     {(page - 1) * 20 + index + 1}
                   </TD>
-                  <TD className="font-mono text-xs">
-                    {p.kode_barang}
-                  </TD>
+                  <TD className="font-mono text-xs">{p.kode_barang}</TD>
                   <TD>
                     {p.nama_barang}
                     {p.status === "nonaktif" && (
@@ -81,30 +73,31 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
                     )}
                   </TD>
                   <TD className="text-slate-500">{p.merk || "-"}</TD>
-                  <TD className="text-right">
-                    {rupiah(p.harga_beli)}
-                  </TD>
-                  <TD className="text-right">
-                    {rupiah(p.harga_jual)}
-                  </TD>
-                  <TD className="text-right font-semibold">
-                    {angka(p.stok)}
-                  </TD>
-                  <TD className="text-right text-slate-500">
-                    {angka(p.min_stock)}
-                  </TD>
+                  <TD className="text-right">{rupiah(p.harga_beli)}</TD>
+                  <TD className="text-right">{rupiah(p.harga_jual)}</TD>
+                  <TD className="text-right font-semibold">{angka(p.stok)}</TD>
+                  <TD className="text-right text-slate-500">{angka(p.min_stock)}</TD>
                   <TD>{stokBadge(p)}</TD>
-                  {isAdmin && (
-                    <TD className="text-center">
+                  <TD className="text-center">
+                    <div className="flex items-center justify-center gap-0.5">
                       <button
-                        onClick={() => onEdit(p)}
-                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition"
-                        title="Edit barang"
+                        onClick={() => onView(p)}
+                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-slate-500 hover:text-brand-600"
+                        title="Lihat detail barang"
                       >
-                        <EditIcon />
+                        <EyeIcon />
                       </button>
-                    </TD>
-                  )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => onEdit(p)}
+                          className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-slate-500 hover:text-blue-600"
+                          title="Edit barang"
+                        >
+                          <PencilIcon />
+                        </button>
+                      )}
+                    </div>
+                  </TD>
                 </TR>
               ))}
             </TBody>
@@ -131,16 +124,24 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
                       {p.kode_barang} · {p.merk || "-"}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1">
                     {stokBadge(p)}
+                    <button
+                      onClick={() => onView(p)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-slate-500 hover:text-brand-600"
+                      title="Lihat detail barang"
+                      aria-label="Lihat detail barang"
+                    >
+                      <EyeIcon />
+                    </button>
                     {isAdmin && (
                       <button
                         onClick={() => onEdit(p)}
-                        className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition"
+                        className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-slate-500 hover:text-blue-600"
                         title="Edit barang"
                         aria-label="Edit barang"
                       >
-                        <EditIcon />
+                        <PencilIcon />
                       </button>
                     )}
                   </div>

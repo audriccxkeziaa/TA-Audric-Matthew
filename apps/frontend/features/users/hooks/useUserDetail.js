@@ -1,6 +1,5 @@
 "use client";
-// features/users/hooks/useUserDetail.js — state form + mutation simpan & toggle
-// status (aktif/nonaktif) untuk modal detail user. Validasi dipindah apa adanya.
+// features/users/hooks/useUserDetail.js — state form + mutation simpan user (edit only).
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +14,8 @@ export function useUserDetail({ target, onClose }) {
     username: target?.username || "",
     password: "",
     role: target?.role || "kasir",
+    nama_lengkap: target?.nama_lengkap || "",
+    no_telepon: target?.no_telepon || "",
   }));
   const [err, setErr] = useState("");
 
@@ -22,15 +23,17 @@ export function useUserDetail({ target, onClose }) {
     setForm((s) => ({ ...s, [f]: v }));
   }
 
-  const active = target?.is_active !== false;
-
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!form.username.trim()) throw new Error("Username wajib diisi");
-      const body = { username: form.username.trim(), role: form.role };
+      const body = {
+        username: form.username.trim(),
+        role: form.role,
+        nama_lengkap: form.nama_lengkap.trim() || null,
+        no_telepon: form.no_telepon.trim() || null,
+      };
       if (form.password) {
-        if (form.password.length < 6)
-          throw new Error("Password minimal 6 karakter");
+        if (form.password.length < 6) throw new Error("Password minimal 6 karakter");
         body.password = form.password;
       }
       return usersApi.update(target.id, body);
@@ -43,31 +46,10 @@ export function useUserDetail({ target, onClose }) {
     onError: (e) => setErr(e.message),
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: () => usersApi.setStatus(target.id, !active),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["users"] });
-      toast.success(
-        active ? "User berhasil dinonaktifkan." : "User berhasil diaktifkan."
-      );
-      onClose();
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
   function save() {
     setErr("");
     saveMutation.mutate();
   }
 
-  return {
-    form,
-    set,
-    err,
-    active,
-    save,
-    saving: saveMutation.isPending,
-    toggle: () => toggleMutation.mutate(),
-    toggling: toggleMutation.isPending,
-  };
+  return { form, set, err, save, saving: saveMutation.isPending };
 }
