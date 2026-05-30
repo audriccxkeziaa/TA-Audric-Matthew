@@ -5,6 +5,7 @@
 import { Card, Button, Input, Badge } from "@/components/ui";
 import { rupiah } from "@/lib/format";
 import { ItemRow } from "./ItemRow";
+import { SupplierCombobox } from "./SupplierCombobox";
 
 export function ValidateStep({ m }) {
   return (
@@ -25,9 +26,22 @@ export function ValidateStep({ m }) {
 
       {/* Manual mode header with No. Nota input */}
       {m.inputMode === "manual" && (
-        <Card className="flex flex-wrap items-center gap-4 p-4">
-          <Badge tone="green">Input Manual</Badge>
-          <div className="flex-1 min-w-[200px]">
+        <Card className="p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Badge tone="green">Input Manual</Badge>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">
+                Nama Supplier <span className="text-red-500">*</span>
+              </label>
+              <SupplierCombobox
+                value={m.supplierName}
+                onChange={m.setSupplierName}
+                supplierList={m.supplierList}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
             <Input
               label="No. Nota Supplier *"
               value={m.noNota}
@@ -154,7 +168,9 @@ export function ValidateStep({ m }) {
           {m.canCommit ? (
             <span className="text-emerald-600">Semua item siap dikonfirmasi.</span>
           ) : !m.noNota.trim() ? (
-            <span className="text-red-600">No. Nota Supplier wajib diisi sebelum menyimpan.</span>
+            <span className="text-red-600">No. Nota Supplier wajib diisi.</span>
+          ) : !m.supplierName.trim() ? (
+            <span className="text-red-600">Nama Supplier wajib diisi.</span>
           ) : (
             <span>
               Pastikan semua kolom sudah terisi agar tombol 'Confirm & Save' aktif.

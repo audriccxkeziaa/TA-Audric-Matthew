@@ -305,6 +305,7 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
 async function commitPurchase({ user, payload }) {
   const {
     no_nota_supplier,
+    supplier_name,
     file_nota_url,
     status_validasi,
     items,
@@ -359,6 +360,7 @@ async function commitPurchase({ user, payload }) {
     rpcResult = await purchaseRepository.commitPurchaseViaRpc({
       userId: user.id,
       noNotaSupplier: no_nota_supplier || null,
+      supplierName: supplier_name?.trim() || null,
       fileNotaUrl: file_nota_url || null,
       items: normalizedItems,
       diskonPersen: Number(diskon_persen) || 0,
@@ -412,6 +414,7 @@ async function saveDraft({ user, payload }) {
     draftId: payload.id || null,
     userId: user.id,
     noNotaSupplier: payload.no_nota_supplier,
+    supplierName: payload.supplier_name?.trim() || null,
     fileNotaUrl: payload.file_nota_url,
     notaType: payload.nota_type,
     rawText: payload.raw_text,

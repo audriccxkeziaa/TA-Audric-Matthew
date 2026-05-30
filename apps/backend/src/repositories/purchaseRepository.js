@@ -38,7 +38,7 @@ async function createNotaSignedUrl(path) {
 }
 
 // Panggil function plpgsql fn_commit_purchase (lihat migrasi 009).
-async function commitPurchaseViaRpc({ userId, noNotaSupplier, fileNotaUrl, items, diskonPersen = 0, potonganHarga = 0 }) {
+async function commitPurchaseViaRpc({ userId, noNotaSupplier, supplierName, fileNotaUrl, items, diskonPersen = 0, potonganHarga = 0 }) {
   const { data, error } = await supabase.rpc("fn_commit_purchase", {
     p_user_id: userId,
     p_no_nota_supplier: noNotaSupplier,
@@ -55,6 +55,14 @@ async function commitPurchaseViaRpc({ userId, noNotaSupplier, fileNotaUrl, items
     err.hint = error.hint;
     throw err;
   }
+
+  if (supplierName && data?.purchase_id) {
+    await supabase
+      .from("purchases")
+      .update({ supplier_name: supplierName })
+      .eq("id", data.purchase_id);
+  }
+
   return data;
 }
 
@@ -63,7 +71,7 @@ async function getPurchaseDetail(purchaseId) {
   const { data: purchase, error: pErr } = await supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, user_id, total, status_validasi, file_nota_url, diskon_persen, potongan_harga, created_at"
+      "id, no_nota_supplier, supplier_name, user_id, total, status_validasi, file_nota_url, diskon_persen, potongan_harga, created_at"
     )
     .eq("id", purchaseId)
     .single();
@@ -99,7 +107,7 @@ async function list({ from, to, limit = 50 }) {
   let query = supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, user_id, total, status_validasi, file_nota_url, created_at"
+      "id, no_nota_supplier, supplier_name, user_id, total, status_validasi, file_nota_url, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -126,10 +134,31 @@ async function listActiveProductsForMatching() {
 
 // =============== DRAFTS (Cross-device resume) ===============
 
+async function listSupplierNames() {
+  const { data, error } = await supabase
+    .from("purchases")
+    .select("supplier_name")
+    .not("supplier_name", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw new Error("Gagal memuat daftar supplier");
+  const seen = new Set();
+  const names = [];
+  for (const row of data || []) {
+    const name = (row.supplier_name || "").trim();
+    if (name && !seen.has(name.toLowerCase())) {
+      seen.add(name.toLowerCase());
+      names.push(name);
+    }
+  }
+  return names;
+}
+
 async function saveDraft({
   draftId,
   userId,
   noNotaSupplier,
+  supplierName,
   fileNotaUrl,
   notaType,
   rawText,
@@ -141,6 +170,7 @@ async function saveDraft({
   const payload = {
     user_id: userId,
     no_nota_supplier: noNotaSupplier || null,
+    supplier_name: supplierName || null,
     file_nota_url: fileNotaUrl,
     nota_type: notaType || null,
     raw_text: rawText || null,
@@ -258,6 +288,7 @@ module.exports = {
   getPurchaseDetail,
   list,
   listActiveProductsForMatching,
+  listSupplierNames,
   saveDraft,
   listDrafts,
   getDraft,

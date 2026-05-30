@@ -211,6 +211,7 @@ export function printReturnReceipt(detail) {
   <table class="meta">
     <tr><td class="label">No</td><td>: ${escapeHtml(detail.kode_adjustment || "")}</td></tr>
     <tr><td class="label">Tanggal</td><td>: ${tanggalJamWita(detail.created_at)}</td></tr>
+    ${detail.supplier_name ? `<tr><td class="label">Supplier</td><td>: ${escapeHtml(detail.supplier_name)}</td></tr>` : ""}
     ${detail.username ? `<tr><td class="label">User</td><td>: ${escapeHtml(detail.username)}</td></tr>` : ""}
     ${detail.alasan ? `<tr><td class="label">Alasan</td><td>: ${escapeHtml(detail.alasan)}</td></tr>` : ""}
   </table>

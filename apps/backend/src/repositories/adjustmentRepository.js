@@ -200,7 +200,7 @@ async function lookupPurchaseByNota(nota) {
   let query = supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, user_id, total, status_validasi, created_at, purchase_items(id, product_id, qty, harga_beli, diskon_persen, source, products(kode_barang, nama_barang, merk))"
+      "id, no_nota_supplier, supplier_name, user_id, total, status_validasi, created_at, purchase_items(id, product_id, qty, harga_beli, diskon_persen, source, products(kode_barang, nama_barang, merk))"
     )
     .eq("status_validasi", "tervalidasi")
     .order("created_at", { ascending: false })
@@ -217,6 +217,7 @@ async function lookupPurchaseByNota(nota) {
   return data.map((purchase) => ({
     id: purchase.id,
     no_nota_supplier: purchase.no_nota_supplier,
+    supplier_name: purchase.supplier_name || null,
     user_id: purchase.user_id,
     total: purchase.total,
     status_validasi: purchase.status_validasi,

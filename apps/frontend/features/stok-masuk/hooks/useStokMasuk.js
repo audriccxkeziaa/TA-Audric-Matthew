@@ -35,6 +35,8 @@ export function useStokMasuk() {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [noNota, setNoNota] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [supplierList, setSupplierList] = useState([]);
   const [notaTypeChoice, setNotaTypeChoice] = useState("auto"); // auto|cetak|tulisan_tangan
   const [dragOver, setDragOver] = useState(false);
 
@@ -59,6 +61,7 @@ export function useStokMasuk() {
 
   useEffect(() => {
     productsApi.merks().then((res) => setMerkList(res?.data || [])).catch(() => {});
+    purchasesApi.suppliers().then((res) => setSupplierList(res?.data || [])).catch(() => {});
   }, []);
 
   // nota_type efektif untuk hasil OCR aktif (penentu highlight & aturan review)
@@ -166,6 +169,7 @@ export function useStokMasuk() {
       const res = await purchasesApi.drafts.save({
         id: currentDraftId,
         no_nota_supplier: ocr?.no_nota_supplier || noNota.trim() || null,
+        supplier_name: supplierName.trim() || null,
         file_nota_url: ocr.file_nota_url,
         nota_type: ocr?.nota_type || null,
         raw_text: ocr?.raw_text || null,
@@ -199,6 +203,7 @@ export function useStokMasuk() {
         quality: d.quality,
       });
       setNoNota(d.no_nota_supplier || "");
+      setSupplierName(d.supplier_name || "");
       const items = Array.isArray(d.items) ? d.items : [];
       setRows(items.length ? items.map(draftItemToRow) : [blankManualRow()]);
       setCurrentDraftId(d.id);
@@ -268,7 +273,8 @@ export function useStokMasuk() {
   // ---------- Validasi siap commit (R2 sisi klien) ----------
   const canCommit = useMemo(() => {
     if (rows.length === 0) return false;
-    if (!noNota.trim()) return false; // No. Nota Supplier wajib diisi
+    if (!noNota.trim()) return false;
+    if (!supplierName.trim()) return false;
     return rows.every((r) => {
       const qtyOk = Number(r.qty) > 0;
       const hargaOk = Number(r.harga_beli) > 0; // wajib > 0
@@ -302,10 +308,8 @@ export function useStokMasuk() {
   // ---------- Commit (R2) ----------
   async function commit() {
     if (!canCommit) return;
-    if (!noNota.trim()) {
-      toast.error("No. Nota Supplier wajib diisi sebelum menyimpan");
-      return;
-    }
+    if (!noNota.trim()) { toast.error("No. Nota Supplier wajib diisi"); return; }
+    if (!supplierName.trim()) { toast.error("Nama Supplier wajib diisi"); return; }
     setCommitting(true);
     try {
       const items = rows.map((r) => {
@@ -331,6 +335,7 @@ export function useStokMasuk() {
 
       const res = await purchasesApi.commit({
         no_nota_supplier: ocr?.no_nota_supplier || noNota.trim() || null,
+        supplier_name: supplierName.trim() || null,
         file_nota_url: ocr?.file_nota_url || null,
         status_validasi: "tervalidasi",
         items,
@@ -370,6 +375,7 @@ export function useStokMasuk() {
     setFile(null);
     setPreviewUrl("");
     setNoNota("");
+    setSupplierName("");
     setNotaTypeChoice("auto");
     setOcr(null);
     setAmbiguous(null);
@@ -414,6 +420,7 @@ export function useStokMasuk() {
     isMobile, step, inputMode, setInputMode,
     // upload
     file, previewUrl, noNota, setNoNota,
+    supplierName, setSupplierName, supplierList,
     notaTypeChoice, setNotaTypeChoice,
     dragOver, setDragOver, pickFile, onDrop,
     ocrLoading, runOcr, startManualInput, goBackToModeSelect,

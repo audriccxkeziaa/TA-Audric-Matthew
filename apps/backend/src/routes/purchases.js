@@ -7,6 +7,7 @@ const {
   commitPurchase,
   listPurchases,
   getPurchaseDetailCtrl,
+  listSupplierNames,
   saveDraft,
   listDrafts,
   getDraft,
@@ -51,6 +52,7 @@ function uploadSingleNota(req, res, next) {
 
 router.post("/ocr", uploadSingleNota, processOcr);
 router.post("/commit", commitPurchase);
+router.get("/suppliers", listSupplierNames);
 router.get("/", listPurchases);
 
 // Drafts: scan di HP → resume di laptop (atau sebaliknya).

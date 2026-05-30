@@ -53,6 +53,7 @@ export function useReturSupplier() {
       ...ret,
       items: detailData?.items || [],
       no_nota_ref: linkedPurchase?.no_nota_supplier || null,
+      supplier_name_ref: linkedPurchase?.supplier_name || null,
       reference_purchase_id: refPurchaseId || null,
     };
   });
@@ -131,6 +132,7 @@ export function useReturSupplier() {
         kode_adjustment: res.data?.kode_adjustment || "",
         type: "return_supplier",
         created_at: res.data?.created_at || new Date().toISOString(),
+        supplier_name: selected?.supplier_name || null,
         alasan,
         items: checkedItems.map((it) => ({
           nama_barang: it.nama_barang,
@@ -170,6 +172,7 @@ export function useReturSupplier() {
           kode_adjustment: resolveTarget.kode_adjustment,
           type: resolveTarget.type,
           created_at: resolveTarget.created_at,
+          supplier_name: resolveTarget.supplier_name_ref || null,
           username: resolveTarget.username,
           alasan: resolveTarget.alasan,
           items: (resolveTarget.items || []).map((it) => ({

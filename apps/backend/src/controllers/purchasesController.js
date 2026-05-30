@@ -159,11 +159,22 @@ async function deleteNotaFileCtrl(req, res) {
   }
 }
 
+async function listSupplierNames(req, res) {
+  try {
+    const data = await purchaseRepository.listSupplierNames();
+    return res.json({ data });
+  } catch (err) {
+    console.error("[POS-PURCHASES] listSupplierNames:", err.message);
+    return res.status(500).json({ error: "Gagal memuat daftar supplier" });
+  }
+}
+
 module.exports = {
   processOcr,
   commitPurchase,
   listPurchases,
   getPurchaseDetailCtrl,
+  listSupplierNames,
   saveDraft,
   listDrafts,
   getDraft,

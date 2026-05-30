@@ -4,6 +4,7 @@
 
 import { Card, Button, Input, Select, Spinner } from "@/components/ui";
 import { DraftsPanel } from "./DraftsPanel";
+import { SupplierCombobox } from "./SupplierCombobox";
 
 export function UploadStep({ m }) {
   return (
@@ -65,12 +66,25 @@ export function UploadStep({ m }) {
       {m.inputMode === "ocr" && (
         <Card className="p-5">
           <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600">
+                Nama Supplier <span className="text-red-500">*</span>
+              </label>
+              <SupplierCombobox
+                value={m.supplierName}
+                onChange={m.setSupplierName}
+                supplierList={m.supplierList}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
             <Input
               label="No. Nota Supplier *"
               value={m.noNota}
               onChange={(e) => m.setNoNota(e.target.value)}
               placeholder="mis. INV-2026-0481"
             />
+          </div>
+          <div className="mt-4">
             <Select
               label="Jenis Nota"
               value={m.notaTypeChoice}

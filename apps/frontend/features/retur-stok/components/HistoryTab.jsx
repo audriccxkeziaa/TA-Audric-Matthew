@@ -55,6 +55,12 @@ function ReturnReceiptPreview({ detail }) {
           <span className="w-14 shrink-0 text-slate-400">Tanggal</span>
           <span>: {fmtWita(detail.created_at)}</span>
         </div>
+        {detail.supplier_name && (
+          <div className="flex gap-1">
+            <span className="w-14 shrink-0 text-slate-400">Supplier</span>
+            <span className="break-words">: {detail.supplier_name}</span>
+          </div>
+        )}
         {detail.username && (
           <div className="flex gap-1">
             <span className="w-14 shrink-0 text-slate-400">User</span>
