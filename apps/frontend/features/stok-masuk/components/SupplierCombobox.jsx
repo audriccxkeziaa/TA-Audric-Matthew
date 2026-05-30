@@ -3,7 +3,7 @@
 
 import { useState, useRef, useMemo, useEffect } from "react";
 
-export function SupplierCombobox({ value, onChange, supplierList, className }) {
+export function SupplierCombobox({ value, onChange, supplierList = [], className }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const wrapperRef = useRef(null);
@@ -17,14 +17,15 @@ export function SupplierCombobox({ value, onChange, supplierList, className }) {
   }, []);
 
   const filtered = useMemo(() => {
+    const list = Array.isArray(supplierList) ? supplierList : [];
     const q = search.trim().toLowerCase();
-    if (!q) return supplierList;
-    return supplierList.filter((s) => s.toLowerCase().includes(q));
+    if (!q) return list;
+    return list.filter((s) => s.toLowerCase().includes(q));
   }, [search, supplierList]);
 
   const showAddNew =
     search.trim() &&
-    !supplierList.some((s) => s.toLowerCase() === search.trim().toLowerCase());
+    !filtered.some((s) => s.toLowerCase() === search.trim().toLowerCase());
 
   return (
     <div ref={wrapperRef} className="relative">
