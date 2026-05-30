@@ -1,5 +1,5 @@
 import "./globals.css";
-import { GeistSans} from "geist/font/sans";
+// import { GeistSans} from "geist/font/sans";
 import Providers from "./providers";
 
 // // Tipografi profesional: Inter dimuat sebagai CSS variable (--font-sans)
@@ -29,7 +29,8 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="id" className={GeistSans.variable}>
+    <html lang="id"> 
+    {/* className={GeistSans.variable}> */}
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
