@@ -127,6 +127,17 @@ export function useReturSupplier() {
         })),
       });
       toast.success(res.message || "Retur dikirim — menunggu barang ganti dari supplier.");
+      printReturnReceipt({
+        kode_adjustment: res.data?.kode_adjustment || "",
+        type: "return_supplier",
+        created_at: res.data?.created_at || new Date().toISOString(),
+        alasan,
+        items: checkedItems.map((it) => ({
+          nama_barang: it.nama_barang,
+          qty: it.return_qty,
+          harga_satuan: it.harga_beli,
+        })),
+      });
       setSelected(null);
       setReturnItems([]);
       setAlasan("");
