@@ -82,6 +82,26 @@ export function RestockDetailModal({ item, onClose }) {
                   : `${item.estimasi_hari_habis} hari`}
               </p>
             </div>
+            <div>
+              <span className="text-xs text-slate-400">ROP (Batas Pesan Ulang)</span>
+              <p>
+                {Number(item.avg_sales_30d || 0) === 0
+                  ? "Belum ada data"
+                  : `${angka(item.rop)} unit`}
+              </p>
+            </div>
+            <div className="col-span-2">
+              <span className="text-xs text-slate-400">
+                Status ROP{Number(item.avg_sales_30d || 0) > 0 && ` — lead time ${item.lead_time_hari}h, safety stock ${angka(item.safety_stock)} unit`}
+              </span>
+              <p className={`font-semibold ${Number(item.avg_sales_30d || 0) === 0 ? "text-slate-400" : item.dibawah_rop ? "text-red-600" : "text-emerald-600"}`}>
+                {Number(item.avg_sales_30d || 0) === 0
+                  ? "Belum ada data penjualan"
+                  : item.dibawah_rop
+                  ? "Di Bawah ROP — Pesan Sekarang!"
+                  : "Aman (Di Atas ROP)"}
+              </p>
+            </div>
           </div>
         </div>
 

@@ -91,6 +91,11 @@ export default function RestockPage() {
           <span className="font-medium text-slate-500">Min Stok</span> = batas alarm restock, idealnya = laju jual × estimasi hari tiba kiriman supplier.
           {!r.isAdmin && " (Hanya admin yang dapat mengubah min. stok.)"}
         </p>
+        <p>
+          <span className="font-medium text-slate-500">ROP (Reorder Point)</span> = batas stok yang jika dilewati, barang harus dipesan segera agar tidak lost sales.
+          Dihitung otomatis: <span className="font-mono text-slate-600">(laju jual × 3 hari lead time) + (laju jual × 2 hari safety stock)</span>.{" "}
+          <span className="text-red-500 font-medium">Pesan Sekarang!</span> = stok sudah di bawah ROP.
+        </p>
       </div>
 
       {r.isAdmin && (

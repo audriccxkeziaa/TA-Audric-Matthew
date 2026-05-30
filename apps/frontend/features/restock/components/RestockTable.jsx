@@ -1,7 +1,7 @@
 "use client";
 // Tabel rekomendasi restock. Kolom Aksi (detail) hanya untuk admin.
 
-import { Card, Spinner, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
+import { Card, Spinner, EmptyState, Badge, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { angka } from "@/lib/format";
 import { UrgensiBadge } from "./UrgensiBadge";
 
@@ -38,6 +38,7 @@ export function RestockTable({
               <TH className="text-right">Perlu Beli</TH>
               <TH className="text-right" title="Total terjual 30 hari terakhir ÷ 30">Laju Jual/Hari</TH>
               <TH className="text-right" title="Prediksi berapa hari lagi stok akan habis jika laju jual tetap sama (= Stok ÷ Laju Jual/Hari). Merah <7 hari, kuning <14 hari.">Estimasi Habis</TH>
+              <TH className="text-center" title="Reorder Point (ROP): batas stok sebelum harus pesan ulang agar tidak kehabisan. ROP = (laju jual × 3 hari lead time) + (laju jual × 2 hari safety stock). Merah = stok sudah di bawah ROP, pesan segera!">Status ROP</TH>
               <TH>Status</TH>
               {isAdmin && <TH className="text-right">Aksi</TH>}
             </THead>
@@ -69,6 +70,21 @@ export function RestockTable({
                       <span className="font-semibold text-amber-600">{it.estimasi_hari_habis} hari</span>
                     ) : (
                       <span className="text-slate-700">{it.estimasi_hari_habis} hari</span>
+                    )}
+                  </TD>
+                  <TD className="text-center">
+                    {Number(it.avg_sales_30d || 0) === 0 ? (
+                      <span className="text-xs text-slate-400">-</span>
+                    ) : it.dibawah_rop ? (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <Badge tone="red">Pesan Sekarang!</Badge>
+                        <span className="text-[10px] text-slate-400">ROP: {angka(it.rop)} unit</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <Badge tone="green">Aman</Badge>
+                        <span className="text-[10px] text-slate-400">ROP: {angka(it.rop)} unit</span>
+                      </div>
                     )}
                   </TD>
                   <TD><UrgensiBadge level={it.tingkat_urgensi} /></TD>
@@ -152,6 +168,16 @@ export function RestockTable({
                       <span className="font-semibold text-amber-600">{it.estimasi_hari_habis} hari</span>
                     ) : (
                       <span className="text-slate-700">{it.estimasi_hari_habis} hari</span>
+                    )}
+                  </span>
+                  <span className="text-slate-500">Status ROP</span>
+                  <span className="text-right">
+                    {Number(it.avg_sales_30d || 0) === 0 ? (
+                      <span className="text-xs text-slate-400">-</span>
+                    ) : it.dibawah_rop ? (
+                      <Badge tone="red">Pesan Sekarang!</Badge>
+                    ) : (
+                      <Badge tone="green">Aman</Badge>
                     )}
                   </span>
                 </div>
