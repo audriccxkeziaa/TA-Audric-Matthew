@@ -331,11 +331,41 @@ async function lookupPurchase(nota) {
   return adjustmentRepository.lookupPurchaseByNota(nota);
 }
 
+// Tahap 2 Retur Supplier: konfirmasi barang ganti diterima → stok bertambah, status='selesai'
+async function resolveSupplierReturn({ adminUser, adjustmentId }) {
+  if (adminUser.role !== "admin") {
+    const e = new Error("Hanya admin yang dapat menyelesaikan retur supplier");
+    e.status = 403;
+    throw e;
+  }
+
+  let rpcResult;
+  try {
+    rpcResult = await adjustmentRepository.resolveViaRpc({
+      adjustmentId,
+      adminId: adminUser.id,
+    });
+  } catch (err) {
+    const mapped = ruleEngine.mapDbErrorToHttp(err);
+    const e = new Error(mapped.message || err.message);
+    e.status = mapped.status || 400;
+    e.rule = mapped.rule;
+    throw e;
+  }
+
+  const detail = await adjustmentRepository.getDetail(adjustmentId);
+  console.log(
+    `[POS-ADJ] RESOLVED supplier return=${adjustmentId} oleh admin=${adminUser.username}`
+  );
+  return detail;
+}
+
 module.exports = {
   createAdjustment,
   approveAdjustment,
   rejectAdjustment,
   verifyAdminAndApprove,
+  resolveSupplierReturn,
   listAdjustments,
   getAdjustmentDetail,
   countPending,

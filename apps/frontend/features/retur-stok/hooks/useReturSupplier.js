@@ -1,13 +1,16 @@
 "use client";
-// features/retur-stok/hooks/useReturSupplier.js — retur ke supplier:
-// load semua nota, filter, pilih nota, set item retur, submit. Logika apa adanya.
+// features/retur-stok/hooks/useReturSupplier.js — retur ke supplier 2 tahap:
+// Tahap 1 (Kirim): create → stok berkurang, status='approved' (badge: Menunggu Barang Ganti)
+// Tahap 2 (Ganti): resolveSupplier → stok bertambah, status='selesai'
 
 import { useState, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { adjustmentsApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 
 export function useReturSupplier() {
   const toast = useToast();
+  const qc = useQueryClient();
   const [notaQ, setNotaQ] = useState("");
   const [allPurchases, setAllPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +20,18 @@ export function useReturSupplier() {
   const [catatan, setCatatan] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resolveId, setResolveId] = useState(null);
+  const [resolveSubmitting, setResolveSubmitting] = useState(false);
   const listRef = useRef(null);
+
+  // Retur supplier yang sudah dikirim, menunggu barang ganti (status='approved')
+  const { data: pendingData, refetch: refetchPending } = useQuery({
+    queryKey: ["adjustments", "return_supplier", "approved"],
+    queryFn: () =>
+      adjustmentsApi.list({ type: "return_supplier", status: "approved", limit: 20 }),
+    refetchInterval: 30000,
+  });
+  const pendingReturns = pendingData?.data || [];
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +86,7 @@ export function useReturSupplier() {
 
   const checkedItems = returnItems.filter((it) => it.checked && it.return_qty > 0);
 
+  // Tahap 1: buat dokumen retur, stok langsung berkurang
   async function handleSubmit() {
     setConfirm(false);
     setSubmitting(true);
@@ -87,18 +102,36 @@ export function useReturSupplier() {
           harga_satuan: it.harga_beli,
         })),
       });
-      toast.success(res.message || "Retur supplier berhasil.");
+      toast.success(res.message || "Retur dikirim — menunggu barang ganti dari supplier.");
       setSelected(null);
       setReturnItems([]);
       setAlasan("");
       setCatatan("");
       setNotaQ("");
+      refetchPending();
       const refresh = await adjustmentsApi.lookupPurchase("");
       setAllPurchases(refresh.data || []);
     } catch (err) {
       toast.error(err.message || "Gagal menyimpan retur");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // Tahap 2: barang ganti sudah datang, stok bertambah kembali
+  async function handleResolve() {
+    if (!resolveId) return;
+    setResolveSubmitting(true);
+    try {
+      await adjustmentsApi.resolveSupplier(resolveId);
+      toast.success("Barang ganti diterima — stok sudah ditambahkan!");
+      setResolveId(null);
+      refetchPending();
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+    } catch (err) {
+      toast.error(err.message || "Gagal menyelesaikan retur");
+    } finally {
+      setResolveSubmitting(false);
     }
   }
 
@@ -110,5 +143,8 @@ export function useReturSupplier() {
     alasan, setAlasan, catatan, setCatatan,
     confirm, setConfirm, submitting,
     checkedItems, handleSubmit,
+    pendingReturns,
+    resolveId, setResolveId,
+    resolveSubmitting, handleResolve,
   };
 }

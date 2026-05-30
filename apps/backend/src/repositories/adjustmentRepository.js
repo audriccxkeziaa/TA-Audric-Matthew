@@ -234,10 +234,25 @@ async function lookupPurchaseByNota(nota) {
   }));
 }
 
+async function resolveViaRpc({ adjustmentId, adminId }) {
+  const { data, error } = await supabase.rpc("fn_resolve_supplier_return", {
+    p_adjustment_id: adjustmentId,
+    p_admin_id: adminId,
+  });
+  if (error) {
+    const err = new Error(error.message);
+    err.code = error.code;
+    err.details = error.details;
+    throw err;
+  }
+  return data;
+}
+
 module.exports = {
   createViaRpc,
   approveViaRpc,
   rejectViaRpc,
+  resolveViaRpc,
   getDetail,
   list,
   countPending,

@@ -3,7 +3,7 @@
 
 import { Card, Button, Badge, Modal, Spinner, EmptyState } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
-import { TYPE_BADGES, STATUS_BADGES } from "../lib/badges";
+import { TYPE_BADGES, STATUS_BADGES, getStatusBadge } from "../lib/badges";
 import { useHistory } from "../hooks/useHistory";
 
 export function HistoryTab() {
@@ -65,7 +65,7 @@ export function HistoryTab() {
                 <tbody>
                   {h.pagedData.map((row) => {
                     const tb = TYPE_BADGES[row.type] || { label: row.type, tone: "slate" };
-                    const sb = STATUS_BADGES[row.status] || { label: row.status, tone: "slate" };
+                    const sb = getStatusBadge(row.type, row.status);
                     return (
                       <tr key={row.id} className="border-b border-slate-100 transition-colors hover:bg-brand-50/40">
                         <td className="py-2 pr-2 font-mono text-xs">{row.kode_adjustment}</td>
@@ -112,7 +112,7 @@ export function HistoryTab() {
               <ul className="divide-y divide-slate-100 md:hidden">
                 {h.pagedData.map((row) => {
                   const tb = TYPE_BADGES[row.type] || { label: row.type, tone: "slate" };
-                  const sb = STATUS_BADGES[row.status] || { label: row.status, tone: "slate" };
+                  const sb = getStatusBadge(row.type, row.status);
                   return (
                     <li
                       key={row.id}
@@ -185,8 +185,8 @@ export function HistoryTab() {
               </div>
               <div>
                 <span className="text-slate-400">Status:</span>{" "}
-                <Badge tone={STATUS_BADGES[h.detail.status]?.tone || "slate"}>
-                  {STATUS_BADGES[h.detail.status]?.label || h.detail.status}
+                <Badge tone={getStatusBadge(h.detail.type, h.detail.status).tone}>
+                  {getStatusBadge(h.detail.type, h.detail.status).label}
                 </Badge>
               </div>
               <div>

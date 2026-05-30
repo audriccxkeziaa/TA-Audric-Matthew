@@ -28,6 +28,7 @@
 \i 022_stock_adjustments.sql
 \i 023_manager_override.sql
 \i 024_stock_adjustment_bidirectional.sql
+\i 025_supplier_return_resolve.sql
 
 -- Catatan: \i hanya bekerja di psql, BUKAN di Supabase SQL Editor web.
 -- Untuk Supabase SQL Editor, paste isi tiap file secara berurutan,

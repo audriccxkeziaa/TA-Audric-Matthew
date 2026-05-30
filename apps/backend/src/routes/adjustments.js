@@ -12,6 +12,9 @@ router.get("/pending/count", ctrl.pendingCount);
 router.get("/lookup/sale", ctrl.lookupSale);
 router.get("/lookup/purchase", ctrl.lookupPurchase);
 
+// Retur Supplier Tahap 2: barang ganti diterima (admin only — enforced in service layer)
+router.post("/:id/resolve", ctrl.resolveSupplierReturn);
+
 // Manager Override: remote approval (admin only — enforced in service layer)
 router.post("/:id/approve", ctrl.approveAdjustment);
 // Manager Override: on-site PIN verification (kasir+admin, tapi verifikasi admin credentials)

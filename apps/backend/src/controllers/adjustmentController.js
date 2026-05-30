@@ -148,11 +148,29 @@ async function lookupPurchase(req, res) {
   }
 }
 
+async function resolveSupplierReturn(req, res) {
+  try {
+    const detail = await adjustmentService.resolveSupplierReturn({
+      adminUser: req.user,
+      adjustmentId: req.params.id,
+    });
+    return res.json({
+      message: "Retur supplier diselesaikan — barang ganti telah masuk gudang.",
+      data: detail,
+    });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status >= 500) console.error("[POS-ADJ] resolveSupplier error:", err.message);
+    return res.status(status).json({ error: err.message, rule: err.rule || null });
+  }
+}
+
 module.exports = {
   createAdjustment,
   approveAdjustment,
   rejectAdjustment,
   approvePIN,
+  resolveSupplierReturn,
   listAdjustments,
   getAdjustmentDetail,
   pendingCount,
