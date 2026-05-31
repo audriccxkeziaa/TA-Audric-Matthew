@@ -124,7 +124,7 @@ export default function LaporanPage() {
               icon={<ReceiptText size={18} />}
             />
             <StatCard
-              label="Pendapatan Bersih"
+              label="Net Income"
               value={rupiah(fs?.saldo_bersih || 0)}
               tone={fs?.saldo_bersih >= 0 ? "good" : "bad"}
               hint="Total Omzet − Total Pengeluaran"

@@ -106,7 +106,7 @@ export default function KeuanganPage() {
             icon={<TrendingDown size={18} />}
           />
           <StatCard
-            label="Pendapatan Bersih"
+            label="Net Income"
             value={rupiah(s?.saldo_bersih || 0)}
             tone={s?.saldo_bersih >= 0 ? "good" : "bad"}
             icon={<Wallet size={18} />}

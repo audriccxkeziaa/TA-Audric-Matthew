@@ -27,7 +27,7 @@ function TrenTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const labelMap = {
     pendapatan: "Omzet",
-    pendapatan_bersih: "Pendapatan Bersih",
+    pendapatan_bersih: "",
     n_tx: "Transaksi",
   };
   return (
@@ -203,7 +203,7 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                   yAxisId="rp"
                   type="monotone"
                   dataKey="pendapatan_bersih"
-                  name="Pendapatan Bersih"
+                  name="Net Income"
                   stroke="#10b981"
                   strokeWidth={2.5}
                   fill="url(#gradBersih)"

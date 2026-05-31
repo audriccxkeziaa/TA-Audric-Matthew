@@ -36,7 +36,7 @@ function KeuanganDoc({ fs, unifiedRows, salesGrouped }) {
           <p className="text-[9px] text-slate-400">Supplier + Operasional</p>
         </div>
         <div className="text-center">
-          <p className="text-[10px] uppercase text-slate-500">Pendapatan Bersih</p>
+          <p className="text-[10px] uppercase text-slate-500">Net Income</p>
           <p className={`mt-1 text-sm font-bold ${(fs?.saldo_bersih || 0) >= 0 ? "text-brand-700" : "text-red-700"}`}>
             {rupiah(fs?.saldo_bersih || 0)}
           </p>
@@ -151,7 +151,7 @@ export function PrintPreviewModal({
             {[
               { label: "Total Omzet", val: fs.omset_kotor || 0, cls: "text-emerald-300" },
               { label: "Total Pengeluaran", val: totalPengeluaran, cls: "text-red-300" },
-              { label: "Pendapatan Bersih", val: fs.saldo_bersih || 0, cls: (fs.saldo_bersih || 0) >= 0 ? "text-brand-300" : "text-red-300" },
+              { label: "Net Income", val: fs.saldo_bersih || 0, cls: (fs.saldo_bersih || 0) >= 0 ? "text-brand-300" : "text-red-300" },
             ].map(({ label, val, cls }) => (
               <div key={label} className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2">
                 <span className="text-xs text-white/60">{label}</span>
