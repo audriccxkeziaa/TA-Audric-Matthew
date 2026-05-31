@@ -110,12 +110,29 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Gaya cetak struk: sembunyikan elemen non-struk saat print */
+/* ─── Print ───────────────────────────────────────────────── */
 @media print {
-  .no-print {
-    display: none !important;
+  .no-print { display: none !important; }
+
+  /* Sembunyikan seluruh halaman */
+  body > * { visibility: hidden; }
+  body { background: white !important; }
+
+  /* Tampilkan hanya area dokumen cetak (PrintPreviewModal) */
+  .print-document,
+  .print-document * { visibility: visible !important; }
+  .print-document {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 99999 !important;
+    background: white !important;
+    padding: 12mm 14mm !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
-  body {
-    background: white;
-  }
+
+  @page { margin: 0; size: A4 portrait; }
 }
