@@ -199,20 +199,49 @@ export function Card({ children, className = "", hover = false }) {
 // }
 
 // ---------- Kartu metrik (ganti fungsi StatCard yang lama dengan ini) ----------
-export function StatCard({ label, value, hint, tone = "default", icon }) {
+export function StatCard({ label, value, hint, tone = "default", icon, accent = false }) {
   const tones = {
     default: "text-slate-900",
     good: "text-emerald-600",
     warn: "text-amber-600",
     bad: "text-red-600",
   };
-  // Icon tones diubah agar background-nya lebih soft dan premium
   const iconTones = {
     default: "bg-brand-50/50 text-brand-600 ring-1 ring-brand-100/50",
     good: "bg-emerald-50/50 text-emerald-600 ring-1 ring-emerald-100/50",
     warn: "bg-amber-50/50 text-amber-600 ring-1 ring-amber-100/50",
     bad: "bg-red-50/50 text-red-600 ring-1 ring-red-100/50",
   };
+  const accentBg = {
+    default: "bg-brand-600",
+    good: "bg-emerald-600",
+    warn: "bg-amber-600",
+    bad: "bg-red-600",
+  };
+
+  if (accent) {
+    return (
+      <div className={`rounded-xl p-4 shadow-card ${accentBg[tone]}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-white/70">
+              {label}
+            </p>
+            <p className="mt-1.5 text-2xl font-bold tracking-tight text-white">
+              {value}
+            </p>
+            {hint && <p className="mt-1 text-xs text-white/60">{hint}</p>}
+          </div>
+          {icon && (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white">
+              {icon}
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Card className="p-4" hover>
       <div className="flex items-start justify-between gap-3">

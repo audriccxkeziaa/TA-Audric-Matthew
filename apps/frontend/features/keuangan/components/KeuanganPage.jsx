@@ -14,6 +14,7 @@ import {
   Spinner,
 } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
+import { TrendingUp, Package, ReceiptText, Wallet } from "lucide-react";
 import { JENIS_OPTIONS, JENIS_TONE } from "../lib/constants";
 import { useKeuangan } from "../hooks/useKeuangan";
 import { ExpenseFormModal } from "./ExpenseFormModal";
@@ -84,23 +85,28 @@ export default function KeuanganPage() {
             value={rupiah(s?.omset_kotor || 0)}
             tone="good"
             hint={`${angka(s?.n_sales || 0)} transaksi`}
+            icon={<TrendingUp size={18} />}
           />
           <StatCard
             label="Pembelian Supplier"
             value={rupiah(s?.total_pembelian || 0)}
             tone="warn"
             hint={`${angka(s?.n_purchases || 0)} nota tervalidasi`}
+            icon={<Package size={18} />}
           />
           <StatCard
             label="Pengeluaran Operasional"
             value={rupiah(s?.total_pengeluaran || 0)}
             tone="warn"
             hint={`${angka(s?.n_expenses || 0)} entri`}
+            icon={<ReceiptText size={18} />}
           />
           <StatCard
             label="Pendapatan Bersih"
             value={rupiah(s?.saldo_bersih || 0)}
             tone={s?.saldo_bersih >= 0 ? "good" : "bad"}
+            icon={<Wallet size={18} />}
+            accent
           />
         </div>
       )}
