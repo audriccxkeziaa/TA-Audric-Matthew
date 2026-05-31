@@ -6,25 +6,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { expensesApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { isoDate } from "@/lib/format";
-import { getPeriodRange } from "@/features/laporan/hooks/useLaporanTerpadu";
 
 export function usePengeluaran() {
   const qc = useQueryClient();
   const toast = useToast();
 
-  // ── Periode filter ──
-  const [periodPreset, setPeriodPreset] = useState("bulan-ini");
-  const [from, setFrom] = useState(() => getPeriodRange("bulan-ini").from);
-  const [to, setTo] = useState(() => getPeriodRange("bulan-ini").to);
+  // ── Filter jenis (client-side saja, tanpa filter periode) ──
   const [jenisFilter, setJenisFilter] = useState("all");
-
-  function applyPreset(preset) {
-    setPeriodPreset(preset);
-    if (preset !== "custom") {
-      const range = getPeriodRange(preset);
-      if (range) { setFrom(range.from); setTo(range.to); }
-    }
-  }
 
   // ── Form state ──
   const [jenis, setJenis] = useState("gaji");
@@ -32,11 +20,11 @@ export function usePengeluaran() {
   const [nominal, setNominal] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
 
-  // ── Queries ──
+  // ── Fetch semua riwayat pengeluaran (tanpa filter tanggal) ──
   const list = useQuery({
-    queryKey: ["pengeluaran-page", from, to],
-    queryFn: () =>
-      expensesApi.list({ ...(from ? { from } : {}), ...(to ? { to } : {}), limit: 500 }),
+    queryKey: ["pengeluaran-page"],
+    queryFn: () => expensesApi.list({ limit: 500 }),
+    staleTime: 30_000,
   });
 
   const create = useMutation({
@@ -71,34 +59,26 @@ export function usePengeluaran() {
   }, [allRows, jenisFilter]);
 
   const totalVisible = rows.reduce((s, r) => s + Number(r.nominal || 0), 0);
-  const totalAll = allRows.reduce((s, r) => s + Number(r.nominal || 0), 0);
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!deskripsi.trim()) return toast.error("Deskripsi wajib diisi");
-    if (!nominal || Number(nominal) <= 0) return toast.error("Nominal harus lebih dari 0");
+    const val = Number(nominal);
+    if (!nominal || val <= 0) return toast.error("Nominal harus lebih dari 0");
     create.mutate({
       jenis,
       tanggal: formTanggal,
-      nominal: Number(nominal),
+      nominal: val,
       deskripsi: deskripsi.trim(),
     });
   }
 
-  function resetFilter() {
-    applyPreset("bulan-ini");
-    setJenisFilter("all");
-  }
-
   return {
-    periodPreset, applyPreset,
-    from, setFrom, to, setTo,
     jenisFilter, setJenisFilter,
-    resetFilter,
     list,
     rows,
     totalVisible,
-    totalAll,
+    allCount: allRows.length,
     // form
     jenis, setJenis,
     formTanggal, setFormTanggal,
