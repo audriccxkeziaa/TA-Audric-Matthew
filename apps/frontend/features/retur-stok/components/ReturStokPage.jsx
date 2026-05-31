@@ -29,7 +29,7 @@ export default function ReturStokPage() {
     <PageShell>
       <PageHeader
         title="Retur & Penyesuaian Stok"
-        description="Kelola retur supplier, retur pelanggan, dan penyesuaian stok (penyusutan)"
+        description="Halaman untuk mengelola retur supplier, retur pelanggan, dan penyesuaian stok."
       />
 
       {/* Tab bar */}

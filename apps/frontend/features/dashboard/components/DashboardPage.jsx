@@ -37,7 +37,7 @@ export default function DashboardPage() {
     <PageShell>
       <PageHeader
         title="Dashboard"
-        description="Ringkasan operasional toko & analitik penjualan. Klik kartu mana saja untuk detail."
+        description="Halaman yang menampilkan overview toko & analitik penjualan. Klik kartu mana saja untuk detail."
       />
 
       {/* Kartu metrik — clickable */}

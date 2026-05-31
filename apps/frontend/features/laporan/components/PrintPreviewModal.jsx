@@ -1,16 +1,11 @@
 "use client";
-// PrintPreviewModal — preview cetak laporan (Keuangan atau Transaksi).
+// PrintPreviewModal — preview cetak laporan keuangan.
 // Tombol "Cetak Sekarang" → window.print() → @media print hanya tampilkan .print-document.
 
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import { rupiah, angka, tanggal } from "@/lib/format";
 import { JENIS_LABELS } from "@/features/keuangan/lib/constants";
-
-const TAB_NAMES = {
-  keuangan: "Ringkasan & Arus Kas",
-  transaksi: "Riwayat Transaksi Penjualan",
-};
 
 function fmtNow() {
   return new Date().toLocaleString("id-ID", {
@@ -31,7 +26,7 @@ function KeuanganDoc({ fs, unifiedRows, salesGrouped }) {
       {/* Summary 3 kotak */}
       <div className="mb-5 grid grid-cols-3 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
         <div className="text-center">
-          <p className="text-[10px] uppercase text-slate-500">Pendapatan Kotor</p>
+          <p className="text-[10px] uppercase text-slate-500">Total Omzet</p>
           <p className="mt-1 text-sm font-bold text-emerald-700">{rupiah(fs?.omset_kotor || 0)}</p>
           <p className="text-[9px] text-slate-400">{angka(fs?.n_sales || 0)} transaksi</p>
         </div>
@@ -117,68 +112,13 @@ function KeuanganDoc({ fs, unifiedRows, salesGrouped }) {
   );
 }
 
-// Dokumen Tab Transaksi
-function TransaksiDoc({ summary, rows }) {
-  return (
-    <>
-      <div className="mb-5 grid grid-cols-3 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-        <div className="text-center">
-          <p className="text-[10px] uppercase text-slate-500">Total Transaksi</p>
-          <p className="mt-1 text-lg font-bold text-slate-800">{angka(summary.total_transactions || 0)}</p>
-        </div>
-        <div className="border-x border-slate-200 text-center">
-          <p className="text-[10px] uppercase text-slate-500">Total Item Terjual</p>
-          <p className="mt-1 text-lg font-bold text-slate-800">{angka(summary.total_qty || 0)}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-[10px] uppercase text-slate-500">Total Revenue</p>
-          <p className="mt-1 text-sm font-bold text-emerald-700">{rupiah(summary.total_revenue || 0)}</p>
-        </div>
-      </div>
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-        Daftar Transaksi ({rows.length} transaksi)
-      </p>
-      <table className="w-full border-collapse text-[10px]">
-        <thead>
-          <tr className="bg-slate-100">
-            <th className="border border-slate-200 px-2 py-1.5 text-left w-5">No</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left">Tanggal</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left">Kode Transaksi</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-left">Kasir</th>
-            <th className="border border-slate-200 px-2 py-1.5 text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.slice(0, 30).map((g, i) => (
-            <tr key={g.sale_id}>
-              <td className="border border-slate-200 px-2 py-1 text-slate-400">{i + 1}</td>
-              <td className="border border-slate-200 px-2 py-1">{tanggal(g.created_at)}</td>
-              <td className="border border-slate-200 px-2 py-1 font-mono">{g.kode_transaksi}</td>
-              <td className="border border-slate-200 px-2 py-1">{g.kasir}</td>
-              <td className="border border-slate-200 px-2 py-1 text-right font-semibold text-emerald-700">{rupiah(g.total)}</td>
-            </tr>
-          ))}
-          {rows.length > 30 && (
-            <tr>
-              <td colSpan={5} className="border border-slate-200 px-2 py-1 text-center italic text-slate-400">
-                ... dan {rows.length - 30} transaksi lainnya
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </>
-  );
-}
-
 // ── Modal utama ──
 export function PrintPreviewModal({
-  open, onClose, activeTab, from, to,
+  open, onClose, from, to,
   fs, unifiedRows, salesSummary, filteredSales, salesGrouped,
 }) {
   if (!open) return null;
 
-  const tabTitle = TAB_NAMES[activeTab] || activeTab;
   const printedAt = fmtNow();
   const totalPengeluaran = (fs?.total_pembelian || 0) + (fs?.total_pengeluaran || 0);
 
@@ -197,7 +137,7 @@ export function PrintPreviewModal({
         <div className="space-y-3 text-sm">
           <div className="rounded-lg bg-white/10 p-3">
             <p className="mb-0.5 text-[10px] uppercase text-white/50">Jenis Laporan</p>
-            <p className="font-semibold">{tabTitle}</p>
+            <p className="font-semibold">Ringkasan &amp; Arus Kas</p>
           </div>
           <div className="rounded-lg bg-white/10 p-3">
             <p className="mb-0.5 text-[10px] uppercase text-white/50">Periode</p>
@@ -205,11 +145,11 @@ export function PrintPreviewModal({
           </div>
         </div>
 
-        {activeTab === "keuangan" && fs && (
+        {fs && (
           <div className="space-y-2 text-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-white/50">Ringkasan Kas</p>
             {[
-              { label: "Pendapatan Kotor", val: fs.omset_kotor || 0, cls: "text-emerald-300" },
+              { label: "Total Omzet", val: fs.omset_kotor || 0, cls: "text-emerald-300" },
               { label: "Total Pengeluaran", val: totalPengeluaran, cls: "text-red-300" },
               { label: "Pendapatan Bersih", val: fs.saldo_bersih || 0, cls: (fs.saldo_bersih || 0) >= 0 ? "text-brand-300" : "text-red-300" },
             ].map(({ label, val, cls }) => (
@@ -218,20 +158,6 @@ export function PrintPreviewModal({
                 <span className={`font-bold ${cls}`}>{rupiah(val)}</span>
               </div>
             ))}
-          </div>
-        )}
-
-        {activeTab === "transaksi" && (
-          <div className="space-y-2 text-sm">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/50">Ringkasan</p>
-            <div className="flex justify-between rounded-lg bg-white/10 px-3 py-2">
-              <span className="text-xs text-white/60">Transaksi</span>
-              <span className="font-bold">{angka(salesSummary.total_transactions || 0)}</span>
-            </div>
-            <div className="flex justify-between rounded-lg bg-white/10 px-3 py-2">
-              <span className="text-xs text-white/60">Revenue</span>
-              <span className="font-bold text-emerald-300">{rupiah(salesSummary.total_revenue || 0)}</span>
-            </div>
           </div>
         )}
 
@@ -259,16 +185,11 @@ export function PrintPreviewModal({
             </div>
 
             <div className="mb-6 text-center">
-              <p className="text-sm font-bold uppercase tracking-wide">LAPORAN {tabTitle.toUpperCase()}</p>
+              <p className="text-sm font-bold uppercase tracking-wide">LAPORAN RINGKASAN &amp; ARUS KAS</p>
               <p className="mt-0.5 text-xs text-slate-500">Periode: {tanggal(from)} s/d {tanggal(to)}</p>
             </div>
 
-            {activeTab === "keuangan" && (
-              <KeuanganDoc fs={fs} unifiedRows={unifiedRows} salesGrouped={salesGrouped} />
-            )}
-            {activeTab === "transaksi" && (
-              <TransaksiDoc summary={salesSummary} rows={filteredSales} />
-            )}
+            <KeuanganDoc fs={fs} unifiedRows={unifiedRows} salesGrouped={salesGrouped} />
 
             <div className="mt-8 flex justify-between border-t border-slate-200 pt-4 text-[10px] text-slate-400">
               <span>Dicetak: {printedAt} WITA</span>

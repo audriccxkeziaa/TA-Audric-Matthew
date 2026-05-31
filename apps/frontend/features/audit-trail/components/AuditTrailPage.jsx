@@ -16,7 +16,7 @@ export default function AuditTrailPage() {
     <PageShell>
       <PageHeader
         title="Audit Trail"
-        description="Berisi detail setiap aksi & perubahan yang dilakukan oleh admin dan kasir."
+        description="Halaman untuk melihat detail setiap aksi & perubahan yang dilakukan oleh admin dan kasir."
         actions={
           <Button variant="outline" onClick={a.exportCsv}>
             Export CSV

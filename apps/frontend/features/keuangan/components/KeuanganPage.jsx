@@ -85,7 +85,7 @@ export default function KeuanganPage() {
       ) : (
         <div className="mb-3 grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
           <StatCard
-            label="Pendapatan Kotor"
+            label="Total Omzet"
             value={rupiah(s?.omset_kotor || 0)}
             tone="good"
             hint={`${angka(s?.n_sales || 0)} transaksi`}

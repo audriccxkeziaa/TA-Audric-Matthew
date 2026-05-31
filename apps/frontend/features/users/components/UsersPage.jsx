@@ -15,7 +15,7 @@ export default function UsersPage() {
     <PageShell>
       <PageHeader
         title="Manajemen User"
-        description="Halaman untuk mengelola role superadmin dan kasir."
+        description="Halaman untuk mengelola role user."
         actions={<Button onClick={() => u.setShowAdd(true)}>+ Add User</Button>}
       />
 

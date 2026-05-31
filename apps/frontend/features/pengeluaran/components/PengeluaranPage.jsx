@@ -25,7 +25,7 @@ export default function PengeluaranPage() {
     <PageShell>
       <PageHeader
         title="Pengeluaran Operasional"
-        description="Catat biaya operasional: gaji karyawan, listrik, air, dan lainnya."
+        description="Halaman untuk mencatat biaya operasional: gaji karyawan, listrik, air, dan lainnya."
       />
 
       {/* Seluruh konten di-scroll dalam satu wrapper */}
