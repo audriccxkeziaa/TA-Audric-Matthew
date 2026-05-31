@@ -17,6 +17,7 @@ export const JENIS_LABELS = {
   air: "Air (PDAM)",
   custom: "Custom",
   refund_pelanggan: "Refund Pelanggan",
+  pembelian_supplier: "Pembelian Supplier",
 };
 
 export const JENIS_TONE = {
@@ -24,6 +25,16 @@ export const JENIS_TONE = {
   listrik: "amber",
   air: "blue",
   custom: "green",
+  refund_pelanggan: "red",
+};
+
+// Tone badge estetik untuk unified pengeluaran table.
+export const JENIS_BADGE_TONE = {
+  pembelian_supplier: "orange",
+  gaji: "blue",
+  listrik: "amber",
+  air: "cyan",
+  custom: "slate",
   refund_pelanggan: "red",
 };
 

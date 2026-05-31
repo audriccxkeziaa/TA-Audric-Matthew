@@ -1,8 +1,7 @@
 "use client";
 // features/keuangan/hooks/useKeuangan.js — orkestrasi halaman keuangan:
 // filter periode + jenis, query ringkasan/pengeluaran/penjualan/pembelian,
-// hapus pengeluaran, dan pembukaan detail transaksi/nota. Perbedaan kecil
-// pada parameter `to` antar query dipertahankan apa adanya.
+// hapus pengeluaran, detail transaksi/nota, dan unified pengeluaran feed.
 
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +18,7 @@ export function useKeuangan() {
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
-  const [jenisDetail, setJenisDetail] = useState(null);
+  const [activeTab, setActiveTab] = useState("pemasukan");
 
   const params = useMemo(() => {
     const p = {};
@@ -33,13 +32,13 @@ export function useKeuangan() {
     queryFn: () => expensesApi.summary(params),
   });
 
+  // Fetch semua expenses — filter jenis dilakukan client-side di unifiedRows
   const list = useQuery({
-    queryKey: ["expenses", from, to, jenisFilter],
+    queryKey: ["expenses", from, to],
     queryFn: () =>
       expensesApi.list({
         ...(from ? { from } : {}),
         ...(to ? { to } : {}),
-        ...(jenisFilter !== "all" ? { jenis: jenisFilter } : {}),
         limit: 500,
       }),
   });
@@ -65,16 +64,7 @@ export function useKeuangan() {
       }),
   });
 
-  const [showSales, setShowSales] = useState(false);
-  const [salesPage, setSalesPage] = useState(1);
-  const [detailTrx, setDetailTrx] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  const [showPurchases, setShowPurchases] = useState(false);
-  const [purchasesPage, setPurchasesPage] = useState(1);
-  const [detailPurchase, setDetailPurchase] = useState(null);
-  const [detailPurchaseLoading, setDetailPurchaseLoading] = useState(false);
-
+  // Purchases selalu di-fetch (dulu lazy via enabled:showPurchases)
   const purchasesList = useQuery({
     queryKey: ["finance-purchases", from, to],
     queryFn: () =>
@@ -83,9 +73,48 @@ export function useKeuangan() {
         ...(to ? { to: to + "T23:59:59.999Z" } : {}),
         limit: 500,
       }),
-    enabled: showPurchases,
   });
-  const purchasesRows = purchasesList.data?.data || [];
+
+  const [detailTrx, setDetailTrx] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailPurchase, setDetailPurchase] = useState(null);
+  const [detailPurchaseLoading, setDetailPurchaseLoading] = useState(false);
+
+  // Unified feed: gabung purchases + expenses, sort by date desc, filter client-side
+  const unifiedRows = useMemo(() => {
+    const allExpenses = list.data?.data || [];
+    const allPurchases = purchasesList.data?.data || [];
+
+    const purchaseEntries = allPurchases.map((p) => ({
+      id: `purchase-${p.id}`,
+      _type: "purchase",
+      _rawId: p.id,
+      tanggal: p.created_at,
+      jenis: "pembelian_supplier",
+      deskripsi: p.supplier_name || p.no_nota_supplier || "-",
+      username: "-",
+      nominal: p.total || 0,
+    }));
+
+    const expenseEntries = allExpenses.map((e) => ({
+      id: `expense-${e.id}`,
+      _type: "expense",
+      _rawId: e.id,
+      _raw: e,
+      tanggal: e.tanggal,
+      jenis: e.jenis,
+      deskripsi: e.deskripsi,
+      username: e.username || "-",
+      nominal: e.nominal || 0,
+    }));
+
+    const merged = [...purchaseEntries, ...expenseEntries].sort(
+      (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
+    );
+
+    if (jenisFilter === "all") return merged;
+    return merged.filter((r) => r.jenis === jenisFilter);
+  }, [list.data, purchasesList.data, jenisFilter]);
 
   async function openTrxDetail(id) {
     setDetailLoading(true);
@@ -135,23 +164,24 @@ export function useKeuangan() {
   return {
     // filter
     from, setFrom, to, setTo, jenisFilter, setJenisFilter, resetFilter,
+    // tabs
+    activeTab, setActiveTab,
     // summary + expenses
     summary,
     s: summary.data?.data,
     list,
     rows: list.data?.data || [],
-    // form / delete / jenis detail
+    // form / delete
     openForm, editing, openCreate, openEdit, closeForm,
     confirmDel, setConfirmDel, del,
-    jenisDetail, setJenisDetail,
     // sales income
     salesList,
     salesRows: salesList.data?.data || [],
-    showSales, setShowSales, salesPage, setSalesPage,
     detailTrx, setDetailTrx, detailLoading, openTrxDetail,
-    // purchases
-    purchasesList, purchasesRows,
-    showPurchases, setShowPurchases, purchasesPage, setPurchasesPage,
+    // purchases + unified pengeluaran
+    purchasesList,
+    unifiedRows,
+    isUnifiedLoading: list.isLoading || purchasesList.isLoading,
     detailPurchase, setDetailPurchase, detailPurchaseLoading, openPurchaseDetail,
   };
 }

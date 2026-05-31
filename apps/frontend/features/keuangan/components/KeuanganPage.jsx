@@ -6,24 +6,27 @@ import {
   PageHeader,
   Card,
   StatCard,
-  Badge,
   Button,
   Input,
   Select,
   ConfirmDialog,
   Spinner,
+  Tabs,
 } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
-import { TrendingUp, Package, ReceiptText, Wallet } from "lucide-react";
-import { JENIS_OPTIONS, JENIS_TONE } from "../lib/constants";
+import { TrendingUp, TrendingDown, Package, Wallet } from "lucide-react";
+import { JENIS_OPTIONS } from "../lib/constants";
 import { useKeuangan } from "../hooks/useKeuangan";
 import { ExpenseFormModal } from "./ExpenseFormModal";
-import { JenisDetailModal } from "./JenisDetailModal";
-import { SalesIncomeCard } from "./SalesIncomeCard";
-import { PurchasesCard } from "./PurchasesCard";
-import { ExpensesTable } from "./ExpensesTable";
+import { SalesTable } from "./SalesTable";
+import { UnifiedExpensesTable } from "./ExpensesTable";
 import { PurchaseDetailModal } from "./PurchaseDetailModal";
 import { SaleDetailModal } from "./SaleDetailModal";
+
+const TABS = [
+  { id: "pemasukan", label: "Rincian Pemasukan" },
+  { id: "pengeluaran", label: "Daftar Pengeluaran" },
+];
 
 export default function KeuanganPage() {
   const k = useKeuangan();
@@ -59,6 +62,7 @@ export default function KeuanganPage() {
             onChange={(e) => k.setJenisFilter(e.target.value)}
           >
             <option value="all">Semua Jenis</option>
+            <option value="pembelian_supplier">Pembelian Supplier</option>
             {JENIS_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -97,9 +101,9 @@ export default function KeuanganPage() {
           <StatCard
             label="Pengeluaran Operasional"
             value={rupiah(s?.total_pengeluaran || 0)}
-            tone="warn"
+            tone="bad"
             hint={`${angka(s?.n_expenses || 0)} entri`}
-            icon={<ReceiptText size={18} />}
+            icon={<TrendingDown size={18} />}
           />
           <StatCard
             label="Pendapatan Bersih"
@@ -111,66 +115,32 @@ export default function KeuanganPage() {
         </div>
       )}
 
-      {/* Breakdown pengeluaran per jenis — clickable */}
-      {s?.per_jenis && (
-        <Card className="mb-3 shrink-0 p-3">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-            Breakdown Pengeluaran Operasional · klik kotak untuk detail
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {JENIS_OPTIONS.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => k.setJenisDetail(o.value)}
-                className="group flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm transition hover:-translate-y-0.5 hover:border-brand-400 hover:bg-brand-50 hover:shadow-sm"
-              >
-                <Badge tone={JENIS_TONE[o.value]}>{o.label}</Badge>
-                <span className="font-semibold">{rupiah(s.per_jenis[o.value] || 0)}</span>
-                <span className="ml-1 text-[10px] text-slate-400 group-hover:text-brand-600">↗</span>
-              </button>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      <SalesIncomeCard
-        omsetKotor={s?.omset_kotor}
-        salesRows={k.salesRows}
-        salesLoading={k.salesList.isLoading}
-        showSales={k.showSales}
-        onOpen={() => k.setShowSales(true)}
-        onClose={() => {
-          k.setShowSales(false);
-          k.setSalesPage(1);
-        }}
-        salesPage={k.salesPage}
-        setSalesPage={k.setSalesPage}
-        onTrxDetail={(id) => {
-          k.setShowSales(false);
-          k.openTrxDetail(id);
-        }}
-      />
-
-      <PurchasesCard
-        totalPembelian={s?.total_pembelian}
-        purchasesRows={k.purchasesRows}
-        purchasesLoading={k.purchasesList.isLoading}
-        showPurchases={k.showPurchases}
-        onOpen={() => k.setShowPurchases(true)}
-        onClose={() => {
-          k.setShowPurchases(false);
-          k.setPurchasesPage(1);
-        }}
-        purchasesPage={k.purchasesPage}
-        setPurchasesPage={k.setPurchasesPage}
-        onPurchaseDetail={(id) => {
-          k.setShowPurchases(false);
-          k.openPurchaseDetail(id);
-        }}
-      />
-
-      <ExpensesTable rows={k.rows} isLoading={k.list.isLoading} onEdit={k.openEdit} />
+      {/* Tabs + Tabel terpadu */}
+      <Card className="flex min-h-0 flex-1 flex-col p-0">
+        <Tabs
+          tabs={TABS}
+          activeTab={k.activeTab}
+          onTabChange={k.setActiveTab}
+          className="px-4 pt-1"
+        />
+        <div className="min-h-0 flex-1">
+          {k.activeTab === "pemasukan" ? (
+            <SalesTable
+              rows={k.salesRows}
+              isLoading={k.salesList.isLoading}
+              onDetail={k.openTrxDetail}
+            />
+          ) : (
+            <UnifiedExpensesTable
+              key={`${k.from}-${k.to}-${k.jenisFilter}`}
+              rows={k.unifiedRows}
+              isLoading={k.isUnifiedLoading}
+              onExpenseEdit={k.openEdit}
+              onPurchaseDetail={k.openPurchaseDetail}
+            />
+          )}
+        </div>
+      </Card>
 
       {k.openForm && (
         <ExpenseFormModal
@@ -181,13 +151,6 @@ export default function KeuanganPage() {
           onClose={k.closeForm}
         />
       )}
-
-      <JenisDetailModal
-        open={Boolean(k.jenisDetail)}
-        onClose={() => k.setJenisDetail(null)}
-        jenis={k.jenisDetail}
-        rows={k.rows}
-      />
 
       <ConfirmDialog
         open={Boolean(k.confirmDel)}

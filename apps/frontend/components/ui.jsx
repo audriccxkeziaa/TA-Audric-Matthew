@@ -275,6 +275,8 @@ export function Badge({ children, tone = "slate", dot = false }) {
     amber: "bg-amber-50 text-amber-700 ring-amber-200",
     blue: "bg-blue-50 text-blue-700 ring-blue-200",
     indigo: "bg-brand-50 text-brand-700 ring-brand-200",
+    orange: "bg-orange-50 text-orange-700 ring-orange-200",
+    cyan: "bg-cyan-50 text-cyan-700 ring-cyan-200",
   };
   const dotTones = {
     slate: "bg-slate-400",
@@ -283,6 +285,8 @@ export function Badge({ children, tone = "slate", dot = false }) {
     amber: "bg-amber-500",
     blue: "bg-blue-500",
     indigo: "bg-brand-500",
+    orange: "bg-orange-500",
+    cyan: "bg-cyan-500",
   };
   return (
     <span
@@ -476,5 +480,38 @@ export function TD({ children, className = "", ...props }) {
     <td className={`px-4 py-2.5 ${className}`} {...props}>
       {children}
     </td>
+  );
+}
+
+// ---------- Tabs ----------
+export function Tabs({ tabs, activeTab, onTabChange, className = "" }) {
+  return (
+    <div className={`flex border-b border-slate-200 ${className}`}>
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onTabChange(tab.id)}
+          className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+            activeTab === tab.id
+              ? "border-brand-600 text-brand-700"
+              : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
+          }`}
+        >
+          {tab.label}
+          {tab.count != null && (
+            <span
+              className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                activeTab === tab.id
+                  ? "bg-brand-100 text-brand-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {tab.count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
   );
 }
