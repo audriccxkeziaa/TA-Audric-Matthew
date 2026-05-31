@@ -17,6 +17,7 @@ import { Spinner } from "@/components/ui";
 const ADMIN_ONLY = [
   "/dashboard",
   "/laporan",
+  "/pengeluaran",
   "/audit-trail",
   "/users",
   "/keuangan",

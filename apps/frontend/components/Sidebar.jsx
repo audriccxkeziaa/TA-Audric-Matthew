@@ -35,6 +35,7 @@ const NAV = [
     icon: "alert",
   },
   { href: "/laporan", label: "Laporan", roles: ["admin"], icon: "chart" },
+  { href: "/pengeluaran", label: "Pengeluaran", roles: ["admin"], icon: "receipt" },
   {
     href: "/audit-trail",
     label: "Audit Trail",
@@ -53,6 +54,7 @@ function Icon({ name }) {
     alert: "M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z",
     doc: "M6 2h9l5 5v15H6zM14 2v6h6",
     chart: "M3 3v18h18M7 17V9M12 17V5M17 17v-3",
+    receipt: "M4 2h12l4 4v16a1 1 0 01-1.6.8L16 21l-2.4 1.8a1 1 0 01-1.2 0L10 21l-2.4 1.8a1 1 0 01-1.2 0L4 21V2zM8 10h8M8 14h6",
     shield: "M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6z",
     undo: "M3 10h10a5 5 0 010 10H9M3 10l4-4M3 10l4 4",
     users: "M9 11a4 4 0 100-8 4 4 0 000 8zM3 21v-1a6 6 0 0112 0v1M16 11a4 4 0 000-8",

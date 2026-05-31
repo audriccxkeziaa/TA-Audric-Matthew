@@ -1,37 +1,39 @@
 "use client";
-// /laporan — Laporan Terpadu (admin). 2 tab: Keuangan (split) + Transaksi Penjualan.
+// /laporan — Laporan Terpadu (admin). 2 tab: Keuangan (split) + Transaksi.
 
 import {
-  PageShell,
-  PageHeader,
-  Card,
-  StatCard,
-  Badge,
-  Button,
-  Input,
-  Select,
-  Modal,
-  Tabs,
-  Spinner,
-  EmptyState,
+  PageShell, PageHeader, Card, StatCard, Badge,
+  Button, Input, Select, Modal, Tabs, Spinner, EmptyState,
 } from "@/components/ui";
 import { rupiah, angka, tanggal } from "@/lib/format";
-import { TrendingUp, TrendingDown, Package, Wallet, Printer } from "lucide-react";
+import {
+  TrendingUp, TrendingDown, Package, Wallet, Printer, ReceiptText,
+} from "lucide-react";
 import { useLaporanTerpadu } from "../hooks/useLaporanTerpadu";
 import { LaporanTable } from "./LaporanTable";
 import { LaporanDetailModal } from "./LaporanDetailModal";
 import { LaporanSummary } from "./LaporanSummary";
 import { PurchaseDetailModal } from "@/features/keuangan/components/PurchaseDetailModal";
 import { PrintPreviewModal } from "./PrintPreviewModal";
-import { JENIS_LABELS, JENIS_BADGE_TONE } from "@/features/keuangan/lib/constants";
+import { JENIS_LABELS, JENIS_BADGE_TONE, JENIS_OPTIONS } from "@/features/keuangan/lib/constants";
 
 const TABS = [
   { id: "keuangan", label: "Ringkasan & Keuangan" },
   { id: "transaksi", label: "Riwayat Transaksi Penjualan" },
 ];
 
+const PERIOD_PRESETS = [
+  { id: "bulan-ini",  label: "Bulan Ini" },
+  { id: "bulan-lalu", label: "Bulan Lalu" },
+  { id: "3-bulan",    label: "3 Bulan" },
+  { id: "tahun-ini",  label: "Tahun Ini" },
+  { id: "custom",     label: "Custom" },
+];
+
 export default function LaporanPage() {
   const l = useLaporanTerpadu();
+  const fs = l.fs;
+  const totalPengeluaran = (fs?.total_pembelian || 0) + (fs?.total_pengeluaran || 0);
 
   return (
     <PageShell>
@@ -40,120 +42,148 @@ export default function LaporanPage() {
         description="Ringkasan keuangan dan riwayat transaksi penjualan."
         actions={
           <div className="flex gap-2 no-print">
-            <Button variant="secondary" onClick={l.exportCsv}>
-              Export CSV
-            </Button>
+            <Button variant="secondary" onClick={l.exportCsv}>Export CSV</Button>
             <Button onClick={() => l.setPrintOpen(true)}>
-              <Printer size={16} />
-              Print Report
+              <Printer size={16} /> Cetak Laporan
             </Button>
           </div>
         }
       />
 
-      {/* Filter tanggal bersama */}
+      {/* ── Filter Periode ── */}
       <Card className="mb-3 shrink-0 p-3 no-print">
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <Input
-            label="Dari Tanggal"
-            type="date"
-            value={l.from}
-            onChange={(e) => l.setFrom(e.target.value)}
-          />
-          <Input
-            label="Sampai Tanggal"
-            type="date"
-            value={l.to}
-            onChange={(e) => l.setTo(e.target.value)}
-          />
-          <div />
-          <div className="flex items-end">
-            <Button variant="secondary" onClick={l.resetFilter} className="w-full">
-              Reset Filter
-            </Button>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-500">Periode:</span>
+            {PERIOD_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => l.applyPreset(p.id)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  l.periodPreset === p.id
+                    ? "bg-brand-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+            <Button size="sm" variant="secondary" onClick={l.resetFilter}>Reset</Button>
           </div>
+
+          {l.periodPreset === "custom" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Dari Tanggal"
+                type="date"
+                value={l.from}
+                onChange={(e) => l.setFrom(e.target.value)}
+              />
+              <Input
+                label="Sampai Tanggal"
+                type="date"
+                value={l.to}
+                onChange={(e) => l.setTo(e.target.value)}
+              />
+            </div>
+          )}
         </div>
       </Card>
 
-      {/* Card utama: Tabs + konten */}
+      {/* ── Card utama: Tabs + konten ── */}
       <Card className="flex min-h-0 flex-1 flex-col p-0">
-        <Tabs
-          tabs={TABS}
-          activeTab={l.activeTab}
-          onTabChange={l.setActiveTab}
-          className="px-4 pt-1 no-print"
-        />
+        <Tabs tabs={TABS} activeTab={l.activeTab} onTabChange={l.setActiveTab} className="px-4 pt-1 no-print" />
 
-        {/* Wadah konten — setiap tab mengatur overflow sendiri */}
         <div className="flex min-h-0 flex-1 flex-col">
 
-          {/* ════════════════════════════════════════════
+          {/* ════════════════════════════════════════
               Tab 1 — Ringkasan & Keuangan
-              Layout: summary cards (atas) + split kiri/kanan
-          ════════════════════════════════════════════ */}
+          ════════════════════════════════════════ */}
           {l.activeTab === "keuangan" && (
             <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
 
-              {/* Summary cards */}
+              {/* 5 Summary cards */}
               {l.financeSummary.isLoading ? (
-                <div className="shrink-0 p-4">
-                  <Spinner label="Menghitung saldo..." />
-                </div>
+                <div className="shrink-0 p-4"><Spinner label="Menghitung saldo..." /></div>
               ) : (
-                <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+                <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                   <StatCard
                     label="Pendapatan Kotor"
-                    value={rupiah(l.fs?.omset_kotor || 0)}
+                    value={rupiah(fs?.omset_kotor || 0)}
                     tone="good"
-                    hint={`${angka(l.fs?.n_sales || 0)} transaksi`}
+                    hint={`${angka(fs?.n_sales || 0)} transaksi`}
                     icon={<TrendingUp size={18} />}
                   />
                   <StatCard
                     label="Pembelian Supplier"
-                    value={rupiah(l.fs?.total_pembelian || 0)}
+                    value={rupiah(fs?.total_pembelian || 0)}
                     tone="warn"
-                    hint={`${angka(l.fs?.n_purchases || 0)} nota`}
+                    hint={`${angka(fs?.n_purchases || 0)} nota`}
                     icon={<Package size={18} />}
                   />
                   <StatCard
                     label="Pengeluaran Operasional"
-                    value={rupiah(l.fs?.total_pengeluaran || 0)}
+                    value={rupiah(fs?.total_pengeluaran || 0)}
                     tone="bad"
-                    hint={`${angka(l.fs?.n_expenses || 0)} entri`}
+                    hint={`${angka(fs?.n_expenses || 0)} entri`}
                     icon={<TrendingDown size={18} />}
                   />
                   <StatCard
+                    label="Total Pengeluaran"
+                    value={rupiah(totalPengeluaran)}
+                    tone="bad"
+                    hint="Supplier + Operasional"
+                    icon={<ReceiptText size={18} />}
+                  />
+                  <StatCard
                     label="Pendapatan Bersih"
-                    value={rupiah(l.fs?.saldo_bersih || 0)}
-                    tone={l.fs?.saldo_bersih >= 0 ? "good" : "bad"}
+                    value={rupiah(fs?.saldo_bersih || 0)}
+                    tone={fs?.saldo_bersih >= 0 ? "good" : "bad"}
+                    hint="Pendapatan Kotor − Total Pengeluaran"
                     icon={<Wallet size={18} />}
                     accent
                   />
                 </div>
               )}
 
-              {/* Split: Rincian Pemasukan (kiri) | Daftar Pengeluaran (kanan) */}
+              {/* Split panels */}
               <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
 
                 {/* ── Rincian Pemasukan ── */}
                 <Card className="flex min-h-0 flex-1 flex-col p-0">
-                  <div className="shrink-0 border-b border-slate-100 px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Rincian Pemasukan
-                      </h3>
-                      <span className="text-sm font-bold text-emerald-600">
-                        {rupiah(l.salesSummary?.total_revenue || 0)}
-                      </span>
+                  <div className="shrink-0 border-b border-slate-100 px-4 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Rincian Pemasukan
+                        </h3>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {l.filteredSales.length} transaksi
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-emerald-600">
+                          {rupiah(l.salesSummary?.total_revenue || 0)}
+                        </span>
+                        {/* Filter kasir inline */}
+                        <select
+                          value={l.kasirFilter}
+                          onChange={(e) => l.setKasirFilter(e.target.value)}
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600 focus:border-brand-400 focus:outline-none"
+                        >
+                          <option value="">Semua Kasir</option>
+                          {l.kasirOptions.map((k) => (
+                            <option key={k} value={k}>{k}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {l.salesGrouped.length} transaksi
-                    </p>
                   </div>
                   <div className="min-h-0 flex-1 overflow-auto thin-scroll">
                     {l.salesQuery.isLoading ? (
                       <div className="p-4"><Spinner label="Memuat..." /></div>
-                    ) : l.salesGrouped.length === 0 ? (
+                    ) : l.filteredSales.length === 0 ? (
                       <EmptyState title="Belum ada transaksi penjualan" />
                     ) : (
                       <table className="w-full text-sm">
@@ -166,16 +196,14 @@ export default function LaporanPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {l.salesGrouped.map((g) => (
+                          {l.filteredSales.map((g) => (
                             <tr
                               key={g.sale_id}
                               onClick={() => l.setDetailData(g)}
                               className="cursor-pointer transition-colors hover:bg-brand-50/40"
                             >
                               <td className="px-3 py-2 text-xs">{tanggal(g.created_at)}</td>
-                              <td className="px-3 py-2 font-mono text-xs text-brand-700">
-                                {g.kode_transaksi}
-                              </td>
+                              <td className="px-3 py-2 font-mono text-xs text-brand-700">{g.kode_transaksi}</td>
                               <td className="px-3 py-2 text-xs text-slate-500">{g.kasir}</td>
                               <td className="px-3 py-2 text-right font-semibold text-emerald-600">
                                 {rupiah(g.total)}
@@ -190,18 +218,34 @@ export default function LaporanPage() {
 
                 {/* ── Daftar Pengeluaran ── */}
                 <Card className="flex min-h-0 flex-1 flex-col p-0">
-                  <div className="shrink-0 border-b border-slate-100 px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Daftar Pengeluaran
-                      </h3>
-                      <span className="text-sm font-bold text-red-600">
-                        − {rupiah((l.fs?.total_pembelian || 0) + (l.fs?.total_pengeluaran || 0))}
-                      </span>
+                  <div className="shrink-0 border-b border-slate-100 px-4 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Daftar Pengeluaran
+                        </h3>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {l.unifiedRows.length} entri
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-red-600">
+                          − {rupiah(totalPengeluaran)}
+                        </span>
+                        {/* Filter jenis pengeluaran inline */}
+                        <select
+                          value={l.jenisFilter}
+                          onChange={(e) => l.setJenisFilter(e.target.value)}
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600 focus:border-brand-400 focus:outline-none"
+                        >
+                          <option value="all">Semua Jenis</option>
+                          <option value="pembelian_supplier">Pembelian Supplier</option>
+                          {JENIS_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {l.unifiedRows.length} entri
-                    </p>
                   </div>
                   <div className="min-h-0 flex-1 overflow-auto thin-scroll">
                     {l.isUnifiedLoading ? (
@@ -235,7 +279,7 @@ export default function LaporanPage() {
                                   {JENIS_LABELS[r.jenis] || r.jenis}
                                 </Badge>
                               </td>
-                              <td className="max-w-[140px] truncate px-3 py-2 text-xs text-slate-600">
+                              <td className="max-w-[160px] truncate px-3 py-2 text-xs text-slate-600">
                                 {r.deskripsi}
                               </td>
                               <td className="px-3 py-2 text-right font-semibold text-red-600">
@@ -252,9 +296,9 @@ export default function LaporanPage() {
             </div>
           )}
 
-          {/* ════════════════════════════════════════════
+          {/* ════════════════════════════════════════
               Tab 2 — Riwayat Transaksi Penjualan
-          ════════════════════════════════════════════ */}
+          ════════════════════════════════════════ */}
           {l.activeTab === "transaksi" && (
             <div className="min-h-0 flex-1 overflow-auto thin-scroll p-4">
               <LaporanSummary isSales={true} summary={l.salesSummary} isKasir={l.isKasir} />
@@ -273,9 +317,7 @@ export default function LaporanPage() {
                       ))}
                     </Select>
                   </div>
-                  <Button variant="secondary" onClick={l.exportCsv}>
-                    Export CSV
-                  </Button>
+                  <Button variant="secondary" onClick={l.exportCsv}>Export CSV</Button>
                 </div>
               </Card>
 
@@ -297,12 +339,10 @@ export default function LaporanPage() {
                     {l.kasirFilter && ` · kasir: ${l.kasirFilter}`}
                   </span>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="secondary" disabled={l.salesPage <= 1} onClick={() => l.setSalesPage((p) => p - 1)}>
-                      ← Prev
-                    </Button>
-                    <Button size="sm" variant="secondary" disabled={l.salesPage >= l.salesTotalPages} onClick={() => l.setSalesPage((p) => p + 1)}>
-                      Next →
-                    </Button>
+                    <Button size="sm" variant="secondary" disabled={l.salesPage <= 1}
+                      onClick={() => l.setSalesPage((p) => p - 1)}>← Prev</Button>
+                    <Button size="sm" variant="secondary" disabled={l.salesPage >= l.salesTotalPages}
+                      onClick={() => l.setSalesPage((p) => p + 1)}>Next →</Button>
                   </div>
                 </div>
               )}
@@ -325,11 +365,7 @@ export default function LaporanPage() {
         salesGrouped={l.salesGrouped}
       />
 
-      <LaporanDetailModal
-        detailData={l.detailData}
-        isSales={true}
-        onClose={() => l.setDetailData(null)}
-      />
+      <LaporanDetailModal detailData={l.detailData} isSales={true} onClose={() => l.setDetailData(null)} />
 
       <PurchaseDetailModal
         detailPurchase={l.detailPurchase}
@@ -337,7 +373,6 @@ export default function LaporanPage() {
         onClose={() => l.setDetailPurchase(null)}
       />
 
-      {/* Detail pengeluaran operasional (read-only) */}
       {l.viewExpense && (
         <Modal
           open={true}
@@ -369,7 +404,7 @@ export default function LaporanPage() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => l.setViewExpense(null)}>Close</Button>
+              <Button variant="secondary" onClick={() => l.setViewExpense(null)}>Tutup</Button>
             </div>
           </div>
         </Modal>

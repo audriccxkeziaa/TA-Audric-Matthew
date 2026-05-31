@@ -1,15 +1,9 @@
 "use client";
-// features/laporan/hooks/useLaporanTerpadu.js — hook master laporan terpadu:
-// filter tanggal bersama + data keuangan & transaksi penjualan.
+// features/laporan/hooks/useLaporanTerpadu.js
 
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  reportsApi,
-  usersApi,
-  expensesApi,
-  purchasesApi,
-} from "@/lib/api";
+import { reportsApi, usersApi, expensesApi, purchasesApi } from "@/lib/api";
 import { downloadFile } from "@/lib/api-client";
 import { useToast } from "@/hooks/useToast";
 import { isoDate } from "@/lib/format";
@@ -18,16 +12,51 @@ import { useAuth } from "@/hooks/useAuth";
 
 const SALES_PAGE = 10;
 
+// ── Hitung range tanggal berdasarkan preset ──
+export function getPeriodRange(preset) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  if (preset === "bulan-ini")
+    return {
+      from: new Date(y, m, 1).toISOString().slice(0, 10),
+      to: new Date(y, m + 1, 0).toISOString().slice(0, 10),
+    };
+  if (preset === "bulan-lalu")
+    return {
+      from: new Date(y, m - 1, 1).toISOString().slice(0, 10),
+      to: new Date(y, m, 0).toISOString().slice(0, 10),
+    };
+  if (preset === "3-bulan")
+    return {
+      from: new Date(y, m - 2, 1).toISOString().slice(0, 10),
+      to: new Date(y, m + 1, 0).toISOString().slice(0, 10),
+    };
+  if (preset === "tahun-ini")
+    return { from: `${y}-01-01`, to: `${y}-12-31` };
+  return null; // custom — jangan auto-set
+}
+
 export function useLaporanTerpadu() {
   const toast = useToast();
   const { user } = useAuth();
   const isKasir = user?.role === "kasir";
 
-  // ── Filter tanggal bersama ──
-  const [from, setFrom] = useState(isoDate(-30));
-  const [to, setTo] = useState(isoDate(0));
+  // ── Filter periode (preset + custom range) ──
+  const [periodPreset, setPeriodPreset] = useState("bulan-ini");
+  const [from, setFrom] = useState(() => getPeriodRange("bulan-ini").from);
+  const [to, setTo] = useState(() => getPeriodRange("bulan-ini").to);
+  const [jenisFilter, setJenisFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("keuangan");
   const [printOpen, setPrintOpen] = useState(false);
+
+  function applyPreset(preset) {
+    setPeriodPreset(preset);
+    if (preset !== "custom") {
+      const range = getPeriodRange(preset);
+      if (range) { setFrom(range.from); setTo(range.to); }
+    }
+  }
 
   // ══════════════════════════════════════════
   // Tab 1 — Ringkasan & Keuangan
@@ -44,11 +73,7 @@ export function useLaporanTerpadu() {
   const expensesList = useQuery({
     queryKey: ["expenses", from, to],
     queryFn: () =>
-      expensesApi.list({
-        ...(from ? { from } : {}),
-        ...(to ? { to } : {}),
-        limit: 500,
-      }),
+      expensesApi.list({ ...(from ? { from } : {}), ...(to ? { to } : {}), limit: 500 }),
   });
 
   const purchasesList = useQuery({
@@ -61,7 +86,7 @@ export function useLaporanTerpadu() {
       }),
   });
 
-  // Unified feed: pembelian supplier + pengeluaran operasional
+  // Unified feed dengan jenisFilter client-side
   const unifiedRows = useMemo(() => {
     const allExpenses = expensesList.data?.data || [];
     const allPurchases = purchasesList.data?.data || [];
@@ -89,12 +114,14 @@ export function useLaporanTerpadu() {
       nominal: e.nominal || 0,
     }));
 
-    return [...purchaseEntries, ...expenseEntries].sort(
+    const merged = [...purchaseEntries, ...expenseEntries].sort(
       (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
     );
-  }, [expensesList.data, purchasesList.data]);
 
-  // Detail modals untuk tab keuangan
+    if (jenisFilter === "all") return merged;
+    return merged.filter((r) => r.jenis === jenisFilter);
+  }, [expensesList.data, purchasesList.data, jenisFilter]);
+
   const [viewExpense, setViewExpense] = useState(null);
   const [detailPurchase, setDetailPurchase] = useState(null);
   const [detailPurchaseLoading, setDetailPurchaseLoading] = useState(false);
@@ -154,9 +181,7 @@ export function useLaporanTerpadu() {
     salesPage * SALES_PAGE
   );
 
-  useEffect(() => {
-    setSalesPage(1);
-  }, [activeTab, from, to, kasirFilter]);
+  useEffect(() => { setSalesPage(1); }, [activeTab, from, to, kasirFilter]);
 
   async function exportCsv() {
     try {
@@ -171,28 +196,31 @@ export function useLaporanTerpadu() {
   }
 
   function resetFilter() {
-    setFrom(isoDate(-30));
-    setTo(isoDate(0));
+    applyPreset("bulan-ini");
     setKasirFilter("");
+    setJenisFilter("all");
     setSalesPage(1);
   }
 
   return {
     isKasir,
-    // filter
-    from, setFrom, to, setTo, resetFilter,
+    // periode
+    periodPreset, applyPreset,
+    from, setFrom, to, setTo,
+    jenisFilter, setJenisFilter,
+    resetFilter,
     // tabs
     activeTab, setActiveTab,
-    // print modal
+    // print
     printOpen, setPrintOpen,
-    // tab 1 - keuangan
+    // tab 1
     financeSummary,
     fs: financeSummary.data?.data,
     unifiedRows,
     isUnifiedLoading: expensesList.isLoading || purchasesList.isLoading,
     viewExpense, setViewExpense,
     detailPurchase, setDetailPurchase, detailPurchaseLoading, openPurchaseDetail,
-    // tab 2 - transaksi
+    // tab 2
     salesQuery,
     salesSummary,
     salesGrouped,
