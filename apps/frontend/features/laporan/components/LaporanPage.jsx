@@ -182,7 +182,7 @@ export default function LaporanPage() {
               label="Total Pengeluaran"
               value={rupiah(totalPengeluaran)}
               tone="bad"
-              hint="Supplier + Operasional"
+              hint="Pembelian Supplier + Pengeluaran Operasional"
               icon={<ReceiptText size={18} />}
             />
             <StatCard
