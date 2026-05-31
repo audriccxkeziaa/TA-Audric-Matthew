@@ -4,14 +4,12 @@ const stockLogRepository = require("../repositories/stockLogRepository");
 const ruleEngine = require("./ruleEngine");
 const { nextDocumentNumber } = require("../utils/documentCounter");
 
-function validatePayload(items, productsFromDb = []) { // Tambahkan parameter kedua, yaitu products dari Supabase
+// Pilar 2 — hanya validasi struktur minimal: product_id + qty.
+// Harga, diskon, subtotal, grand_total TIDAK diterima dari client.
+function validatePayload(items) {
   if (!Array.isArray(items) || items.length === 0) {
     return "Keranjang kosong: minimal 1 item";
   }
-
-  // Buat Map untuk memudahkan pencarian harga asli
-  const productMap = new Map(productsFromDb.map((p) => [p.id, p]));
-
   for (const it of items) {
     if (!it.product_id || typeof it.product_id !== "string") {
       return "product_id wajib string UUID";
@@ -19,38 +17,45 @@ function validatePayload(items, productsFromDb = []) { // Tambahkan parameter ke
     if (!Number.isInteger(it.qty) || it.qty <= 0) {
       return "qty wajib bilangan bulat > 0";
     }
-    if (typeof it.harga_satuan !== "number" || it.harga_satuan <= 0) {
-      return "harga_satuan wajib angka > 0";
-    }
-
-    // Validasi Harga
-    const dbProduct = productMap.get(it.product_id);
-    if (dbProduct) {
-       const hargaAsli = Number(dbProduct.harga_jual);
-       const hargaInput = Number(it.harga_satuan);
-       
-       if (hargaAsli !== hargaInput) {
-         return `Manipulasi Harga! ${dbProduct.nama_barang} aslinya ${hargaAsli}, anda mengirim ${hargaInput}`;
-       }
-    }
-    // ----------------------------------------
   }
   return null;
 }
 
-async function createSale({ user, items }) {
-  const ids = [...new Set(items.map((i) => i.product_id))];
-  const products = await productRepository.findByIds(ids);
+// Field harga yang dilarang masuk dari request — jika terdeteksi, catat warning.
+const BLACKLISTED_PRICE_FIELDS = [
+  "harga_satuan", "harga_jual", "harga_beli",
+  "diskon_persen", "diskon_rate",
+  "subtotal", "grand_total", "total",
+];
 
-  const payloadError = validatePayload(items, products);
+async function createSale({ user, items }) {
+  // Pilar 2 — Strip & log: buang semua field harga/diskon dari request.
+  // Server adalah satu-satunya authority untuk kalkulasi harga.
+  const hasTamperedFields = Array.isArray(items) &&
+    items.some((it) => BLACKLISTED_PRICE_FIELDS.some((f) => it[f] !== undefined));
+  if (hasTamperedFields) {
+    console.warn(
+      `[POS-SECURITY] Parameter harga terdeteksi di request user=${user.id} (${user.username}) — diabaikan.`
+    );
+  }
+
+  // Hanya ambil product_id + qty — buang sisanya secara eksplisit.
+  const safeItems = Array.isArray(items)
+    ? items.map(({ product_id, qty }) => ({ product_id, qty }))
+    : [];
+
+  const payloadError = validatePayload(safeItems);
   if (payloadError) {
     const e = new Error(payloadError);
     e.status = 400;
     throw e;
   }
 
-  // 3. R1 LAYER 1 — pre-check stok (TIDAK PERLU const ids lagi di sini)
-  const failures = ruleEngine.checkR1StockAvailability({ items, products });
+  const ids = [...new Set(safeItems.map((i) => i.product_id))];
+  const products = await productRepository.findByIds(ids);
+
+  // R1 LAYER 1 — pre-check stok
+  const failures = ruleEngine.checkR1StockAvailability({ items: safeItems, products });
 
   if (failures.length > 0) {
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -69,7 +74,7 @@ async function createSale({ user, items }) {
         rule_action: "REJECTED",
         reason_detail: f.reason,
         context_payload: {
-          attempted_items: items,
+          attempted_items: safeItems,
           failure: f,
         },
       });
@@ -85,18 +90,15 @@ async function createSale({ user, items }) {
   const kodeTransaksi = await nextDocumentNumber("sale");
   const productMap = new Map(products.map((p) => [p.id, p]));
 
-  // Harga diambil dari DB, bukan dari request — mencegah manipulasi harga
-  const secureItems = items.map((it) => {
+  // Pilar 2 — Kalkulasi mandiri di server: harga & diskon 100% dari DB.
+  // Tidak ada nilai dari request yang masuk ke sini.
+  const secureItems = safeItems.map((it) => {
     const dbProduct = productMap.get(it.product_id);
-    const diskonNum = Number(it.diskon_persen || 0);
-    const diskon = Number.isFinite(diskonNum)
-      ? Math.max(0, Math.min(100, diskonNum))
-      : 0;
     return {
       product_id: it.product_id,
       qty: it.qty,
-      harga_satuan: dbProduct.harga_jual,
-      diskon_persen: diskon,
+      harga_satuan: Number(dbProduct.harga_jual), // authoritative dari DB
+      diskon_persen: 0,                           // tidak ada diskon dari frontend
     };
   });
 
@@ -118,7 +120,7 @@ async function createSale({ user, items }) {
         rule_triggered: "R1",
         rule_action: "REJECTED",
         reason_detail: `Race condition R1 di trigger DB: ${mapped.message}`,
-        context_payload: { kode_transaksi: kodeTransaksi, items },
+        context_payload: { kode_transaksi: kodeTransaksi, items: safeItems },
       });
     }
     if (mapped.rule === "R3") {
@@ -129,7 +131,7 @@ async function createSale({ user, items }) {
         rule_triggered: "R3",
         rule_action: "TRIGGERED",
         reason_detail: mapped.message,
-        context_payload: { kode_transaksi: kodeTransaksi, items },
+        context_payload: { kode_transaksi: kodeTransaksi, items: safeItems },
       });
     }
 

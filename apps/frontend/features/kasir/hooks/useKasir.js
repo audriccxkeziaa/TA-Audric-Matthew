@@ -195,11 +195,10 @@ export function useKasir() {
   const sale = useMutation({
     mutationFn: () =>
       salesApi.create({
+        // Kirim hanya product_id + qty — harga dihitung server-side (anti-tampering).
         items: cart.map((x) => ({
           product_id: x.id,
           qty: x.qty,
-          harga_satuan: x.harga_jual,
-          diskon_persen: x.diskon_persen || 0,
         })),
       }),
     onSuccess: (res) => {
