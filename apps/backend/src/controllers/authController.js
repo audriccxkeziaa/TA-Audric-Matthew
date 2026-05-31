@@ -309,21 +309,41 @@ async function deleteUser(req, res) {
   }
 
   try {
-    const { count, error: countErr } = await supabaseAdmin
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", id);
+    // Check all tables that reference users via user_id
+    const checks = await Promise.all([
+      supabaseAdmin.from("sales").select("id", { count: "exact", head: true }).eq("user_id", id),
+      supabaseAdmin.from("purchases").select("id", { count: "exact", head: true }).eq("user_id", id),
+      supabaseAdmin.from("expenses").select("id", { count: "exact", head: true }).eq("user_id", id),
+      supabaseAdmin.from("stock_adjustments").select("id", { count: "exact", head: true }).eq("user_id", id),
+    ]);
 
-    if (countErr) throw countErr;
+    for (const { error: checkErr } of checks) {
+      if (checkErr) throw checkErr;
+    }
 
-    if (count > 0) {
+    const [salesRes, purchasesRes, expensesRes, adjustmentsRes] = checks;
+    const totalSales = salesRes.count ?? 0;
+    const totalPurchases = purchasesRes.count ?? 0;
+    const totalExpenses = expensesRes.count ?? 0;
+    const totalAdjustments = adjustmentsRes.count ?? 0;
+    const total = totalSales + totalPurchases + totalExpenses + totalAdjustments;
+
+    if (total > 0) {
       return res.status(409).json({
-        error: `User tidak dapat dihapus karena memiliki ${count} riwayat transaksi. Gunakan Deactivate sebagai gantinya.`,
+        error: `User tidak dapat dihapus karena memiliki riwayat data (transaksi: ${totalSales}, pembelian: ${totalPurchases}, pengeluaran: ${totalExpenses}, penyesuaian: ${totalAdjustments}). Gunakan Deactivate sebagai gantinya.`,
       });
     }
 
     const { error } = await supabaseAdmin.from("users").delete().eq("id", id);
-    if (error) throw error;
+    if (error) {
+      // FK violation — data exists in a related table we didn't check
+      if (error.code === "23503") {
+        return res.status(409).json({
+          error: "User tidak dapat dihapus karena memiliki data terkait. Gunakan Deactivate sebagai gantinya.",
+        });
+      }
+      throw error;
+    }
 
     await supabaseAdmin.auth.admin.deleteUser(id);
 
