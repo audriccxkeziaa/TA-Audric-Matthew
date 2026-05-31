@@ -47,15 +47,20 @@ export function useDashboard() {
     return map;
   }, [expense.data]);
 
-  // 30 hari terakhir — gabungkan pendapatan & pengeluaran per hari
+  // 30 hari terakhir — gabungkan pendapatan, pengeluaran, pendapatan_bersih, n_tx per hari
   const combinedData = useMemo(
     () =>
-      trendRaw.slice(-30).map((d) => ({
-        date: d.date,
-        label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
-        pendapatan: d.total_revenue,
-        pengeluaran: expenseByDate.get(d.date) || 0,
-      })),
+      trendRaw.slice(-30).map((d) => {
+        const exp = expenseByDate.get(d.date) || 0;
+        return {
+          date: d.date,
+          label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
+          pendapatan: d.total_revenue,
+          pengeluaran: exp,
+          pendapatan_bersih: Math.max(0, d.total_revenue - exp),
+          n_tx: d.tx_count || 0,
+        };
+      }),
     [trendRaw, expenseByDate]
   );
 

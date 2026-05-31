@@ -1,11 +1,10 @@
 "use client";
-// Dua grafik dashboard: Pendapatan vs Pengeluaran (area) & top 10 produk (bar).
+// Dua grafik dashboard: Tren Pendapatan & Pengeluaran (ComposedChart) & top 10 produk (custom bars).
 
 import {
   ResponsiveContainer,
-  AreaChart,
+  ComposedChart,
   Area,
-  BarChart,
   Bar,
   XAxis,
   YAxis,
@@ -16,29 +15,32 @@ import {
 import { rupiah } from "@/lib/format";
 import { Card, Spinner, EmptyState } from "@/components/ui";
 
-// Format angka singkat untuk sumbu Y
+// Format angka singkat untuk sumbu Y kiri (rupiah)
 function fmtAxis(v) {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(0)}rb`;
   return String(v);
 }
 
-// Tooltip kustom dengan layout rapi
-function RevenueExpenseTooltip({ active, payload, label }) {
+// Tooltip kustom untuk ComposedChart (3 series + transaksi)
+function TrenTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
+  const labelMap = {
+    pendapatan: "Omzet",
+    pendapatan_bersih: "Pendapatan Bersih",
+    n_tx: "Transaksi",
+  };
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl text-xs">
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl text-xs min-w-[190px]">
       <p className="mb-2 font-semibold text-slate-600">{label}</p>
       {payload.map((p) => (
         <div key={p.dataKey} className="flex items-center justify-between gap-6 py-0.5">
           <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
-            <span className="text-slate-500">
-              {p.dataKey === "pendapatan" ? "Pendapatan" : "Pengeluaran"}
-            </span>
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+            <span className="text-slate-500">{labelMap[p.dataKey] ?? p.name}</span>
           </div>
           <span className="font-semibold tabular-nums" style={{ color: p.color }}>
-            {rupiah(p.value)}
+            {p.dataKey === "n_tx" ? `${p.value} trx` : rupiah(p.value)}
           </span>
         </div>
       ))}
@@ -46,15 +48,69 @@ function RevenueExpenseTooltip({ active, payload, label }) {
   );
 }
 
+// ── Warna gradient per ranking (1–10) ──
+const RANK_GRADIENTS = [
+  ["#f59e0b", "#f97316"], // 1 amber→orange
+  ["#10b981", "#059669"], // 2 emerald
+  ["#6366f1", "#4f46e5"], // 3 indigo
+  ["#8b5cf6", "#7c3aed"], // 4 violet
+  ["#f43f5e", "#e11d48"], // 5 rose
+  ["#06b6d4", "#0891b2"], // 6 cyan
+  ["#84cc16", "#65a30d"], // 7 lime
+  ["#ec4899", "#db2777"], // 8 pink
+  ["#14b8a6", "#0d9488"], // 9 teal
+  ["#fb923c", "#ea580c"], // 10 orange-dark
+];
+
+// Baris progress-bar satu produk
+function ProductBar({ rank, nama, nama_barang, total_qty, maxQty }) {
+  const colors = RANK_GRADIENTS[(rank - 1) % RANK_GRADIENTS.length];
+  const pct = maxQty > 0 ? (total_qty / maxQty) * 100 : 0;
+
+  return (
+    <div
+      className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-slate-50 cursor-default"
+      title={nama_barang}
+    >
+      <span
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
+        style={{ background: `linear-gradient(135deg, ${colors[0]}, ${colors[1]})` }}
+      >
+        {rank}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <span className="truncate text-xs font-medium text-slate-700">{nama}</span>
+          <span className="shrink-0 text-xs font-bold tabular-nums" style={{ color: colors[0] }}>
+            {total_qty}
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full transition-all duration-700 ease-out"
+            style={{
+              width: `${pct}%`,
+              background: `linear-gradient(90deg, ${colors[0]}, ${colors[1]})`,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardCharts({ combinedData, isLoadingCombined, top, topData }) {
   const hasData = combinedData.some((d) => d.pendapatan > 0 || d.pengeluaran > 0);
+  const maxQty = topData[0]?.total_qty || 1;
 
   return (
     <div className="mt-3 grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
-      {/* ── Pendapatan vs Pengeluaran ── */}
+
+      {/* ── Tren Pendapatan & Pengeluaran ── */}
       <Card className="flex min-h-0 flex-col p-4">
         <div className="mb-3 shrink-0 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Pendapatan vs Pengeluaran</h2>
+          <h2 className="font-semibold text-slate-800">Tren Pendapatan &amp; Pengeluaran</h2>
           <span className="text-xs text-slate-400">30 hari terakhir</span>
         </div>
 
@@ -65,15 +121,15 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
             <EmptyState title="Belum ada data" />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={combinedData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <ComposedChart data={combinedData} margin={{ top: 8, right: 36, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="gradPendapatan" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                  <linearGradient id="gradOmzet" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
                   </linearGradient>
-                  <linearGradient id="gradPengeluaran" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#f43f5e" stopOpacity={0} />
+                  <linearGradient id="gradBersih" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
 
@@ -86,7 +142,10 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                   axisLine={false}
                   interval={4}
                 />
+
+                {/* Sumbu kiri: rupiah */}
                 <YAxis
+                  yAxisId="rp"
                   fontSize={10}
                   tick={{ fill: "#94a3b8" }}
                   tickLine={false}
@@ -94,36 +153,64 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                   tickFormatter={fmtAxis}
                   width={48}
                 />
-                <Tooltip content={<RevenueExpenseTooltip />} />
+                {/* Sumbu kanan: jumlah transaksi */}
+                <YAxis
+                  yAxisId="tx"
+                  orientation="right"
+                  fontSize={10}
+                  tick={{ fill: "#94a3b8" }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                  width={28}
+                />
+
+                <Tooltip content={<TrenTooltip />} />
                 <Legend
                   iconType="circle"
                   iconSize={8}
-                  formatter={(val) => (
-                    <span className="text-xs text-slate-600">
-                      {val === "pendapatan" ? "Pendapatan" : "Pengeluaran"}
-                    </span>
+                  formatter={(val, entry) => (
+                    <span className="text-xs text-slate-600">{entry.name}</span>
                   )}
                 />
+
+                {/* Bar transaksi (layer bawah) */}
+                <Bar
+                  yAxisId="tx"
+                  dataKey="n_tx"
+                  name="Total Transaksi"
+                  fill="#fb923c"
+                  fillOpacity={0.55}
+                  radius={[3, 3, 0, 0]}
+                  barSize={8}
+                />
+
+                {/* Area omzet */}
                 <Area
+                  yAxisId="rp"
                   type="monotone"
                   dataKey="pendapatan"
-                  stroke="#10b981"
+                  name="Omzet"
+                  stroke="#6366f1"
                   strokeWidth={2}
-                  fill="url(#gradPendapatan)"
+                  fill="url(#gradOmzet)"
                   dot={false}
                   activeDot={{ r: 4, strokeWidth: 0 }}
                 />
+
+                {/* Area pendapatan bersih */}
                 <Area
+                  yAxisId="rp"
                   type="monotone"
-                  dataKey="pengeluaran"
-                  stroke="#f43f5e"
-                  strokeWidth={2}
-                  fill="url(#gradPengeluaran)"
+                  dataKey="pendapatan_bersih"
+                  name="Pendapatan Bersih"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  fill="url(#gradBersih)"
                   dot={false}
                   activeDot={{ r: 4, strokeWidth: 0 }}
-                  strokeDasharray="4 2"
                 />
-              </AreaChart>
+              </ComposedChart>
             </ResponsiveContainer>
           )}
         </div>
@@ -131,29 +218,29 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
 
       {/* ── Top 10 Produk Terlaris ── */}
       <Card className="flex min-h-0 flex-col p-4">
-        <h2 className="mb-2 shrink-0 font-semibold text-slate-800">
-          10 Produk Terlaris (30 hari)
-        </h2>
-        <div className="min-h-0 flex-1">
+        <div className="mb-3 shrink-0 flex items-center justify-between">
+          <h2 className="font-semibold text-slate-800">10 Produk Terlaris (30 hari)</h2>
+          <span className="text-xs text-slate-400">Qty terjual</span>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto thin-scroll">
           {top.isLoading ? (
             <Spinner label="Memuat..." />
           ) : topData.length === 0 ? (
             <EmptyState title="Belum ada penjualan" />
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topData} layout="vertical" margin={{ left: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis type="number" fontSize={11} />
-                <YAxis
-                  type="category"
-                  dataKey="nama"
-                  width={140}
-                  fontSize={10}
+            <div className="space-y-0.5">
+              {topData.map((item, idx) => (
+                <ProductBar
+                  key={item.product_id}
+                  rank={idx + 1}
+                  nama={item.nama}
+                  nama_barang={item.nama_barang}
+                  total_qty={item.total_qty}
+                  maxQty={maxQty}
                 />
-                <Tooltip formatter={(v) => [v, "Qty terjual"]} />
-                <Bar dataKey="total_qty" fill="#4f46e5" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+              ))}
+            </div>
           )}
         </div>
       </Card>
