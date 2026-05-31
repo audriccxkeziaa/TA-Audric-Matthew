@@ -91,7 +91,7 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
             </div>
           )}
           <div className="mt-4 flex justify-end">
-            <Button variant="secondary" onClick={onClose}>Tutup</Button>
+            <Button variant="secondary" onClick={onClose}>Close</Button>
           </div>
         </div>
       ) : null}

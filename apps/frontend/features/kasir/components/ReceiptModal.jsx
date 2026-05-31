@@ -42,9 +42,9 @@ export function ReceiptModal({ receipt, onClose }) {
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="secondary" onClick={onClose}>
-              Tutup
+              Close
             </Button>
-            <Button onClick={() => printReceipt(receipt)}>Cetak Struk</Button>
+            <Button onClick={() => printReceipt(receipt)}>Print Receipt</Button>
           </div>
         </div>
       )}

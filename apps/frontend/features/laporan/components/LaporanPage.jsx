@@ -45,7 +45,7 @@ export default function LaporanPage() {
             </Button>
             <Button onClick={() => l.setPrintOpen(true)}>
               <Printer size={16} />
-              Cetak Laporan
+              Print Report
             </Button>
           </div>
         }
@@ -369,7 +369,7 @@ export default function LaporanPage() {
               </div>
             </div>
             <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => l.setViewExpense(null)}>Tutup</Button>
+              <Button variant="secondary" onClick={() => l.setViewExpense(null)}>Close</Button>
             </div>
           </div>
         </Modal>

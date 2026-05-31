@@ -156,7 +156,7 @@ export function ReturPelangganForm() {
             }}
             className="mt-4 text-xs text-slate-400 hover:text-slate-600"
           >
-            Tutup (retur tetap pending dan bisa disetujui nanti dari Dashboard Admin)
+            Close (retur tetap pending dan bisa disetujui nanti dari Dashboard Admin)
           </button>
         </div>
       </Card>

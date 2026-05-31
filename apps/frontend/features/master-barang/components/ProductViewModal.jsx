@@ -50,7 +50,7 @@ export function ProductViewModal({ open, onClose, product }) {
         </div>
 
         <div className="flex justify-end">
-          <Button variant="secondary" onClick={onClose}>Tutup</Button>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
         </div>
       </div>
     </Modal>

@@ -27,7 +27,7 @@ export function SearchPanel({
           onClick={onClose}
           className="text-xs text-slate-500 hover:underline"
         >
-          Tutup
+          Close
         </button>
       </div>
       <div className="mt-2 max-h-48 space-y-1 overflow-y-auto thin-scroll">

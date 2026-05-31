@@ -197,7 +197,7 @@ export function PendingApprovalTab() {
           />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => a.setRejectId(null)}>
-              Batal
+              Cancel
             </Button>
             <Button
               variant="danger"

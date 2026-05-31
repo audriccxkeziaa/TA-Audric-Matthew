@@ -257,7 +257,7 @@ export function LaporanDetailModal({ detailData, isSales, onClose }) {
 
           <div className="flex justify-end">
             <Button variant="secondary" onClick={onClose}>
-              Tutup
+              Close
             </Button>
           </div>
         </div>

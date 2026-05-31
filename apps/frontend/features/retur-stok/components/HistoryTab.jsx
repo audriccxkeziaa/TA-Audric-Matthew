@@ -377,7 +377,7 @@ export function HistoryTab() {
                   <InfoGrid />
                   <ItemsTable />
                   <div className="flex justify-end">
-                    <Button variant="secondary" onClick={() => h.setDetail(null)}>Tutup</Button>
+                    <Button variant="secondary" onClick={() => h.setDetail(null)}>Close</Button>
                   </div>
                 </div>
                 <div className="flex w-1/2 flex-col gap-3">
@@ -386,7 +386,7 @@ export function HistoryTab() {
                     <ReturnReceiptPreview detail={h.detail} />
                   </div>
                   <Button className="w-full" onClick={() => printReturnReceipt(h.detail)}>
-                    🖨️ Cetak Struk
+                    🖨️ Print Receipt
                   </Button>
                 </div>
               </div>
@@ -398,7 +398,7 @@ export function HistoryTab() {
               <InfoGrid />
               <ItemsTable />
               <div className="flex justify-end">
-                <Button variant="secondary" onClick={() => h.setDetail(null)}>Tutup</Button>
+                <Button variant="secondary" onClick={() => h.setDetail(null)}>Close</Button>
               </div>
             </div>
           );

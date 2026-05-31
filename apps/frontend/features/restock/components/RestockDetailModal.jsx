@@ -107,7 +107,7 @@ export function RestockDetailModal({ item, onClose, viewOnly = false }) {
 
         {viewOnly ? (
           <div className="flex justify-end border-t border-slate-100 pt-3">
-            <Button variant="secondary" size="sm" onClick={close}>Tutup</Button>
+            <Button variant="secondary" size="sm" onClick={close}>Close</Button>
           </div>
         ) : (
           <div className="border-t border-slate-100 pt-3 space-y-3">
@@ -132,7 +132,7 @@ export function RestockDetailModal({ item, onClose, viewOnly = false }) {
             />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={close}>
-                Batal
+                Cancel
               </Button>
               <Button
                 size="sm"

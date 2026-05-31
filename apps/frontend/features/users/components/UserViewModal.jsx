@@ -1,3 +1,5 @@
+
+
 "use client";
 // Modal read-only detail user. Informasi "Terakhir Diubah" tampil di sini.
 
@@ -38,7 +40,7 @@ export function UserViewModal({ open, onClose, target }) {
         </div>
 
         <div className="flex justify-end">
-          <Button variant="secondary" onClick={onClose}>Tutup</Button>
+          <Button variant="secondary" onClick={onClose}>Close</Button>
         </div>
       </div>
     </Modal>

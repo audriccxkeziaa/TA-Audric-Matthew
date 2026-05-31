@@ -90,9 +90,9 @@ export function UploadStep({ m }) {
               value={m.notaTypeChoice}
               onChange={(e) => m.setNotaTypeChoice(e.target.value)}
             >
-              <option value="auto">Deteksi otomatis (Strategi 1)</option>
-              <option value="cetak">Cetak komputer</option>
-              <option value="tulisan_tangan">Tulisan tangan</option>
+              <option value="auto">Automatic Detection (Strategi 1)</option>
+              <option value="cetak">Computer Preview</option>
+              <option value="tulisan_tangan">Handwriting</option>
             </Select>
           </div>
 
