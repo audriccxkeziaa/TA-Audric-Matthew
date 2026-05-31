@@ -189,7 +189,7 @@ export function PrintPreviewModal({
       <div className="flex w-72 shrink-0 flex-col gap-5 overflow-y-auto bg-slate-800 p-6 text-white">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold">Cetak Laporan</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 transition hover:bg-white/10" aria-label="Close'>
+          <button onClick={onClose} className="rounded-lg p-1.5 transition hover:bg-white/10" aria-label="Tutup">
             <X size={18} />
           </button>
         </div>
