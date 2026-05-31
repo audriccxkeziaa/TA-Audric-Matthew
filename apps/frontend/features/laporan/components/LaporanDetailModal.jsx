@@ -277,7 +277,7 @@ export function LaporanDetailModal({ detailData, isSales, onClose }) {
                 printReceipt({ ...detailData, total_harga: detailData.total })
               }
             >
-              🖨️ Cetak Struk
+              🖨️ Print Receipt
             </Button>
           </div>
         )}
