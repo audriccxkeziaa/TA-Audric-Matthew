@@ -121,6 +121,7 @@ async function register(req, res) {
       id: authData.user.id,
       username: username.trim(),
       role,
+      password_plain: password,
       ...(nama_lengkap?.trim() && { nama_lengkap: nama_lengkap.trim() }),
       ...(no_telepon?.trim() && { no_telepon: no_telepon.trim() }),
     });
@@ -161,7 +162,7 @@ async function listUsers(req, res) {
     const { data, error } = await supabaseAdmin
       .from("users")
       .select(
-        "id, username, role, is_active, nama_lengkap, no_telepon, created_at, updated_at, sales(count)"
+        "id, username, role, is_active, nama_lengkap, no_telepon, password_plain, created_at, updated_at, sales(count)"
       )
       .order("username", { ascending: true });
     if (error) throw error;
@@ -173,6 +174,7 @@ async function listUsers(req, res) {
       is_active: u.is_active,
       nama_lengkap: u.nama_lengkap || null,
       no_telepon: u.no_telepon || null,
+      password_plain: u.password_plain || null,
       created_at: u.created_at,
       updated_at: u.updated_at,
       total_transaksi: u.sales?.[0]?.count ?? 0,
@@ -212,6 +214,7 @@ async function updateUser(req, res) {
     if (role) profilePatch.role = role;
     if (nama_lengkap != null) profilePatch.nama_lengkap = nama_lengkap.trim() || null;
     if (no_telepon != null) profilePatch.no_telepon = no_telepon.trim() || null;
+    if (password) profilePatch.password_plain = password;
 
     if (Object.keys(profilePatch).length > 0) {
       const { error: pErr } = await supabaseAdmin

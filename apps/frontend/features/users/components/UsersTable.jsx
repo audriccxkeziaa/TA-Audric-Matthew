@@ -19,10 +19,10 @@ function fmtWita(iso) {
 }
 
 function RoleBadge({ role }) {
-  if (role === "superadmin") {
-    return <Badge className="bg-purple-100 text-purple-700">Admin</Badge>;
+  if (role === "admin") {
+    return <Badge tone="indigo">Admin</Badge>;
   }
-  return <Badge className="bg-blue-100 text-blue-700">Kasir</Badge>;
+  return <Badge tone="blue">Kasir</Badge>;
 }
 
 function ActionBtn({ onClick, title, colorClass, children }) {
@@ -40,8 +40,8 @@ function ActionBtn({ onClick, title, colorClass, children }) {
 
 export function UsersTable({ users, isLoading, currentUserId, onView, onEdit, onDelete, onToggle }) {
   const sortedUsers = [...users].sort((a, b) => {
-    if (a.role === "superadmin" && b.role !== "superadmin") return -1;
-    if (a.role !== "superadmin" && b.role === "superadmin") return 1;
+    if (a.role === "admin" && b.role !== "admin") return -1;
+    if (a.role !== "admin" && b.role === "admin") return 1;
     return 0;
   });
 
@@ -69,7 +69,7 @@ export function UsersTable({ users, isLoading, currentUserId, onView, onEdit, on
               {sortedUsers.map((u) => {
                 const isSelf = u.id === currentUserId;
                 const active = u.is_active !== false;
-                const isAdmin = u.role === "superadmin";
+                const isAdmin = u.role === "admin";
                 return (
                   <TR key={u.id}>
                     <TD className="font-medium">
@@ -121,7 +121,7 @@ export function UsersTable({ users, isLoading, currentUserId, onView, onEdit, on
             {sortedUsers.map((u) => {
               const isSelf = u.id === currentUserId;
               const active = u.is_active !== false;
-              const isAdmin = u.role === "superadmin";
+              const isAdmin = u.role === "admin";
               return (
                 <li key={u.id} className="flex items-start justify-between gap-2 p-3">
                   <div className="min-w-0">
