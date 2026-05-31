@@ -216,7 +216,7 @@ export function ReturSupplierForm() {
               variant="danger"
               loading={r.submitting}
             >
-              Kirim Retur (Tahap 1)
+              Confirm Return
             </Button>
           </div>
 
