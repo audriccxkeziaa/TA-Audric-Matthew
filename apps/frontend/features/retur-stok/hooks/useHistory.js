@@ -50,10 +50,22 @@ export function useHistory() {
     }
   }
 
+  async function deleteEntry(id, kode) {
+    if (!window.confirm(`Hapus riwayat "${kode}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    try {
+      await adjustmentsApi.remove(id);
+      setData((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Riwayat berhasil dihapus");
+    } catch {
+      toast.error("Gagal menghapus riwayat");
+    }
+  }
+
   return {
     data, loading, loaded, load,
     filterType, setFilterType,
     detail, setDetail, detailLoading, openDetail,
     page, setPage, totalPages, pagedData,
+    deleteEntry,
   };
 }

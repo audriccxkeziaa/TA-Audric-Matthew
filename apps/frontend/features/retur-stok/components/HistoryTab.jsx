@@ -1,8 +1,7 @@
 "use client";
-// Tab "Riwayat" — semua retur & penyesuaian dengan filter tipe + paging + detail.
-
 import { Card, Button, Badge, Modal, Spinner, EmptyState } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
+import { Trash2 } from "lucide-react";
 import { TYPE_BADGES, getStatusBadge } from "../lib/badges";
 import { printReturnReceipt } from "@/lib/receipt";
 import { useHistory } from "../hooks/useHistory";
@@ -161,7 +160,7 @@ export function HistoryTab() {
                     <th className="py-2 pr-2">Alasan</th>
                     <th className="py-2 px-4 text-right">Total Qty</th>
                     <th className="py-2 pr-2">Tanggal</th>
-                    <th className="py-2"></th>
+                    <th className="py-2 text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -193,16 +192,25 @@ export function HistoryTab() {
                         <td className="py-2 px-4 text-right">{angka(row.total_qty)}</td>
                         <td className="py-2 pr-2 text-xs text-slate-500">{tanggalJam(row.created_at)}</td>
                         <td className="py-2">
-                          <button
-                            onClick={() => h.openDetail(row.id)}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
-                            title="Lihat detail"
-                          >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <button
+                              onClick={() => h.openDetail(row.id)}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
+                              title="Lihat detail"
+                            >
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => h.deleteEntry(row.id, row.kode_adjustment)}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition hover:bg-red-50 hover:text-red-700"
+                              title="Hapus riwayat"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -216,29 +224,43 @@ export function HistoryTab() {
                   const tb = TYPE_BADGES[row.type] || { label: row.type, tone: "slate" };
                   const sb = getStatusBadge(row.type, row.status);
                   return (
-                    <li
-                      key={row.id}
-                      onClick={() => h.openDetail(row.id)}
-                      className="cursor-pointer py-3 transition-colors hover:bg-brand-50/40"
-                    >
+                    <li key={row.id} className="py-3 transition-colors hover:bg-brand-50/40">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-mono text-xs font-medium text-slate-700">
-                          {row.kode_adjustment}
+                        <button
+                          onClick={() => h.openDetail(row.id)}
+                          className="min-w-0 text-left"
+                        >
+                          <p className="font-mono text-xs font-medium text-slate-700">
+                            {row.kode_adjustment}
+                          </p>
+                        </button>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <span className="text-xs text-slate-500">Qty {angka(row.total_qty)}</span>
+                          <button
+                            onClick={() => h.deleteEntry(row.id, row.kode_adjustment)}
+                            className="flex h-7 w-7 items-center justify-center rounded text-red-500 transition hover:bg-red-50 hover:text-red-700"
+                            title="Hapus riwayat"
+                            aria-label="Hapus riwayat"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => h.openDetail(row.id)}
+                        className="mt-1.5 block w-full text-left"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge tone={tb.tone}>{tb.label}</Badge>
+                          <Badge tone={sb.tone}>{sb.label}</Badge>
+                        </div>
+                        <p className="mt-1.5 line-clamp-2 text-xs text-slate-600" title={row.alasan}>
+                          {row.alasan}
                         </p>
-                        <span className="shrink-0 text-xs text-slate-500">
-                          Qty {angka(row.total_qty)}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        <Badge tone={tb.tone}>{tb.label}</Badge>
-                        <Badge tone={sb.tone}>{sb.label}</Badge>
-                      </div>
-                      <p className="mt-1.5 line-clamp-2 text-xs text-slate-600" title={row.alasan}>
-                        {row.alasan}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {row.username || "-"} · {tanggalJam(row.created_at)}
-                      </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {row.username || "-"} · {tanggalJam(row.created_at)}
+                        </p>
+                      </button>
                     </li>
                   );
                 })}

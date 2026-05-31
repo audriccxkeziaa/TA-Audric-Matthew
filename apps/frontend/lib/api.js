@@ -81,6 +81,7 @@ export const adjustmentsApi = {
   create: (body) => apiFetch("/adjustments", { method: "POST", body }),
   list: (params) => apiFetch("/adjustments", { query: params }),
   get: (id) => apiFetch(`/adjustments/${id}`),
+  remove: (id) => apiFetch(`/adjustments/${id}`, { method: "DELETE" }),
   lookupSale: (kode) =>
     apiFetch("/adjustments/lookup/sale", { query: { kode } }),
   lookupPurchase: (nota) =>

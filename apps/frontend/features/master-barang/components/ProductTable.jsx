@@ -1,9 +1,7 @@
 "use client";
-// Tabel daftar barang. Eye → View detail (read-only), Pencil → Edit (admin).
-
 import { Card, Badge, Skeleton, EmptyState, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { rupiah, angka } from "@/lib/format";
-import { Eye, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 function stokBadge(p) {
   if (Number(p.stok) === 0) return <Badge tone="red">Stok Habis</Badge>;
@@ -12,7 +10,7 @@ function stokBadge(p) {
   return <Badge tone="green">Normal</Badge>;
 }
 
-export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdit }) {
+export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
   return (
     <Card className="flex flex-col p-0 md:min-h-0 md:flex-1">
       {isLoading ? (
@@ -38,7 +36,7 @@ export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdi
               <TH className="text-right">Stok</TH>
               <TH className="text-right">Min Stok</TH>
               <TH>Kondisi</TH>
-              <TH className="text-center">Aksi</TH>
+              {isAdmin && <TH className="text-center">Aksi</TH>}
             </THead>
             <TBody>
               {products.map((p, index) => (
@@ -61,26 +59,17 @@ export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdi
                   <TD className="text-right font-semibold">{angka(p.stok)}</TD>
                   <TD className="text-right text-slate-500">{angka(p.min_stock)}</TD>
                   <TD>{stokBadge(p)}</TD>
-                  <TD className="text-center">
-                    <div className="flex items-center justify-center gap-0.5">
+                  {isAdmin && (
+                    <TD className="text-center">
                       <button
-                        onClick={() => onView(p)}
-                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-blue-600 hover:text-blue-800"
-                        title="Lihat detail barang"
+                        onClick={() => onEdit(p)}
+                        className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
+                        title="Edit barang"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
                       </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => onEdit(p)}
-                          className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
-                          title="Edit barang"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  </TD>
+                    </TD>
+                  )}
                 </TR>
               ))}
             </TBody>
@@ -109,14 +98,6 @@ export function ProductTable({ products, isLoading, isAdmin, page, onView, onEdi
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     {stokBadge(p)}
-                    <button
-                      onClick={() => onView(p)}
-                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-blue-600 hover:text-blue-800"
-                      title="Lihat detail barang"
-                      aria-label="Lihat detail barang"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
                     {isAdmin && (
                       <button
                         onClick={() => onEdit(p)}

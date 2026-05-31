@@ -10,7 +10,6 @@ import { BarcodeSearch } from "./BarcodeSearch";
 import { ProductFilters } from "./ProductFilters";
 import { ProductTable } from "./ProductTable";
 import { ProductFormModal } from "./ProductFormModal";
-import { ProductViewModal } from "./ProductViewModal";
 
 export default function MasterBarangPage() {
   const m = useMasterBarang();
@@ -50,7 +49,6 @@ export default function MasterBarangPage() {
         isLoading={m.isLoading}
         isAdmin={m.isAdmin}
         page={m.page}
-        onView={m.openView}
         onEdit={m.openEdit}
       />
 
@@ -78,14 +76,6 @@ export default function MasterBarangPage() {
             </Button>
           </div>
         </div>
-      )}
-
-      {m.showView && (
-        <ProductViewModal
-          open={m.showView}
-          onClose={m.closeView}
-          product={m.viewProduct}
-        />
       )}
 
       {m.showForm && (

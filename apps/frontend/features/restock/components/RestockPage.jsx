@@ -49,7 +49,6 @@ export default function RestockPage() {
         isAdmin={r.isAdmin}
         page={r.page}
         pageSize={r.pageSize}
-        onDetail={r.setDetailItem}
         onEdit={r.setEditItem}
       />
 
@@ -99,9 +98,6 @@ export default function RestockPage() {
         </p>
       </div>
 
-      {r.isAdmin && (
-        <RestockDetailModal item={r.detailItem} onClose={() => r.setDetailItem(null)} viewOnly />
-      )}
       {r.isAdmin && (
         <RestockDetailModal item={r.editItem} onClose={() => r.setEditItem(null)} />
       )}

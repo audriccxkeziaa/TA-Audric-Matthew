@@ -1,10 +1,8 @@
 "use client";
-// Tabel rekomendasi restock. Kolom Aksi (detail) hanya untuk admin.
-
 import { Card, Spinner, EmptyState, Badge, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { angka } from "@/lib/format";
 import { UrgensiBadge } from "./UrgensiBadge";
-import { Eye, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 export function RestockTable({
   rows,
@@ -13,7 +11,6 @@ export function RestockTable({
   isAdmin,
   page,
   pageSize,
-  onDetail,
   onEdit,
 }) {
   return (
@@ -94,13 +91,6 @@ export function RestockTable({
                     <TD>
                       <div className="flex justify-end gap-0.5">
                         <button
-                          onClick={() => onDetail(it)}
-                          className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-blue-600 hover:text-blue-800"
-                          title="Lihat detail"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
                           onClick={() => onEdit(it)}
                           className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
                           title="Edit min. stok"
@@ -134,24 +124,14 @@ export function RestockTable({
                   <div className="flex shrink-0 items-center gap-2">
                     <UrgensiBadge level={it.tingkat_urgensi} />
                     {isAdmin && (
-                      <div className="flex gap-0.5">
-                        <button
-                          onClick={() => onDetail(it)}
-                          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-blue-600 hover:text-blue-800"
-                          title="Lihat detail"
-                          aria-label="Lihat detail"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => onEdit(it)}
-                          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
-                          title="Edit min. stok"
-                          aria-label="Edit min. stok"
-                        >
-<Pencil className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => onEdit(it)}
+                        className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
+                        title="Edit min. stok"
+                        aria-label="Edit min. stok"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
                     )}
                   </div>
                 </div>

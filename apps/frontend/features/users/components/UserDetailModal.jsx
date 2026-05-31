@@ -35,7 +35,7 @@ export function UserDetailModal({ open, onClose, target, isSelf }) {
           placeholder="Nomor telepon (opsional)"
         />
         <PasswordInput
-          label="Password baru (kosongkan jika tidak diubah)"
+          label="Set Password Baru (Opsional)"
           value={form.password}
           onChange={(e) => set("password", e.target.value)}
         />
