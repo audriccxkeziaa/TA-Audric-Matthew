@@ -19,6 +19,25 @@ function localDate(date) {
   return `${y}-${m}-${d}`;
 }
 
+// Build timezone-aware ISO for timestamp-based API filters (sales, purchases).
+// Sends e.g. "2026-06-01T00:00:00.000+08:00" so Supabase/PG filters correctly
+// in local time — plain "2026-06-01" would be cast as UTC midnight (wrong for WITA).
+function tzOffset() {
+  const off = -(new Date().getTimezoneOffset()); // positive for UTC+ zones
+  const sign = off >= 0 ? "+" : "-";
+  const hh = String(Math.floor(Math.abs(off) / 60)).padStart(2, "0");
+  const mm = String(Math.abs(off) % 60).padStart(2, "0");
+  return `${sign}${hh}:${mm}`;
+}
+function toLocalISOStart(dateStr) {
+  if (!dateStr) return undefined;
+  return `${dateStr}T00:00:00.000${tzOffset()}`;
+}
+function toLocalISOEnd(dateStr) {
+  if (!dateStr) return undefined;
+  return `${dateStr}T23:59:59.999${tzOffset()}`;
+}
+
 // ── Hitung range tanggal berdasarkan preset ──
 export function getPeriodRange(preset) {
   const now = new Date();
@@ -78,11 +97,12 @@ export function useLaporanTerpadu() {
     queryKey: ["finance-summary", from, to],
     queryFn: () =>
       expensesApi.summary({
-        ...(from ? { from } : {}),
-        ...(to ? { to: to + "T23:59:59.999Z" } : {}),
+        ...(from ? { from: toLocalISOStart(from) } : {}),
+        ...(to ? { to: toLocalISOEnd(to) } : {}),
       }),
   });
 
+  // Expenses use DATE column (tanggal) — plain date strings are correct here
   const expensesList = useQuery({
     queryKey: ["expenses", from, to],
     queryFn: () =>
@@ -93,8 +113,8 @@ export function useLaporanTerpadu() {
     queryKey: ["finance-purchases", from, to],
     queryFn: () =>
       purchasesApi.list({
-        ...(from ? { from } : {}),
-        ...(to ? { to: to + "T23:59:59.999Z" } : {}),
+        ...(from ? { from: toLocalISOStart(from) } : {}),
+        ...(to ? { to: toLocalISOEnd(to) } : {}),
         limit: 500,
       }),
   });
@@ -165,7 +185,7 @@ export function useLaporanTerpadu() {
   // ══════════════════════════════════════════
   const salesQuery = useQuery({
     queryKey: ["laporan", "penjualan", from, to],
-    queryFn: () => reportsApi.sales({ from, to }),
+    queryFn: () => reportsApi.sales({ from: toLocalISOStart(from), to: toLocalISOEnd(to) }),
   });
 
   const salesRaw = salesQuery.data?.data || [];

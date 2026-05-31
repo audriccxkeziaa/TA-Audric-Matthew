@@ -4,11 +4,12 @@
 import {
   PageShell, PageHeader, Card, StatCard, Badge,
   Button, Input, Modal, Spinner, EmptyState,
+  Table, THead, TH, TBody, TR, TD,
 } from "@/components/ui";
 import { rupiah, angka, tanggal } from "@/lib/format";
 import {
   TrendingUp, TrendingDown, Package, Wallet, Printer, ReceiptText,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { useLaporanTerpadu } from "../hooks/useLaporanTerpadu";
 import { LaporanDetailModal } from "./LaporanDetailModal";
@@ -16,15 +17,38 @@ import { PurchaseDetailModal } from "@/features/keuangan/components/PurchaseDeta
 import { PrintPreviewModal } from "./PrintPreviewModal";
 import { JENIS_LABELS, JENIS_BADGE_TONE, JENIS_OPTIONS } from "@/features/keuangan/lib/constants";
 
-const PERIOD_PRESETS = [
+const MONTHLY_PRESETS = [
   { id: "bulan-ini",  label: "Bulan Ini" },
   { id: "bulan-lalu", label: "Bulan Lalu" },
   { id: "3-bulan",    label: "3 Bulan" },
   { id: "6-bulan",    label: "6 Bulan" },
+];
+
+const YEARLY_PRESETS = [
   { id: "tahun-ini",  label: "Tahun Ini" },
   { id: "tahun-lalu", label: "Tahun Lalu" },
-  { id: "custom",     label: "Custom" },
 ];
+
+function PresetGroup({ presets, active, onSelect }) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg bg-slate-100 p-0.5">
+      {presets.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => onSelect(p.id)}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
+            active === p.id
+              ? "bg-white text-brand-700 shadow-sm ring-1 ring-slate-200/80"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function LaporanPage() {
   const l = useLaporanTerpadu();
@@ -47,28 +71,66 @@ export default function LaporanPage() {
       />
 
       {/* ── Filter Periode ── */}
-      <Card className="mb-3 shrink-0 p-3 no-print">
-        <div className="flex flex-col gap-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Periode:</span>
-            {PERIOD_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => l.applyPreset(p.id)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  l.periodPreset === p.id
-                    ? "bg-brand-600 text-white shadow-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-            <Button size="sm" variant="secondary" onClick={l.resetFilter}>Reset</Button>
-          </div>
+      <Card className="mb-3 shrink-0 no-print overflow-hidden">
+        {/* Main filter bar */}
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+          <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 shrink-0">
+            <CalendarDays size={13} />
+            Periode
+          </span>
 
-          {l.periodPreset === "custom" && (
+          <div className="h-4 w-px bg-slate-200 shrink-0" />
+
+          {/* Bulanan */}
+          <PresetGroup
+            presets={MONTHLY_PRESETS}
+            active={l.periodPreset}
+            onSelect={l.applyPreset}
+          />
+
+          <div className="h-4 w-px bg-slate-200 shrink-0" />
+
+          {/* Tahunan */}
+          <PresetGroup
+            presets={YEARLY_PRESETS}
+            active={l.periodPreset}
+            onSelect={l.applyPreset}
+          />
+
+          <div className="h-4 w-px bg-slate-200 shrink-0" />
+
+          {/* Custom */}
+          <button
+            type="button"
+            onClick={() => l.applyPreset("custom")}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              l.periodPreset === "custom"
+                ? "border-brand-300 bg-brand-50 text-brand-700"
+                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            Custom
+          </button>
+
+          <button
+            type="button"
+            onClick={l.resetFilter}
+            className="rounded-lg px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+          >
+            Reset
+          </button>
+
+          {/* Active range pill */}
+          {l.periodPreset !== "custom" && (l.from || l.to) && (
+            <span className="ml-auto shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500">
+              {tanggal(l.from)} — {tanggal(l.to)}
+            </span>
+          )}
+        </div>
+
+        {/* Custom date inputs */}
+        {l.periodPreset === "custom" && (
+          <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 label="Dari Tanggal"
@@ -83,8 +145,8 @@ export default function LaporanPage() {
                 onChange={(e) => l.setTo(e.target.value)}
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </Card>
 
       {/* ── Card utama ── */}
@@ -172,32 +234,26 @@ export default function LaporanPage() {
               ) : l.filteredSales.length === 0 ? (
                 <EmptyState title="Belum ada transaksi penjualan" />
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500 shadow-sm">
-                    <tr>
-                      <th className="px-3 py-2">Tanggal</th>
-                      <th className="px-3 py-2">Kode Transaksi</th>
-                      <th className="px-3 py-2">Kasir</th>
-                      <th className="px-3 py-2 text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+                <Table desktopOnly={false}>
+                  <THead>
+                    <TH>Tanggal</TH>
+                    <TH>Kode Transaksi</TH>
+                    <TH>Kasir</TH>
+                    <TH className="text-right">Total</TH>
+                  </THead>
+                  <TBody>
                     {l.filteredSales.map((g) => (
-                      <tr
-                        key={g.sale_id}
-                        onClick={() => l.setDetailData(g)}
-                        className="cursor-pointer transition-colors hover:bg-emerald-50/50"
-                      >
-                        <td className="px-3 py-2 text-xs">{tanggal(g.created_at)}</td>
-                        <td className="px-3 py-2 font-mono text-xs text-brand-700">{g.kode_transaksi}</td>
-                        <td className="px-3 py-2 text-xs text-slate-500">{g.kasir}</td>
-                        <td className="px-3 py-2 text-right font-semibold text-emerald-600">
+                      <TR key={g.sale_id} onClick={() => l.setDetailData(g)}>
+                        <TD className="text-xs">{tanggal(g.created_at)}</TD>
+                        <TD className="font-mono text-xs text-brand-700">{g.kode_transaksi}</TD>
+                        <TD className="text-xs text-slate-500">{g.kasir}</TD>
+                        <TD className="text-right font-semibold text-emerald-600">
                           {rupiah(g.total)}
-                        </td>
-                      </tr>
+                        </TD>
+                      </TR>
                     ))}
-                  </tbody>
-                </table>
+                  </TBody>
+                </Table>
               )}
             </div>
           </Card>
@@ -238,42 +294,39 @@ export default function LaporanPage() {
               ) : l.unifiedRows.length === 0 ? (
                 <EmptyState title="Belum ada pengeluaran" />
               ) : (
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-slate-50 text-left text-xs uppercase text-slate-500 shadow-sm">
-                    <tr>
-                      <th className="px-3 py-2">Tanggal</th>
-                      <th className="px-3 py-2">Jenis</th>
-                      <th className="px-3 py-2">Deskripsi</th>
-                      <th className="px-3 py-2 text-right">Nominal</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+                <Table desktopOnly={false}>
+                  <THead>
+                    <TH>Tanggal</TH>
+                    <TH>Jenis</TH>
+                    <TH>Deskripsi</TH>
+                    <TH className="text-right">Nominal</TH>
+                  </THead>
+                  <TBody>
                     {l.paginatedUnifiedRows.map((r) => (
-                      <tr
+                      <TR
                         key={r.id}
                         onClick={() =>
                           r._type === "purchase"
                             ? l.openPurchaseDetail(r._rawId)
                             : l.setViewExpense(r)
                         }
-                        className="cursor-pointer transition-colors hover:bg-red-50/40"
                       >
-                        <td className="px-3 py-2 text-xs">{tanggal(r.tanggal)}</td>
-                        <td className="px-3 py-2">
-                          <Badge tone={JENIS_BADGE_TONE[r.jenis] || "slate"}>
+                        <TD className="text-xs">{tanggal(r.tanggal)}</TD>
+                        <TD>
+                          <Badge tone={JENIS_BADGE_TONE[r.jenis] || "slate"} dot>
                             {JENIS_LABELS[r.jenis] || r.jenis}
                           </Badge>
-                        </td>
-                        <td className="max-w-[160px] truncate px-3 py-2 text-xs text-slate-600">
+                        </TD>
+                        <TD className="max-w-[160px] truncate text-xs text-slate-600">
                           {r.deskripsi}
-                        </td>
-                        <td className="px-3 py-2 text-right font-semibold text-red-600">
+                        </TD>
+                        <TD className="text-right font-semibold text-red-600">
                           − {rupiah(r.nominal)}
-                        </td>
-                      </tr>
+                        </TD>
+                      </TR>
                     ))}
-                  </tbody>
-                </table>
+                  </TBody>
+                </Table>
               )}
             </div>
 
@@ -374,7 +427,9 @@ export default function LaporanPage() {
               </div>
               <div>
                 <p className="text-xs text-slate-400">Jenis</p>
-                <p className="font-medium">{JENIS_LABELS[l.viewExpense.jenis] || l.viewExpense.jenis}</p>
+                <Badge tone={JENIS_BADGE_TONE[l.viewExpense.jenis] || "slate"} dot>
+                  {JENIS_LABELS[l.viewExpense.jenis] || l.viewExpense.jenis}
+                </Badge>
               </div>
               <div className="col-span-2">
                 <p className="text-xs text-slate-400">Deskripsi</p>

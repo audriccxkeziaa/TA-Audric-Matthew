@@ -112,7 +112,7 @@ export default function PengeluaranPage() {
                     </div>
                   )}
                   <Button type="submit" loading={p.creating} className="ml-auto">
-                    <Plus size={16} /> Tambah Pengeluaran
+                    <Plus size={16} /> Add Expense
                   </Button>
                 </div>
               </form>
@@ -126,7 +126,7 @@ export default function PengeluaranPage() {
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Riwayat Pengeluaran Operasional</h3>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  {p.rows.length} entri
+                  {p.rows.length} items
                   {p.totalVisible > 0 && (
                     <> · Total: <span className="font-semibold text-red-600">{rupiah(p.totalVisible)}</span></>
                   )}
