@@ -1,6 +1,6 @@
 "use client";
 // features/laporan/hooks/useLaporanTerpadu.js — hook master laporan terpadu:
-// filter tanggal bersama + data keuangan, transaksi penjualan, dan restock.
+// filter tanggal bersama + data keuangan & transaksi penjualan.
 
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +9,6 @@ import {
   usersApi,
   expensesApi,
   purchasesApi,
-  restockApi,
 } from "@/lib/api";
 import { downloadFile } from "@/lib/api-client";
 import { useToast } from "@/hooks/useToast";
@@ -18,7 +17,6 @@ import { groupSalesRows } from "../lib/groupRows";
 import { useAuth } from "@/hooks/useAuth";
 
 const SALES_PAGE = 10;
-const RESTOCK_PAGE = 20;
 
 export function useLaporanTerpadu() {
   const toast = useToast();
@@ -172,41 +170,6 @@ export function useLaporanTerpadu() {
     }
   }
 
-  // ══════════════════════════════════════════
-  // Tab 3 — Kondisi Persediaan & Stok
-  // ══════════════════════════════════════════
-  const restockQuery = useQuery({
-    queryKey: ["restock"],
-    queryFn: restockApi.list,
-    staleTime: 30_000,
-  });
-
-  const allRestockItems = restockQuery.data?.data || [];
-  const restockSummary = restockQuery.data?.summary || {
-    total: 0,
-    habis: 0,
-    kritis: 0,
-    menipis: 0,
-  };
-
-  const [stockFilter, setStockFilter] = useState("all");
-  const [restockPage, setRestockPage] = useState(1);
-  const [detailRestock, setDetailRestock] = useState(null);
-
-  const restockItems = useMemo(() => {
-    if (stockFilter === "all") return allRestockItems;
-    return allRestockItems.filter((it) => it.tingkat_urgensi === stockFilter);
-  }, [allRestockItems, stockFilter]);
-
-  const restockTotalPages = Math.max(
-    1,
-    Math.ceil(restockItems.length / RESTOCK_PAGE)
-  );
-  const paginatedRestock = restockItems.slice(
-    (restockPage - 1) * RESTOCK_PAGE,
-    restockPage * RESTOCK_PAGE
-  );
-
   function resetFilter() {
     setFrom(isoDate(-30));
     setTo(isoDate(0));
@@ -232,6 +195,7 @@ export function useLaporanTerpadu() {
     // tab 2 - transaksi
     salesQuery,
     salesSummary,
+    salesGrouped,
     filteredSales,
     paginatedSales,
     kasirFilter, setKasirFilter,
@@ -241,15 +205,5 @@ export function useLaporanTerpadu() {
     salesPageSize: SALES_PAGE,
     detailData, setDetailData,
     exportCsv,
-    // tab 3 - restock
-    restockQuery,
-    restockSummary,
-    restockItems,
-    paginatedRestock,
-    restockPage, setRestockPage,
-    restockTotalPages,
-    restockPageSize: RESTOCK_PAGE,
-    stockFilter, setStockFilter,
-    detailRestock, setDetailRestock,
   };
 }
