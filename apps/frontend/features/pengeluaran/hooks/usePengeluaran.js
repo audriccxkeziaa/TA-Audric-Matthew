@@ -58,8 +58,13 @@ export function usePengeluaran() {
   const allRows = list.data?.data || [];
 
   const rows = useMemo(() => {
-    // refund_pelanggan dibuat otomatis oleh sistem retur, bukan pengeluaran operasional manual
-    const operasional = allRows.filter((r) => r.jenis !== "refund_pelanggan");
+    // Eksklusikan semua entri retur: jenis 'refund_pelanggan' (data baru)
+    // maupun data lama yg tersimpan sebagai 'custom' dengan deskripsi refund
+    const operasional = allRows.filter((r) => {
+      if (r.jenis === "refund_pelanggan") return false;
+      if (r.jenis === "custom" && r.deskripsi?.toLowerCase().startsWith("refund retur")) return false;
+      return true;
+    });
     if (jenisFilter === "all") return operasional;
     return operasional.filter((r) => r.jenis === jenisFilter);
   }, [allRows, jenisFilter]);

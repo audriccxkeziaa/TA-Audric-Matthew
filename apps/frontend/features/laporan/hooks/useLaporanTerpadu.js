@@ -135,17 +135,24 @@ export function useLaporanTerpadu() {
       nominal: p.total || 0,
     }));
 
-    const expenseEntries = allExpenses.map((e) => ({
-      id: `expense-${e.id}`,
-      _type: "expense",
-      _rawId: e.id,
-      _raw: e,
-      tanggal: e.tanggal,
-      jenis: e.jenis,
-      deskripsi: e.deskripsi,
-      username: e.username || "-",
-      nominal: e.nominal || 0,
-    }));
+    const expenseEntries = allExpenses.map((e) => {
+      // Data lama: backend menyimpan refund retur dengan jenis "custom".
+      // Normalisasi ke "refund_pelanggan" agar label & filter laporan benar.
+      const isLegacyRetur =
+        e.jenis === "custom" &&
+        e.deskripsi?.toLowerCase().startsWith("refund retur");
+      return {
+        id: `expense-${e.id}`,
+        _type: "expense",
+        _rawId: e.id,
+        _raw: e,
+        tanggal: e.tanggal,
+        jenis: isLegacyRetur ? "refund_pelanggan" : e.jenis,
+        deskripsi: e.deskripsi,
+        username: e.username || "-",
+        nominal: e.nominal || 0,
+      };
+    });
 
     const merged = [...purchaseEntries, ...expenseEntries].sort(
       (a, b) => new Date(b.tanggal) - new Date(a.tanggal)
