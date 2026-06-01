@@ -86,7 +86,7 @@ export default function LoginPage() {
             POS — CV Asia Jaya Maju
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Sistem Point of Sale Motorcycle Spareparts
+            Sistem Point of Sale Suku Cadang Motor
           </p>
         </div>
 

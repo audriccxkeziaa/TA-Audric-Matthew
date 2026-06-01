@@ -238,7 +238,7 @@ export function ReturSupplierForm() {
         onConfirm={r.handleResolve}
         title="Konfirmasi Barang Ganti Diterima"
         message="Pastikan barang pengganti dari supplier sudah masuk ke gudang. Stok akan bertambah sesuai jumlah retur semula. Lanjutkan?"
-        confirmLabel="Ya, Barang Sudah Diterima"
+        confirmLabel="Yes, Item Received"
         tone="success"
       />
     </>

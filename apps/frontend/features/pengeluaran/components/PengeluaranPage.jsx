@@ -7,7 +7,7 @@ import {
   Table, THead, TH, TBody, TR, TD,
 } from "@/components/ui";
 import { rupiah, tanggal } from "@/lib/format";
-import { Plus, Trash2, TrendingDown, DollarSign } from "lucide-react";
+import { Plus, Trash2, TrendingDown, DollarSign, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePengeluaran } from "../hooks/usePengeluaran";
 import { JENIS_OPTIONS, JENIS_LABELS, JENIS_BADGE_TONE } from "@/features/keuangan/lib/constants";
 
@@ -168,7 +168,7 @@ export default function PengeluaranPage() {
                       <TH className="text-right">Aksi</TH>
                     </THead>
                     <TBody>
-                      {p.rows.map((r) => (
+                      {p.pagedRows.map((r) => (
                         <TR key={r.id}>
                           <TD className="text-xs">{tanggal(r.tanggal)}</TD>
                           <TD>
@@ -202,7 +202,7 @@ export default function PengeluaranPage() {
 
                 {/* Mobile cards */}
                 <ul className="divide-y divide-slate-100 md:hidden">
-                  {p.rows.map((r) => (
+                  {p.pagedRows.map((r) => (
                     <li key={r.id} className="flex items-start justify-between gap-2 p-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -230,6 +230,32 @@ export default function PengeluaranPage() {
                     </li>
                   ))}
                 </ul>
+
+                {/* Pagination footer */}
+                {p.totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={p.handlePrev}
+                      disabled={p.currentPage === 1}
+                    >
+                      <ChevronLeft size={15} /> Previous
+                    </Button>
+                    <span className="text-xs text-slate-500">
+                      Halaman <span className="font-semibold text-slate-700">{p.currentPage}</span> dari{" "}
+                      <span className="font-semibold text-slate-700">{p.totalPages}</span>
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={p.handleNext}
+                      disabled={p.currentPage === p.totalPages}
+                    >
+                      Next <ChevronRight size={15} />
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </Card>

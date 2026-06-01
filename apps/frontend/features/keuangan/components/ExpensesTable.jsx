@@ -110,7 +110,7 @@ export function UnifiedExpensesTable({ rows, isLoading, onExpenseEdit, onPurchas
 
       {rows.length > PAGE_SIZE && (
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
-          <span>Halaman {page} dari {totalPages} ({rows.length} entri)</span>
+          <span>Page {page} dari {totalPages} ({rows.length} transaksi)</span>
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
               ← Prev

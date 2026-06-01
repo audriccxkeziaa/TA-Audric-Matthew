@@ -1,7 +1,7 @@
 "use client";
 // features/pengeluaran/hooks/usePengeluaran.js
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { expensesApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
@@ -13,6 +13,10 @@ export function usePengeluaran() {
 
   // ── Filter jenis (client-side saja, tanpa filter periode) ──
   const [jenisFilter, setJenisFilter] = useState("all");
+
+  // ── Pagination ──
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // ── Form state ──
   const [jenis, setJenis] = useState("gaji");
@@ -58,6 +62,15 @@ export function usePengeluaran() {
     return allRows.filter((r) => r.jenis === jenisFilter);
   }, [allRows, jenisFilter]);
 
+  // Reset ke halaman 1 saat filter berubah
+  useEffect(() => { setCurrentPage(1); }, [jenisFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pagedRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  function handleNext() { setCurrentPage((p) => Math.min(p + 1, totalPages)); }
+  function handlePrev() { setCurrentPage((p) => Math.max(p - 1, 1)); }
+
   const totalVisible = rows.reduce((s, r) => s + Number(r.nominal || 0), 0);
 
   function handleSubmit(e) {
@@ -77,6 +90,11 @@ export function usePengeluaran() {
     jenisFilter, setJenisFilter,
     list,
     rows,
+    pagedRows,
+    currentPage,
+    totalPages,
+    handleNext,
+    handlePrev,
     totalVisible,
     allCount: allRows.length,
     // form
