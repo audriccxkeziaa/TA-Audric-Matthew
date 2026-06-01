@@ -7,10 +7,11 @@ export const TYPE_BADGES = {
 };
 
 export const STATUS_BADGES = {
-  pending: { label: "Menunggu", tone: "amber" },
-  approved: { label: "Disetujui", tone: "green" },
-  rejected: { label: "Ditolak", tone: "red" },
-  selesai: { label: "Selesai", tone: "green" },
+  pending:   { label: "Menunggu",   tone: "amber" },
+  approved:  { label: "Disetujui",  tone: "green" },
+  rejected:  { label: "Ditolak",    tone: "red" },
+  selesai:   { label: "Selesai",    tone: "green" },
+  cancelled: { label: "Dibatalkan", tone: "slate" },
 };
 
 // Context-aware: return_supplier+approved berarti "Menunggu Barang Ganti" (belum selesai).

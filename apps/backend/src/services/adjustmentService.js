@@ -348,12 +348,67 @@ async function resolveSupplierReturn({ adminUser, adjustmentId }) {
   return detail;
 }
 
+// Jurnal pembalik: hapus expense refund yang dibuat saat sales_return disetujui
+async function reverseRefundExpense({ kode, userId }) {
+  const { data: found } = await supabaseAdmin
+    .from("expenses")
+    .select("id, nominal")
+    .eq("deskripsi", `Refund retur pelanggan — ${kode}`)
+    .maybeSingle();
+  if (!found) return;
+
+  const { error } = await supabaseAdmin
+    .from("expenses")
+    .delete()
+    .eq("id", found.id);
+  if (error) {
+    console.warn("[POS-ADJ] Gagal membalik expense refund:", error.message);
+  } else {
+    console.log(`[POS-ADJ] Expense refund ${found.id} (${kode}) dihapus sebagai jurnal pembalik void`);
+  }
+}
+
+async function voidAdjustment({ adminUser, adjustmentId }) {
+  if (adminUser.role !== "admin") {
+    const e = new Error("Hanya admin yang dapat membatalkan retur");
+    e.status = 403;
+    throw e;
+  }
+
+  try {
+    await adjustmentRepository.voidViaRpc({
+      adjustmentId,
+      adminId: adminUser.id,
+    });
+  } catch (err) {
+    const e = new Error(err.message);
+    e.status = err.status || 400;
+    throw e;
+  }
+
+  const detail = await adjustmentRepository.getDetail(adjustmentId);
+
+  // Balik expense refund jika sales_return
+  if (detail.type === "sales_return") {
+    await reverseRefundExpense({
+      kode: detail.kode_adjustment,
+      userId: adminUser.id,
+    });
+  }
+
+  console.log(
+    `[POS-ADJ] VOIDED adjustment=${adjustmentId} oleh admin=${adminUser.username}`
+  );
+  return detail;
+}
+
 module.exports = {
   createAdjustment,
   approveAdjustment,
   rejectAdjustment,
   verifyAdminAndApprove,
   resolveSupplierReturn,
+  voidAdjustment,
   listAdjustments,
   getAdjustmentDetail,
   countPending,

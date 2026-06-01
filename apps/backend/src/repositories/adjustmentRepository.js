@@ -249,11 +249,26 @@ async function resolveViaRpc({ adjustmentId, adminId }) {
   return data;
 }
 
+async function voidViaRpc({ adjustmentId, adminId }) {
+  const { data, error } = await supabase.rpc("fn_void_adjustment", {
+    p_adjustment_id: adjustmentId,
+    p_admin_id: adminId,
+  });
+  if (error) {
+    const err = new Error(error.message);
+    err.code = error.code;
+    err.details = error.details;
+    throw err;
+  }
+  return data;
+}
+
 module.exports = {
   createViaRpc,
   approveViaRpc,
   rejectViaRpc,
   resolveViaRpc,
+  voidViaRpc,
   getDetail,
   list,
   countPending,

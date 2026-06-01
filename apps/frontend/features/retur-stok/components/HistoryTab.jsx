@@ -1,7 +1,7 @@
 "use client";
 import { Card, Button, Badge, Modal, Spinner, EmptyState } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
-import { XCircle, CheckCircle } from "lucide-react";
+import { XCircle, CheckCircle, Undo2 } from "lucide-react";
 import { TYPE_BADGES, getStatusBadge } from "../lib/badges";
 import { printReturnReceipt } from "@/lib/receipt";
 import { useHistory } from "../hooks/useHistory";
@@ -209,7 +209,7 @@ export function HistoryTab() {
                                   onClick={() => h.cancelEntry(row.id)}
                                   disabled={h.processing === row.id}
                                   className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
-                                  title="Batalkan"
+                                  title="Tolak"
                                 >
                                   <XCircle className="h-4 w-4" />
                                 </button>
@@ -222,6 +222,25 @@ export function HistoryTab() {
                                   <CheckCircle className="h-4 w-4" />
                                 </button>
                               </>
+                            )}
+                            {(row.status === "approved" || row.status === "selesai") && (
+                              <button
+                                onClick={() => h.voidEntry(row.id)}
+                                disabled={h.processing === row.id}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded text-orange-500 transition hover:bg-orange-50 hover:text-orange-700 disabled:opacity-40"
+                                title="Batalkan (Void)"
+                              >
+                                <Undo2 className="h-4 w-4" />
+                              </button>
+                            )}
+                            {row.status === "cancelled" && (
+                              <button
+                                disabled
+                                className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-300 cursor-not-allowed"
+                                title="Sudah dibatalkan"
+                              >
+                                <Undo2 className="h-4 w-4" />
+                              </button>
                             )}
                           </div>
                         </td>
@@ -255,7 +274,7 @@ export function HistoryTab() {
                                 onClick={() => h.cancelEntry(row.id)}
                                 disabled={h.processing === row.id}
                                 className="flex h-7 w-7 items-center justify-center rounded text-red-500 transition hover:bg-red-50 disabled:opacity-40"
-                                title="Batalkan"
+                                title="Tolak"
                               >
                                 <XCircle className="h-4 w-4" />
                               </button>
@@ -268,6 +287,25 @@ export function HistoryTab() {
                                 <CheckCircle className="h-4 w-4" />
                               </button>
                             </>
+                          )}
+                          {(row.status === "approved" || row.status === "selesai") && (
+                            <button
+                              onClick={() => h.voidEntry(row.id)}
+                              disabled={h.processing === row.id}
+                              className="flex h-7 w-7 items-center justify-center rounded text-orange-500 transition hover:bg-orange-50 disabled:opacity-40"
+                              title="Batalkan (Void)"
+                            >
+                              <Undo2 className="h-4 w-4" />
+                            </button>
+                          )}
+                          {row.status === "cancelled" && (
+                            <button
+                              disabled
+                              className="flex h-7 w-7 items-center justify-center rounded text-slate-300 cursor-not-allowed"
+                              title="Sudah dibatalkan"
+                            >
+                              <Undo2 className="h-4 w-4" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -348,18 +386,6 @@ export function HistoryTab() {
                 <span className="text-xs text-slate-400">Dibuat Oleh</span>
                 <p className="font-medium">{h.detail.username || "-"}</p>
               </div>
-              <div>
-                <span className="text-xs text-slate-400">Tanggal (WITA)</span>
-                <p className="font-medium">{fmtWita(h.detail.created_at)}</p>
-              </div>
-              {h.detail.approved_by_username && (
-                <div>
-                  <span className="text-xs text-slate-400">
-                    {h.detail.status === "approved" ? "Disetujui" : "Ditolak"} Oleh
-                  </span>
-                  <p className="font-medium">{h.detail.approved_by_username}</p>
-                </div>
-              )}
               {h.detail.approved_at && (
                 <div>
                   <span className="text-xs text-slate-400">Tanggal Keputusan</span>

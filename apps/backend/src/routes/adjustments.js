@@ -15,6 +15,9 @@ router.get("/lookup/purchase", ctrl.lookupPurchase);
 // Retur Supplier Tahap 2: barang ganti diterima (admin only — enforced in service layer)
 router.post("/:id/resolve", ctrl.resolveSupplierReturn);
 
+// Void/Batalkan retur yang sudah selesai (admin only — enforced in service layer)
+router.post("/:id/void", ctrl.voidAdjustment);
+
 // Manager Override: remote approval (admin only — enforced in service layer)
 router.post("/:id/approve", ctrl.approveAdjustment);
 // Manager Override: on-site PIN verification (kasir+admin, tapi verifikasi admin credentials)

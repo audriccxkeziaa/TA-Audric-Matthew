@@ -53,6 +53,21 @@ export function useHistory() {
     }
   }
 
+  async function voidEntry(id) {
+    if (!window.confirm("Batalkan retur ini? Stok akan dikembalikan ke posisi semula sebelum retur.")) return;
+    setProcessing(id);
+    try {
+      await adjustmentsApi.void(id);
+      toast.success("Retur berhasil dibatalkan — stok sudah dikembalikan");
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+      await load(filterType);
+    } catch (err) {
+      toast.error(err.message || "Gagal membatalkan retur");
+    } finally {
+      setProcessing(null);
+    }
+  }
+
   async function approveEntry(id) {
     if (!window.confirm("Setujui retur ini? Stok akan diproses sesuai dokumen retur.")) return;
     setProcessing(id);
@@ -90,6 +105,6 @@ export function useHistory() {
     filterType, setFilterType,
     detail, setDetail, detailLoading, openDetail,
     page, setPage, totalPages, pagedData,
-    processing, approveEntry, cancelEntry,
+    processing, voidEntry, approveEntry, cancelEntry,
   };
 }

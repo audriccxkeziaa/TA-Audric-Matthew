@@ -89,6 +89,8 @@ export const adjustmentsApi = {
   pendingCount: () => apiFetch("/adjustments/pending/count"),
   resolveSupplier: (id) =>
     apiFetch(`/adjustments/${id}/resolve`, { method: "POST" }),
+  void: (id) =>
+    apiFetch(`/adjustments/${id}/void`, { method: "POST" }),
   approve: (id) =>
     apiFetch(`/adjustments/${id}/approve`, { method: "POST" }),
   approvePin: (id, { username, password }) =>

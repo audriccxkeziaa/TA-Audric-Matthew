@@ -165,12 +165,30 @@ async function resolveSupplierReturn(req, res) {
   }
 }
 
+async function voidAdjustment(req, res) {
+  try {
+    const detail = await adjustmentService.voidAdjustment({
+      adminUser: req.user,
+      adjustmentId: req.params.id,
+    });
+    return res.json({
+      message: "Retur berhasil dibatalkan — stok telah dikembalikan ke posisi semula.",
+      data: detail,
+    });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status >= 500) console.error("[POS-ADJ] void error:", err.message);
+    return res.status(status).json({ error: err.message });
+  }
+}
+
 module.exports = {
   createAdjustment,
   approveAdjustment,
   rejectAdjustment,
   approvePIN,
   resolveSupplierReturn,
+  voidAdjustment,
   listAdjustments,
   getAdjustmentDetail,
   pendingCount,
