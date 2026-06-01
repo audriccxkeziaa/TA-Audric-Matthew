@@ -2,7 +2,8 @@ const dashboardRepository = require("../repositories/dashboardRepository");
 
 async function getSummary(req, res) {
   try {
-    const data = await dashboardRepository.getSummary();
+    const { from, to } = req.query;
+    const data = await dashboardRepository.getSummary({ from, to });
     return res.json({ data });
   } catch (err) {
     console.error("[POS-DASH] summary error:", err.message);

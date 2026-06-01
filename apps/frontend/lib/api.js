@@ -48,7 +48,7 @@ export const restockApi = {
 };
 
 export const dashboardApi = {
-  summary: () => apiFetch("/dashboard/summary"),
+  summary: (params) => apiFetch("/dashboard/summary", { query: params }),
   salesTrend: (days) => apiFetch("/dashboard/sales-trend", { query: { days } }),
   topProducts: (params) =>
     apiFetch("/dashboard/top-products", { query: params }),

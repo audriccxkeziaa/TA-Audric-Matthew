@@ -17,40 +17,57 @@ function daysAgoIso(days) {
   return d.toISOString();
 }
 
-// Summary cards untuk halaman /admin/dashboard
-async function getSummary() {
+// Summary cards untuk halaman /admin/dashboard.
+// from/to opsional (ISO string); default = hari ini.
+async function getSummary({ from, to } = {}) {
   const todayStart = startOfTodayIso();
   const todayEnd = endOfTodayIso();
-  const weekAgo = daysAgoIso(7);
+  const startDate = from || todayStart;
+  const endDate = to || todayEnd;
 
-  // (1) Jumlah transaksi hari ini + revenue
-  const { data: salesToday, error: salesErr } = await supabase
+  // (1) Jumlah transaksi + revenue dalam periode
+  const { data: salesPeriod, error: salesErr } = await supabase
     .from("sales")
     .select("id, total_harga")
-    .gte("created_at", todayStart)
-    .lte("created_at", todayEnd);
-  if (salesErr) throw new Error("Gagal memuat sales hari ini");
+    .gte("created_at", startDate)
+    .lte("created_at", endDate);
+  if (salesErr) throw new Error("Gagal memuat sales periode");
 
-  const tx_today_count = salesToday?.length || 0;
-  const revenue_today = (salesToday || []).reduce(
+  const tx_today_count = salesPeriod?.length || 0;
+  const revenue_today = (salesPeriod || []).reduce(
     (acc, s) => acc + Number(s.total_harga || 0),
     0
   );
 
-  // (2) Total qty stok masuk dalam 7 hari terakhir (purchase_items dari purchases tervalidasi)
-  const { data: stockInItems, error: piErr } = await supabase
-    .from("purchase_items")
-    .select("qty, purchases!inner(status_validasi, created_at)")
-    .gte("purchases.created_at", weekAgo)
-    .eq("purchases.status_validasi", "tervalidasi");
-  if (piErr) throw new Error("Gagal memuat stok masuk minggu ini");
-
-  const stock_in_week = (stockInItems || []).reduce(
-    (acc, r) => acc + Number(r.qty || 0),
-    0
+  // (2) Pengeluaran operasional (expenses, kolom tanggal = DATE)
+  const expFrom = startDate.slice(0, 10);
+  const expTo = endDate.slice(0, 10);
+  const { data: expRows, error: expErr } = await supabase
+    .from("expenses")
+    .select("nominal")
+    .gte("tanggal", expFrom)
+    .lte("tanggal", expTo);
+  if (expErr) throw new Error("Gagal memuat pengeluaran operasional");
+  const total_operasional = (expRows || []).reduce(
+    (a, r) => a + Number(r.nominal || 0), 0
   );
 
-  // (3) Jumlah R1 REJECTED hari ini (bukti R1 aktif)
+  // (3) Pembelian supplier tervalidasi dalam periode
+  const { data: purchRows, error: purchErr } = await supabase
+    .from("purchases")
+    .select("total")
+    .eq("status_validasi", "tervalidasi")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate);
+  if (purchErr) throw new Error("Gagal memuat pembelian supplier");
+  const total_pembelian = (purchRows || []).reduce(
+    (a, r) => a + Number(r.total || 0), 0
+  );
+
+  const total_pengeluaran = total_operasional + total_pembelian;
+  const laba_bersih = revenue_today - total_pengeluaran;
+
+  // (4) Jumlah R1 REJECTED hari ini (selalu today — bukti R1 aktif)
   const { count: r1_rejected_today, error: r1Err } = await supabase
     .from("stock_logs")
     .select("id", { count: "exact", head: true })
@@ -60,7 +77,7 @@ async function getSummary() {
     .lte("created_at", todayEnd);
   if (r1Err) throw new Error("Gagal memuat R1 rejected hari ini");
 
-  // (4) Jumlah produk dengan stok <= min_stock (aktif)
+  // (5) Stok menipis + negatif (selalu kondisi saat ini)
   const { data: lowStockRows, error: lsErr } = await supabase
     .from("products")
     .select("id, stok, min_stock")
@@ -71,7 +88,6 @@ async function getSummary() {
     (p) => Number(p.stok) <= Number(p.min_stock)
   ).length;
 
-  // (5) Negative-stock count (HARUS 0 — bukti R1+R3 menjaga integritas)
   const negative_stock_count = (lowStockRows || []).filter(
     (p) => Number(p.stok) < 0
   ).length;
@@ -79,7 +95,8 @@ async function getSummary() {
   return {
     tx_today_count,
     revenue_today,
-    stock_in_week,
+    laba_bersih,
+    total_pengeluaran,
     r1_rejected_today: r1_rejected_today || 0,
     low_stock_count,
     negative_stock_count,

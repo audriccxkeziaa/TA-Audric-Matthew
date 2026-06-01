@@ -17,16 +17,10 @@ import { PurchaseDetailModal } from "@/features/keuangan/components/PurchaseDeta
 import { PrintPreviewModal } from "./PrintPreviewModal";
 import { JENIS_LABELS, JENIS_BADGE_TONE, JENIS_OPTIONS } from "@/features/keuangan/lib/constants";
 
-const MONTHLY_PRESETS = [
+const PERIOD_PRESETS = [
   { id: "bulan-ini",  label: "Bulan Ini" },
-  { id: "bulan-lalu", label: "Bulan Lalu" },
-  { id: "3-bulan",    label: "3 Bulan" },
-  { id: "6-bulan",    label: "6 Bulan" },
-];
-
-const YEARLY_PRESETS = [
+  { id: "minggu-ini", label: "Minggu Ini" },
   { id: "tahun-ini",  label: "Tahun Ini" },
-  { id: "tahun-lalu", label: "Tahun Lalu" },
 ];
 
 function PresetGroup({ presets, active, onSelect }) {
@@ -62,7 +56,6 @@ export default function LaporanPage() {
         description="Ringkasan arus kas dan rincian pemasukan serta pengeluaran."
         actions={
           <div className="flex gap-2 no-print">
-            <Button variant="secondary" onClick={l.exportCsv}>Export CSV</Button>
             <Button onClick={() => l.setPrintOpen(true)}>
               <Printer size={16} /> Cetak Laporan
             </Button>
@@ -81,18 +74,8 @@ export default function LaporanPage() {
 
           <div className="h-4 w-px bg-slate-200 shrink-0" />
 
-          {/* Bulanan */}
           <PresetGroup
-            presets={MONTHLY_PRESETS}
-            active={l.periodPreset}
-            onSelect={l.applyPreset}
-          />
-
-          <div className="h-4 w-px bg-slate-200 shrink-0" />
-
-          {/* Tahunan */}
-          <PresetGroup
-            presets={YEARLY_PRESETS}
+            presets={PERIOD_PRESETS}
             active={l.periodPreset}
             onSelect={l.applyPreset}
           />
@@ -150,7 +133,7 @@ export default function LaporanPage() {
       </Card>
 
       {/* ── Card utama ── */}
-      <Card className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+      <Card className="flex flex-col gap-4 p-4">
 
         {/* 5 Summary cards */}
         {l.financeSummary.isLoading ? (
@@ -197,10 +180,10 @@ export default function LaporanPage() {
         )}
 
         {/* Split panels */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+        <div className="flex flex-col gap-3 lg:flex-row">
 
           {/* ── Rincian Pemasukan ── */}
-          <Card className="flex min-h-0 flex-1 flex-col p-0 ring-1 ring-slate-200/60">
+          <Card className="flex flex-1 flex-col p-0 ring-1 ring-slate-200/60 min-h-[360px]">
             <div className="shrink-0 rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -228,7 +211,7 @@ export default function LaporanPage() {
                 </div>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto thin-scroll">
+            <div className="max-h-[400px] overflow-auto thin-scroll">
               {l.salesQuery.isLoading ? (
                 <div className="p-4"><Spinner label="Memuat..." /></div>
               ) : l.filteredSales.length === 0 ? (
@@ -261,7 +244,7 @@ export default function LaporanPage() {
           </Card>
 
           {/* ── Daftar Pengeluaran ── */}
-          <Card className="flex min-h-0 flex-1 flex-col p-0 ring-1 ring-slate-200/60">
+          <Card className="flex flex-1 flex-col p-0 ring-1 ring-slate-200/60 min-h-[360px]">
             <div className="shrink-0 rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-red-50 to-white px-4 py-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -291,7 +274,7 @@ export default function LaporanPage() {
                 </div>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto thin-scroll">
+            <div className="max-h-[400px] overflow-auto thin-scroll">
               {l.isUnifiedLoading ? (
                 <div className="p-4"><Spinner label="Memuat..." /></div>
               ) : l.unifiedRows.length === 0 ? (
@@ -324,7 +307,7 @@ export default function LaporanPage() {
                             {JENIS_LABELS[r.jenis] || r.jenis}
                           </Badge>
                         </TD>
-                        <TD className="max-w-[160px] truncate text-xs text-slate-600">
+                        <TD className="text-xs text-slate-600 break-words max-w-[200px]">
                           {r.deskripsi}
                         </TD>
                         <TD className="text-right font-semibold text-red-600">

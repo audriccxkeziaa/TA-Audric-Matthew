@@ -1,5 +1,4 @@
 "use client";
-// Dua grafik dashboard: Tren Pendapatan & Pengeluaran (ComposedChart) & top 10 produk (custom bars).
 
 import {
   ResponsiveContainer,
@@ -13,25 +12,23 @@ import {
 } from "recharts";
 import { rupiah } from "@/lib/format";
 import { Card, Spinner, EmptyState } from "@/components/ui";
+import { TrendingUp, Award } from "lucide-react";
 
-// Format angka singkat untuk sumbu Y kiri (rupiah)
 function fmtAxis(v) {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}jt`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(0)}rb`;
   return String(v);
 }
 
-// Tooltip kustom untuk ComposedChart (3 series + transaksi)
 function TrenTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const labelMap = {
     pendapatan: "Omzet",
     gross_profit: "Gross Profit",
-    pendapatan_bersih: "Est. Pendapatan Bersih",
     n_tx: "Transaksi",
   };
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl text-xs min-w-[190px]">
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl text-xs min-w-[180px]">
       <p className="mb-2 font-semibold text-slate-600">{label}</p>
       {payload.map((p) => (
         <div key={p.dataKey} className="flex items-center justify-between gap-6 py-0.5">
@@ -48,7 +45,6 @@ function TrenTooltip({ active, payload, label }) {
   );
 }
 
-// Satu item legend kustom (dot + teks)
 function LegendItem({ color, label }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -58,21 +54,19 @@ function LegendItem({ color, label }) {
   );
 }
 
-// ── Warna gradient per ranking (1–10) ──
 const RANK_GRADIENTS = [
-  ["#f59e0b", "#f97316"], // 1 amber→orange
-  ["#10b981", "#059669"], // 2 emerald
-  ["#6366f1", "#4f46e5"], // 3 indigo
-  ["#8b5cf6", "#7c3aed"], // 4 violet
-  ["#f43f5e", "#e11d48"], // 5 rose
-  ["#06b6d4", "#0891b2"], // 6 cyan
-  ["#84cc16", "#65a30d"], // 7 lime
-  ["#ec4899", "#db2777"], // 8 pink
-  ["#14b8a6", "#0d9488"], // 9 teal
-  ["#fb923c", "#ea580c"], // 10 orange-dark
+  ["#f59e0b", "#f97316"],
+  ["#10b981", "#059669"],
+  ["#6366f1", "#4f46e5"],
+  ["#8b5cf6", "#7c3aed"],
+  ["#f43f5e", "#e11d48"],
+  ["#06b6d4", "#0891b2"],
+  ["#84cc16", "#65a30d"],
+  ["#ec4899", "#db2777"],
+  ["#14b8a6", "#0d9488"],
+  ["#fb923c", "#ea580c"],
 ];
 
-// Baris progress-bar satu produk
 function ProductBar({ rank, nama, nama_barang, total_qty, maxQty }) {
   const colors = RANK_GRADIENTS[(rank - 1) % RANK_GRADIENTS.length];
   const pct = maxQty > 0 ? (total_qty / maxQty) * 100 : 0;
@@ -88,7 +82,6 @@ function ProductBar({ rank, nama, nama_barang, total_qty, maxQty }) {
       >
         {rank}
       </span>
-
       <div className="min-w-0 flex-1">
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <span className="truncate text-xs font-medium text-slate-700">{nama}</span>
@@ -111,16 +104,19 @@ function ProductBar({ rank, nama, nama_barang, total_qty, maxQty }) {
 }
 
 export function DashboardCharts({ combinedData, isLoadingCombined, top, topData }) {
-  const hasData = combinedData.some((d) => d.pendapatan > 0 || d.pengeluaran > 0);
+  const hasData = combinedData.some((d) => d.pendapatan > 0);
   const maxQty = topData[0]?.total_qty || 1;
 
   return (
     <div className="mt-3 grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
 
-      {/* ── Tren Pendapatan & Pengeluaran ── */}
+      {/* ── Tren Penjualan ── */}
       <Card className="flex min-h-0 flex-col p-4">
         <div className="mb-3 shrink-0 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Tren Pendapatan &amp; Pengeluaran</h2>
+          <div className="flex items-center gap-2">
+            <TrendingUp size={16} className="text-emerald-500" />
+            <h2 className="font-semibold text-slate-800">Tren Penjualan</h2>
+          </div>
           <span className="text-xs text-slate-400">30 hari terakhir</span>
         </div>
 
@@ -135,20 +131,13 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={combinedData} margin={{ top: 8, right: 36, left: 0, bottom: 0 }}>
                     <defs>
-                      {/* gradOmzet = green (Omzet) */}
                       <linearGradient id="gradOmzet" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
                         <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
                       </linearGradient>
-                      {/* gradGross = amber (Gross Profit) */}
                       <linearGradient id="gradGross" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
-                      </linearGradient>
-                      {/* gradBersih = indigo/brand (Estimasi Pendapatan Bersih) */}
-                      <linearGradient id="gradBersih" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.45} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.04} />
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
 
@@ -191,31 +180,19 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                       radius={[3, 3, 0, 0]}
                       barSize={8}
                     />
-                    {/* Estimasi Pendapatan Bersih — indigo, digambar PERTAMA (paling bawah) */}
-                    <Area
-                      yAxisId="rp"
-                      type="monotone"
-                      dataKey="pendapatan_bersih"
-                      name="Estimasi Pendapatan Bersih"
-                      stroke="#6366f1"
-                      strokeWidth={2.5}
-                      fill="url(#gradBersih)"
-                      dot={false}
-                      activeDot={{ r: 4, strokeWidth: 0 }}
-                    />
-                    {/* Gross Profit — amber, tengah */}
+                    {/* Gross Profit — ungu */}
                     <Area
                       yAxisId="rp"
                       type="monotone"
                       dataKey="gross_profit"
                       name="Gross Profit"
-                      stroke="#f59e0b"
+                      stroke="#8b5cf6"
                       strokeWidth={2}
                       fill="url(#gradGross)"
                       dot={false}
                       activeDot={{ r: 4, strokeWidth: 0 }}
                     />
-                    {/* Omzet — green, digambar TERAKHIR (paling atas) */}
+                    {/* Omzet — hijau, digambar terakhir */}
                     <Area
                       yAxisId="rp"
                       type="monotone"
@@ -231,10 +208,8 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                 </ResponsiveContainer>
               </div>
 
-              {/* Legend kustom — urutan & warna sesuai dashboardd.png */}
               <div className="shrink-0 flex items-center justify-center gap-5 flex-wrap pb-1">
-                <LegendItem color="#6366f1" label="Estimasi Pendapatan Bersih" />
-                <LegendItem color="#f59e0b" label="Gross Profit" />
+                <LegendItem color="#8b5cf6" label="Gross Profit" />
                 <LegendItem color="#10b981" label="Omzet" />
                 <LegendItem color="#fb923c" label="Total Transaksi" />
               </div>
@@ -246,7 +221,10 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
       {/* ── Top 10 Produk Terlaris ── */}
       <Card className="flex min-h-0 flex-col p-4">
         <div className="mb-3 shrink-0 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">10 Produk Terlaris (30 hari)</h2>
+          <div className="flex items-center gap-2">
+            <Award size={16} className="text-amber-500" />
+            <h2 className="font-semibold text-slate-800">10 Produk Terlaris (30 hari)</h2>
+          </div>
           <span className="text-xs text-slate-400">Qty terjual</span>
         </div>
 

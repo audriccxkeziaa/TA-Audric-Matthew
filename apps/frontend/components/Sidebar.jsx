@@ -23,19 +23,19 @@ const NAV = [
     icon: "scan",
   },
   {
-    href: "/retur-stok",
-    label: "Retur & Penyesuaian",
-    roles: ["admin"],
-    icon: "undo",
-  },
-  {
     href: "/dashboard/restock",
     label: "Rekomendasi Restock",
     roles: ["admin", "kasir"],
     icon: "alert",
   },
-  { href: "/laporan", label: "Laporan", roles: ["admin"], icon: "chart" },
+  {
+    href: "/retur-stok",
+    label: "Retur & Penyesuaian",
+    roles: ["admin"],
+    icon: "undo",
+  },
   { href: "/pengeluaran", label: "Pengeluaran", roles: ["admin"], icon: "receipt" },
+  { href: "/laporan", label: "Laporan", roles: ["admin"], icon: "chart" },
   {
     href: "/audit-trail",
     label: "Audit Trail",
