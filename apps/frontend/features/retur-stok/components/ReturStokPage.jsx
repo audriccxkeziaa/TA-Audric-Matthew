@@ -8,7 +8,6 @@ import { TabButton } from "./TabButton";
 import { ReturSupplierForm } from "./ReturSupplierForm";
 import { ReturPelangganForm } from "./ReturPelangganForm";
 import { PenyesuaianStokForm } from "./PenyesuaianStokForm";
-import { PendingApprovalTab } from "./PendingApprovalTab";
 import { HistoryTab } from "./HistoryTab";
 
 export default function ReturStokPage() {
@@ -19,7 +18,6 @@ export default function ReturStokPage() {
     { id: "return_supplier", label: "Retur ke Supplier" },
     { id: "sales_return", label: "Retur Pelanggan" },
     ...(isAdmin ? [{ id: "stock_adjustment", label: "Penyesuaian Stok" }] : []),
-    ...(isAdmin ? [{ id: "pending_approval", label: "Persetujuan Pending" }] : []),
     { id: "history", label: "Riwayat" },
   ];
 
@@ -43,7 +41,6 @@ export default function ReturStokPage() {
         {tab === "return_supplier" && <ReturSupplierForm />}
         {tab === "sales_return" && <ReturPelangganForm />}
         {tab === "stock_adjustment" && isAdmin && <PenyesuaianStokForm />}
-        {tab === "pending_approval" && isAdmin && <PendingApprovalTab />}
         {tab === "history" && <HistoryTab />}
       </div>
     </PageShell>

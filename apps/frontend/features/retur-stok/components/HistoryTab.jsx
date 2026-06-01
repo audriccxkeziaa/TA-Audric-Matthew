@@ -1,7 +1,7 @@
 "use client";
 import { Card, Button, Badge, Modal, Spinner, EmptyState } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
-import { Trash2 } from "lucide-react";
+import { XCircle, CheckCircle } from "lucide-react";
 import { TYPE_BADGES, getStatusBadge } from "../lib/badges";
 import { printReturnReceipt } from "@/lib/receipt";
 import { useHistory } from "../hooks/useHistory";
@@ -203,13 +203,26 @@ export function HistoryTab() {
                                 <circle cx="12" cy="12" r="3" />
                               </svg>
                             </button>
-                            <button
-                              onClick={() => h.deleteEntry(row.id, row.kode_adjustment)}
-                              className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition hover:bg-red-50 hover:text-red-700"
-                              title="Hapus riwayat"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {row.status === "pending" && (
+                              <>
+                                <button
+                                  onClick={() => h.cancelEntry(row.id)}
+                                  disabled={h.processing === row.id}
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
+                                  title="Batalkan"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => h.approveEntry(row.id)}
+                                  disabled={h.processing === row.id}
+                                  className="inline-flex h-6 w-6 items-center justify-center rounded text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
+                                  title="Setujui"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -236,14 +249,26 @@ export function HistoryTab() {
                         </button>
                         <div className="flex shrink-0 items-center gap-1">
                           <span className="text-xs text-slate-500">Qty {angka(row.total_qty)}</span>
-                          <button
-                            onClick={() => h.deleteEntry(row.id, row.kode_adjustment)}
-                            className="flex h-7 w-7 items-center justify-center rounded text-red-500 transition hover:bg-red-50 hover:text-red-700"
-                            title="Hapus riwayat"
-                            aria-label="Hapus riwayat"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {row.status === "pending" && (
+                            <>
+                              <button
+                                onClick={() => h.cancelEntry(row.id)}
+                                disabled={h.processing === row.id}
+                                className="flex h-7 w-7 items-center justify-center rounded text-red-500 transition hover:bg-red-50 disabled:opacity-40"
+                                title="Batalkan"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => h.approveEntry(row.id)}
+                                disabled={h.processing === row.id}
+                                className="flex h-7 w-7 items-center justify-center rounded text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-40"
+                                title="Setujui"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                       <button

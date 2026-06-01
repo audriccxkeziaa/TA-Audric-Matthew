@@ -5,11 +5,13 @@
 import { useState, useCallback } from "react";
 import { adjustmentsApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const HISTORY_PAGE_SIZE = 5;
 
 export function useHistory() {
   const toast = useToast();
+  const qc = useQueryClient();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -17,6 +19,7 @@ export function useHistory() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [processing, setProcessing] = useState(null);
 
   const load = useCallback(
     async (type) => {
@@ -50,14 +53,35 @@ export function useHistory() {
     }
   }
 
-  async function deleteEntry(id, kode) {
-    if (!window.confirm(`Hapus riwayat "${kode}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  async function approveEntry(id) {
+    if (!window.confirm("Setujui retur ini? Stok akan diproses sesuai dokumen retur.")) return;
+    setProcessing(id);
     try {
-      await adjustmentsApi.remove(id);
-      setData((prev) => prev.filter((r) => r.id !== id));
-      toast.success("Riwayat berhasil dihapus");
-    } catch {
-      toast.error("Gagal menghapus riwayat");
+      await adjustmentsApi.approve(id);
+      toast.success("Retur berhasil disetujui");
+      qc.invalidateQueries({ queryKey: ["adjustments-pending"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+      await load(filterType);
+    } catch (err) {
+      toast.error(err.message || "Gagal menyetujui retur");
+    } finally {
+      setProcessing(null);
+    }
+  }
+
+  async function cancelEntry(id) {
+    if (!window.confirm("Batalkan retur ini? Status akan diubah menjadi Ditolak.")) return;
+    setProcessing(id);
+    try {
+      await adjustmentsApi.reject(id, "Dibatalkan");
+      toast.success("Retur berhasil dibatalkan");
+      qc.invalidateQueries({ queryKey: ["adjustments-pending"] });
+      qc.invalidateQueries({ queryKey: ["notif-pending-approval"] });
+      await load(filterType);
+    } catch (err) {
+      toast.error(err.message || "Gagal membatalkan retur");
+    } finally {
+      setProcessing(null);
     }
   }
 
@@ -66,6 +90,6 @@ export function useHistory() {
     filterType, setFilterType,
     detail, setDetail, detailLoading, openDetail,
     page, setPage, totalPages, pagedData,
-    deleteEntry,
+    processing, approveEntry, cancelEntry,
   };
 }
