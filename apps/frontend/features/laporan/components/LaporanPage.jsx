@@ -9,7 +9,7 @@ import {
 import { rupiah, angka, tanggal } from "@/lib/format";
 import {
   TrendingUp, TrendingDown, Package, Wallet, Printer, ReceiptText,
-  ChevronLeft, ChevronRight, CalendarDays,
+  ChevronLeft, ChevronRight, CalendarDays, Eye,
 } from "lucide-react";
 import { useLaporanTerpadu } from "../hooks/useLaporanTerpadu";
 import { LaporanDetailModal } from "./LaporanDetailModal";
@@ -296,13 +296,15 @@ export default function LaporanPage() {
               ) : (
                 <Table desktopOnly={false}>
                   <THead>
+                    <TH className="w-8">No</TH>
                     <TH>Tanggal</TH>
                     <TH>Jenis</TH>
                     <TH>Deskripsi</TH>
                     <TH className="text-right">Nominal</TH>
+                    <TH className="text-center">Aksi</TH>
                   </THead>
                   <TBody>
-                    {l.paginatedUnifiedRows.map((r) => (
+                    {l.paginatedUnifiedRows.map((r, idx) => (
                       <TR
                         key={r.id}
                         onClick={() =>
@@ -311,6 +313,9 @@ export default function LaporanPage() {
                             : l.setViewExpense(r)
                         }
                       >
+                        <TD className="text-xs text-slate-400">
+                          {(l.expensePage - 1) * l.expensePageSize + idx + 1}
+                        </TD>
                         <TD className="text-xs">{tanggal(r.tanggal)}</TD>
                         <TD>
                           <Badge tone={JENIS_BADGE_TONE[r.jenis] || "slate"} dot>
@@ -323,6 +328,20 @@ export default function LaporanPage() {
                         <TD className="text-right font-semibold text-red-600">
                           − {rupiah(r.nominal)}
                         </TD>
+                        <TD className="text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              r._type === "purchase"
+                                ? l.openPurchaseDetail(r._rawId)
+                                : l.setViewExpense(r);
+                            }}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded text-slate-400 transition-colors hover:text-brand-500"
+                            title="Lihat detail"
+                          >
+                            <Eye size={14} />
+                          </button>
+                        </TD>
                       </TR>
                     ))}
                   </TBody>
@@ -334,56 +353,28 @@ export default function LaporanPage() {
             {l.unifiedRows.length > l.expensePageSize && (
               <div className="shrink-0 border-t border-slate-100 px-4 py-2.5 no-print">
                 <div className="flex items-center justify-between gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => l.setExpensePage((p) => p - 1)}
+                    disabled={l.expensePage <= 1}
+                  >
+                    <ChevronLeft size={14} /> Previous
+                  </Button>
                   <span className="text-xs text-slate-500">
-                    {l.unifiedRows.length} entri · hal {l.expensePage}/{l.expenseTotalPages}
+                    Page{" "}
+                    <span className="font-semibold text-slate-700">{l.expensePage}</span>
+                    {" "}of{" "}
+                    <span className="font-semibold text-slate-700">{l.expenseTotalPages}</span>
                   </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      disabled={l.expensePage <= 1}
-                      onClick={() => l.setExpensePage((p) => p - 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    {Array.from({ length: l.expenseTotalPages }, (_, i) => i + 1)
-                      .filter((p) =>
-                        p === 1 ||
-                        p === l.expenseTotalPages ||
-                        Math.abs(p - l.expensePage) <= 1
-                      )
-                      .reduce((acc, p, i, arr) => {
-                        if (i > 0 && p - arr[i - 1] > 1) acc.push("…");
-                        acc.push(p);
-                        return acc;
-                      }, [])
-                      .map((p, i) =>
-                        p === "…" ? (
-                          <span key={`ellipsis-${i}`} className="px-1 text-xs text-slate-400">…</span>
-                        ) : (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() => l.setExpensePage(p)}
-                            className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-medium transition ${
-                              l.expensePage === p
-                                ? "border-brand-500 bg-brand-600 text-white shadow-sm"
-                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        )
-                      )}
-                    <button
-                      type="button"
-                      disabled={l.expensePage >= l.expenseTotalPages}
-                      onClick={() => l.setExpensePage((p) => p + 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => l.setExpensePage((p) => p + 1)}
+                    disabled={l.expensePage >= l.expenseTotalPages}
+                  >
+                    Next <ChevronRight size={14} />
+                  </Button>
                 </div>
               </div>
             )}
