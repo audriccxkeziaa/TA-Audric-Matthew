@@ -4,29 +4,30 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "@/lib/api";
 
-function localDateStr(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-}
-
 export function useDashboard() {
   const [period, setPeriod] = useState("today");
 
-  // Hitung from/to berdasarkan period yang aktif
   const periodParams = useMemo(() => {
     const now = new Date();
+    const y = now.getFullYear();
+    const mo = now.getMonth();
+    const d = now.getDate();
+
     if (period === "today") {
-      const start = new Date(now); start.setHours(0, 0, 0, 0);
-      const end = new Date(now); end.setHours(23, 59, 59, 999);
+      const start = new Date(y, mo, d, 0, 0, 0, 0);
+      const end   = new Date(y, mo, d, 23, 59, 59, 999);
+      return { from: start.toISOString(), to: end.toISOString() };
+    }
+    if (period === "week") {
+      const dow = now.getDay();
+      const diffToMon = dow === 0 ? -6 : 1 - dow;
+      const start = new Date(y, mo, d + diffToMon, 0, 0, 0, 0);
+      const end   = new Date(y, mo, d + diffToMon + 6, 23, 59, 59, 999);
       return { from: start.toISOString(), to: end.toISOString() };
     }
     // month
-    const y = now.getFullYear();
-    const mo = now.getMonth();
     const start = new Date(y, mo, 1, 0, 0, 0, 0);
-    const end = new Date(y, mo + 1, 0, 23, 59, 59, 999);
+    const end   = new Date(y, mo + 1, 0, 23, 59, 59, 999);
     return { from: start.toISOString(), to: end.toISOString() };
   }, [period]);
 
@@ -48,7 +49,6 @@ export function useDashboard() {
   const s = summary.data?.data;
   const trendRaw = trend.data?.data || [];
 
-  // 30 hari terakhir — gross_profit, omzet, n_tx per hari (tanpa estimasi bersih)
   const combinedData = useMemo(() => {
     return trendRaw.slice(-30).map((d) => ({
       date: d.date,
@@ -67,14 +67,5 @@ export function useDashboard() {
         : d.nama_barang,
   }));
 
-  return {
-    period,
-    setPeriod,
-    summary,
-    trend,
-    top,
-    s,
-    combinedData,
-    topData,
-  };
+  return { period, setPeriod, summary, trend, top, s, combinedData, topData };
 }

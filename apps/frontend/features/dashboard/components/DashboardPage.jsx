@@ -13,20 +13,23 @@ function I({ d }) {
   );
 }
 const ICONS = {
-  transaksi: <I d={<><path d="M4 4h12l1 14H3z" /><path d="M8 9h6M8 13h4" /></>} />,
-  revenue:   <I d={<><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6" /></>} />,
-  lowStock:  <I d={<><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /><path d="M12 9v4M12 17h.01" /></>} />,
-  laba:      <I d={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>} />,
+  transaksi:   <I d={<><path d="M4 4h12l1 14H3z" /><path d="M8 9h6M8 13h4" /></>} />,
+  revenue:     <I d={<><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6" /></>} />,
+  lowStock:    <I d={<><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /><path d="M12 9v4M12 17h.01" /></>} />,
+  laba:        <I d={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>} />,
   pengeluaran: <I d={<><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>} />,
 };
+
+const PERIOD_OPTIONS = [
+  { id: "today", label: "Hari Ini" },
+  { id: "week",  label: "Minggu Ini" },
+  { id: "month", label: "Bulan Ini" },
+];
 
 function PeriodToggle({ period, setPeriod }) {
   return (
     <div className="flex items-center gap-0.5 rounded-lg bg-slate-100 p-0.5 no-print">
-      {[
-        { id: "today", label: "Hari Ini" },
-        { id: "month", label: "Bulan Ini" },
-      ].map((opt) => (
+      {PERIOD_OPTIONS.map((opt) => (
         <button
           key={opt.id}
           type="button"
@@ -56,7 +59,6 @@ export default function DashboardPage() {
         actions={<PeriodToggle period={d.period} setPeriod={d.setPeriod} />}
       />
 
-      {/* Kartu metrik — display only */}
       {d.summary.isLoading ? (
         <Card className="shrink-0 p-6">
           <Spinner label="Memuat ringkasan..." />
@@ -64,13 +66,13 @@ export default function DashboardPage() {
       ) : (
         <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
-            label={d.period === "today" ? "Transaksi Hari Ini" : "Transaksi Bulan Ini"}
+            label="Total Transaksi"
             value={angka(s?.tx_today_count || 0)}
             hint="total transaksi"
             icon={ICONS.transaksi}
           />
           <StatCard
-            label={d.period === "today" ? "Revenue Hari Ini" : "Revenue Bulan Ini"}
+            label="Revenue"
             value={rupiah(s?.revenue_today || 0)}
             tone="good"
             hint="omzet kotor"
@@ -84,14 +86,14 @@ export default function DashboardPage() {
             icon={ICONS.lowStock}
           />
           <StatCard
-            label={d.period === "today" ? "Laba Bersih Hari Ini" : "Laba Bersih Bulan Ini"}
+            label="Laba Bersih"
             value={rupiah(s?.laba_bersih || 0)}
             tone={(s?.laba_bersih ?? 0) >= 0 ? "good" : "bad"}
             hint="omzet − total pengeluaran"
             icon={ICONS.laba}
           />
           <StatCard
-            label={d.period === "today" ? "Total Pengeluaran Hari Ini" : "Total Pengeluaran Bulan Ini"}
+            label="Total Pengeluaran"
             value={rupiah(s?.total_pengeluaran || 0)}
             tone="bad"
             hint="supplier + operasional"

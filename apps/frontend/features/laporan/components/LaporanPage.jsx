@@ -3,7 +3,7 @@
 
 import {
   PageShell, PageHeader, Card, StatCard, Badge,
-  Button, Input, Modal, Spinner, EmptyState,
+  Button, Modal, Spinner, EmptyState,
   Table, THead, TH, TBody, TR, TD,
 } from "@/components/ui";
 import { rupiah, angka, tanggal } from "@/lib/format";
@@ -18,31 +18,9 @@ import { PrintPreviewModal } from "./PrintPreviewModal";
 import { JENIS_LABELS, JENIS_BADGE_TONE, JENIS_OPTIONS } from "@/features/keuangan/lib/constants";
 
 const PERIOD_PRESETS = [
-  { id: "bulan-ini",  label: "Bulan Ini" },
-  { id: "minggu-ini", label: "Minggu Ini" },
-  { id: "tahun-ini",  label: "Tahun Ini" },
+  { id: "bulan-ini", label: "Bulan Ini" },
+  { id: "tahun-ini", label: "Tahun Ini" },
 ];
-
-function PresetGroup({ presets, active, onSelect }) {
-  return (
-    <div className="flex items-center gap-0.5 rounded-lg bg-slate-100 p-0.5">
-      {presets.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          onClick={() => onSelect(p.id)}
-          className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
-            active === p.id
-              ? "bg-white text-brand-700 shadow-sm ring-1 ring-slate-200/80"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          {p.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export default function LaporanPage() {
   const l = useLaporanTerpadu();
@@ -63,10 +41,9 @@ export default function LaporanPage() {
         }
       />
 
-      {/* ── Filter Periode ── */}
+      {/* ── Filter Periode — semua dalam 1 baris ── */}
       <Card className="mb-3 shrink-0 no-print overflow-hidden">
-        {/* Main filter bar */}
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
           <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 shrink-0">
             <CalendarDays size={13} />
             Periode
@@ -74,26 +51,50 @@ export default function LaporanPage() {
 
           <div className="h-4 w-px bg-slate-200 shrink-0" />
 
-          <PresetGroup
-            presets={PERIOD_PRESETS}
-            active={l.periodPreset}
-            onSelect={l.applyPreset}
-          />
+          {/* Preset buttons */}
+          <div className="flex items-center gap-0.5 rounded-lg bg-slate-100 p-0.5">
+            {PERIOD_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => l.applyPreset(p.id)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
+                  l.periodPreset === p.id
+                    ? "bg-white text-brand-700 shadow-sm ring-1 ring-slate-200/80"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
           <div className="h-4 w-px bg-slate-200 shrink-0" />
 
-          {/* Custom */}
-          <button
-            type="button"
-            onClick={() => l.applyPreset("custom")}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              l.periodPreset === "custom"
-                ? "border-brand-300 bg-brand-50 text-brand-700"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-            }`}
-          >
-            Custom
-          </button>
+          {/* Date range inline */}
+          <div className="flex items-center gap-1.5">
+            <input
+              type="date"
+              value={l.from}
+              onChange={(e) => { l.applyPreset("custom"); l.setFrom(e.target.value); }}
+              className={`rounded-lg border px-2 py-1.5 text-xs text-slate-700 focus:border-brand-400 focus:outline-none transition-colors ${
+                l.periodPreset === "custom"
+                  ? "border-brand-300 bg-brand-50"
+                  : "border-slate-200 bg-white"
+              }`}
+            />
+            <span className="text-xs text-slate-400 shrink-0">—</span>
+            <input
+              type="date"
+              value={l.to}
+              onChange={(e) => { l.applyPreset("custom"); l.setTo(e.target.value); }}
+              className={`rounded-lg border px-2 py-1.5 text-xs text-slate-700 focus:border-brand-400 focus:outline-none transition-colors ${
+                l.periodPreset === "custom"
+                  ? "border-brand-300 bg-brand-50"
+                  : "border-slate-200 bg-white"
+              }`}
+            />
+          </div>
 
           <button
             type="button"
@@ -102,38 +103,11 @@ export default function LaporanPage() {
           >
             Reset
           </button>
-
-          {/* Active range pill */}
-          {l.periodPreset !== "custom" && (l.from || l.to) && (
-            <span className="ml-auto shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500">
-              {tanggal(l.from)} — {tanggal(l.to)}
-            </span>
-          )}
         </div>
-
-        {/* Custom date inputs */}
-        {l.periodPreset === "custom" && (
-          <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                label="Dari Tanggal"
-                type="date"
-                value={l.from}
-                onChange={(e) => l.setFrom(e.target.value)}
-              />
-              <Input
-                label="Sampai Tanggal"
-                type="date"
-                value={l.to}
-                onChange={(e) => l.setTo(e.target.value)}
-              />
-            </div>
-          </div>
-        )}
       </Card>
 
-      {/* ── Card utama ── */}
-      <Card className="flex flex-col gap-4 p-4">
+      {/* ── Card utama — overflow-y-auto agar semua section terlihat ── */}
+      <Card className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
 
         {/* 5 Summary cards */}
         {l.financeSummary.isLoading ? (
@@ -165,196 +139,192 @@ export default function LaporanPage() {
               label="Total Pengeluaran"
               value={rupiah(totalPengeluaran)}
               tone="bad"
-              hint="Pembelian Supplier + Pengeluaran Operasional"
+              hint="Pembelian + Operasional"
               icon={<ReceiptText size={18} />}
             />
             <StatCard
               label="Net Income"
               value={rupiah(fs?.saldo_bersih || 0)}
               tone={fs?.saldo_bersih >= 0 ? "good" : "bad"}
-              hint="Total Omzet − Total Pengeluaran"
+              hint="Omzet − Total Pengeluaran"
               icon={<Wallet size={18} />}
               accent
             />
           </div>
         )}
 
-        {/* Split panels */}
-        <div className="flex flex-col gap-3 lg:flex-row">
-
-          {/* ── Rincian Pemasukan ── */}
-          <Card className="flex flex-1 flex-col p-0 ring-1 ring-slate-200/60 min-h-[360px]">
-            <div className="shrink-0 rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">
-                    Rincian Pemasukan
-                  </h3>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {l.filteredSales.length} transaksi
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-emerald-600">
-                    {rupiah(l.salesSummary?.total_revenue || 0)}
-                  </span>
-                  <select
-                    value={l.kasirFilter}
-                    onChange={(e) => l.setKasirFilter(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-brand-400 focus:outline-none"
-                  >
-                    <option value="">Semua Kasir</option>
-                    {l.kasirOptions.map((k) => (
-                      <option key={k} value={k}>{k}</option>
-                    ))}
-                  </select>
-                </div>
+        {/* ── Rincian Pemasukan ── */}
+        <Card className="shrink-0 overflow-hidden p-0 ring-1 ring-slate-200/60">
+          <div className="rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                  Rincian Pemasukan
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {l.filteredSales.length} transaksi
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-emerald-600">
+                  {rupiah(l.salesSummary?.total_revenue || 0)}
+                </span>
+                <select
+                  value={l.kasirFilter}
+                  onChange={(e) => l.setKasirFilter(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-brand-400 focus:outline-none"
+                >
+                  <option value="">Semua Kasir</option>
+                  {l.kasirOptions.map((k) => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </select>
               </div>
             </div>
-            <div className="max-h-[400px] overflow-auto thin-scroll">
-              {l.salesQuery.isLoading ? (
-                <div className="p-4"><Spinner label="Memuat..." /></div>
-              ) : l.filteredSales.length === 0 ? (
-                <EmptyState title="Belum ada transaksi penjualan" />
-              ) : (
-                <Table desktopOnly={false}>
-                  <THead>
-                    <TH className="w-8">No</TH>
-                    <TH>Tanggal</TH>
-                    <TH>Kode Transaksi</TH>
-                    <TH>Kasir</TH>
-                    <TH className="text-right">Total</TH>
-                  </THead>
-                  <TBody>
-                    {l.filteredSales.map((g, idx) => (
-                      <TR key={g.sale_id} onClick={() => l.openSaleDetail(g)}>
-                        <TD className="text-xs text-slate-400">{idx + 1}</TD>
-                        <TD className="text-xs">{tanggal(g.created_at)}</TD>
-                        <TD className="font-mono text-xs text-brand-700">{g.kode_transaksi}</TD>
-                        <TD className="text-xs text-slate-500">{g.kasir}</TD>
-                        <TD className="text-right font-semibold text-emerald-600">
-                          {rupiah(g.total)}
-                        </TD>
-                      </TR>
-                    ))}
-                  </TBody>
-                </Table>
-              )}
-            </div>
-          </Card>
-
-          {/* ── Daftar Pengeluaran ── */}
-          <Card className="flex flex-1 flex-col p-0 ring-1 ring-slate-200/60 min-h-[360px]">
-            <div className="shrink-0 rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-red-50 to-white px-4 py-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">
-                    Daftar Pengeluaran
-                  </h3>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {l.unifiedRows.length} entri
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-red-600">
-                    − {rupiah(totalPengeluaran)}
-                  </span>
-                  <select
-                    value={l.jenisFilter}
-                    onChange={(e) => l.setJenisFilter(e.target.value)}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-brand-400 focus:outline-none"
-                  >
-                    <option value="all">Semua Jenis</option>
-                    <option value="pembelian_supplier">Pembelian Supplier</option>
-                    {JENIS_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                    <option value="refund_pelanggan">Refund Pelanggan</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div className="max-h-[400px] overflow-auto thin-scroll">
-              {l.isUnifiedLoading ? (
-                <div className="p-4"><Spinner label="Memuat..." /></div>
-              ) : l.unifiedRows.length === 0 ? (
-                <EmptyState title="Belum ada pengeluaran" />
-              ) : (
-                <Table desktopOnly={false}>
-                  <THead>
-                    <TH className="w-8">No</TH>
-                    <TH>Tanggal</TH>
-                    <TH>Jenis</TH>
-                    <TH>Deskripsi</TH>
-                    <TH className="text-right">Nominal</TH>
-                  </THead>
-                  <TBody>
-                    {l.paginatedUnifiedRows.map((r, idx) => (
-                      <TR
-                        key={r.id}
-                        onClick={() =>
-                          r._type === "purchase"
-                            ? l.openPurchaseDetail(r._rawId)
-                            : l.setViewExpense(r)
-                        }
-                      >
-                        <TD className="text-xs text-slate-400">
-                          {(l.expensePage - 1) * l.expensePageSize + idx + 1}
-                        </TD>
-                        <TD className="text-xs">{tanggal(r.tanggal)}</TD>
-                        <TD>
-                          <Badge tone={JENIS_BADGE_TONE[r.jenis] || "slate"} dot>
-                            {JENIS_LABELS[r.jenis] || r.jenis}
-                          </Badge>
-                        </TD>
-                        <TD className="text-xs text-slate-600 break-words max-w-[200px]">
-                          {r.deskripsi}
-                        </TD>
-                        <TD className="text-right font-semibold text-red-600">
-                          − {rupiah(r.nominal)}
-                        </TD>
-                      </TR>
-                    ))}
-                  </TBody>
-                </Table>
-              )}
-            </div>
-
-            {/* Pagination pengeluaran */}
-            {l.unifiedRows.length > l.expensePageSize && (
-              <div className="shrink-0 border-t border-slate-100 px-4 py-2.5 no-print">
-                <div className="flex items-center justify-between gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => l.setExpensePage((p) => p - 1)}
-                    disabled={l.expensePage <= 1}
-                  >
-                    <ChevronLeft size={14} /> Previous
-                  </Button>
-                  <span className="text-xs text-slate-500">
-                    Halaman{" "}
-                    <span className="font-semibold text-slate-700">{l.expensePage}</span>
-                    {" "}dari{" "}
-                    <span className="font-semibold text-slate-700">{l.expenseTotalPages}</span>
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => l.setExpensePage((p) => p + 1)}
-                    disabled={l.expensePage >= l.expenseTotalPages}
-                  >
-                    Next <ChevronRight size={14} />
-                  </Button>
-                </div>
-              </div>
+          </div>
+          <div className="max-h-60 overflow-auto thin-scroll">
+            {l.salesQuery.isLoading ? (
+              <div className="p-4"><Spinner label="Memuat..." /></div>
+            ) : l.filteredSales.length === 0 ? (
+              <EmptyState title="Belum ada transaksi penjualan" />
+            ) : (
+              <Table desktopOnly={false}>
+                <THead>
+                  <TH className="w-8">No</TH>
+                  <TH>Tanggal</TH>
+                  <TH>Kode Transaksi</TH>
+                  <TH>Kasir</TH>
+                  <TH className="text-right">Total</TH>
+                </THead>
+                <TBody>
+                  {l.filteredSales.map((g, idx) => (
+                    <TR key={g.sale_id} onClick={() => l.openSaleDetail(g)}>
+                      <TD className="text-xs text-slate-400">{idx + 1}</TD>
+                      <TD className="text-xs">{tanggal(g.created_at)}</TD>
+                      <TD className="font-mono text-xs text-brand-700">{g.kode_transaksi}</TD>
+                      <TD className="text-xs text-slate-500">{g.kasir}</TD>
+                      <TD className="text-right font-semibold text-emerald-600">
+                        {rupiah(g.total)}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
             )}
-          </Card>
-        </div>
+          </div>
+        </Card>
+
+        {/* ── Daftar Pengeluaran ── */}
+        <Card className="shrink-0 overflow-hidden p-0 ring-1 ring-slate-200/60">
+          <div className="rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-red-50 to-white px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                  Daftar Pengeluaran
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {l.unifiedRows.length} entri
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-red-600">
+                  − {rupiah(totalPengeluaran)}
+                </span>
+                <select
+                  value={l.jenisFilter}
+                  onChange={(e) => l.setJenisFilter(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-brand-400 focus:outline-none"
+                >
+                  <option value="all">Semua Jenis</option>
+                  <option value="pembelian_supplier">Pembelian Supplier</option>
+                  {JENIS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                  <option value="refund_pelanggan">Refund Pelanggan</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="max-h-60 overflow-auto thin-scroll">
+            {l.isUnifiedLoading ? (
+              <div className="p-4"><Spinner label="Memuat..." /></div>
+            ) : l.unifiedRows.length === 0 ? (
+              <EmptyState title="Belum ada pengeluaran" />
+            ) : (
+              <Table desktopOnly={false}>
+                <THead>
+                  <TH className="w-8">No</TH>
+                  <TH>Tanggal</TH>
+                  <TH>Jenis</TH>
+                  <TH>Deskripsi</TH>
+                  <TH className="text-right">Nominal</TH>
+                </THead>
+                <TBody>
+                  {l.paginatedUnifiedRows.map((r, idx) => (
+                    <TR
+                      key={r.id}
+                      onClick={() =>
+                        r._type === "purchase"
+                          ? l.openPurchaseDetail(r._rawId)
+                          : l.setViewExpense(r)
+                      }
+                    >
+                      <TD className="text-xs text-slate-400">
+                        {(l.expensePage - 1) * l.expensePageSize + idx + 1}
+                      </TD>
+                      <TD className="text-xs">{tanggal(r.tanggal)}</TD>
+                      <TD>
+                        <Badge tone={JENIS_BADGE_TONE[r.jenis] || "slate"} dot>
+                          {JENIS_LABELS[r.jenis] || r.jenis}
+                        </Badge>
+                      </TD>
+                      <TD className="text-xs text-slate-600 break-words max-w-[200px]">
+                        {r.deskripsi}
+                      </TD>
+                      <TD className="text-right font-semibold text-red-600">
+                        − {rupiah(r.nominal)}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </div>
+
+          {/* Pagination pengeluaran */}
+          {l.unifiedRows.length > l.expensePageSize && (
+            <div className="shrink-0 border-t border-slate-100 px-4 py-2.5 no-print">
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => l.setExpensePage((p) => p - 1)}
+                  disabled={l.expensePage <= 1}
+                >
+                  <ChevronLeft size={14} /> Previous
+                </Button>
+                <span className="text-xs text-slate-500">
+                  Halaman{" "}
+                  <span className="font-semibold text-slate-700">{l.expensePage}</span>
+                  {" "}dari{" "}
+                  <span className="font-semibold text-slate-700">{l.expenseTotalPages}</span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => l.setExpensePage((p) => p + 1)}
+                  disabled={l.expensePage >= l.expenseTotalPages}
+                >
+                  Next <ChevronRight size={14} />
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
 
         {/* ── Rincian Stok Masuk (Pembelian Supplier) ── */}
         <Card className="shrink-0 overflow-hidden p-0 ring-1 ring-slate-200/60">
-          <div className="shrink-0 rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white px-4 py-3">
+          <div className="rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">
@@ -369,7 +339,7 @@ export default function LaporanPage() {
               </span>
             </div>
           </div>
-          <div className="max-h-64 overflow-auto thin-scroll">
+          <div className="max-h-60 overflow-auto thin-scroll">
             {l.isStockInLoading ? (
               <div className="p-4"><Spinner label="Memuat..." /></div>
             ) : l.stockInRows.length === 0 ? (

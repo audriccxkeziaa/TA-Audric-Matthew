@@ -48,13 +48,6 @@ export function getPeriodRange(preset) {
       from: localDate(new Date(y, m, 1)),
       to: localDate(new Date(y, m + 1, 0)),
     };
-  if (preset === "minggu-ini") {
-    const dow = now.getDay();
-    const diffToMon = dow === 0 ? -6 : 1 - dow;
-    const mon = new Date(y, m, now.getDate() + diffToMon);
-    const sun = new Date(y, m, now.getDate() + diffToMon + 6);
-    return { from: localDate(mon), to: localDate(sun) };
-  }
   if (preset === "tahun-ini")
     return { from: `${y}-01-01`, to: `${y}-12-31` };
   return null; // custom — jangan auto-set

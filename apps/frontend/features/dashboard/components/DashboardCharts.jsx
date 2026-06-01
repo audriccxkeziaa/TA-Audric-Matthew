@@ -110,12 +110,12 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
   return (
     <div className="mt-3 grid min-h-0 flex-1 gap-3 lg:grid-cols-2">
 
-      {/* ── Tren Penjualan ── */}
+      {/* ── Tren PerformaPenjualan ── */}
       <Card className="flex min-h-0 flex-col p-4">
         <div className="mb-3 shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TrendingUp size={16} className="text-emerald-500" />
-            <h2 className="font-semibold text-slate-800">Tren Penjualan</h2>
+            <h2 className="font-semibold text-slate-800">Tren Performa Penjualan</h2>
           </div>
           <span className="text-xs text-slate-400">30 hari terakhir</span>
         </div>
