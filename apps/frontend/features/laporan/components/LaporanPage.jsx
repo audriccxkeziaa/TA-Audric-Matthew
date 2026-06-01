@@ -284,6 +284,7 @@ export default function LaporanPage() {
                     {JENIS_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
+                    <option value="refund_pelanggan">Refund Pelanggan</option>
                   </select>
                 </div>
               </div>

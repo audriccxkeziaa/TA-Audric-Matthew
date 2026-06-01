@@ -22,7 +22,7 @@ function RoleBadge({ role }) {
   if (role === "admin") {
     return <Badge tone="indigo">Admin</Badge>;
   }
-  return <Badge tone="blue">Kasir</Badge>;
+  return <Badge tone="green">Kasir</Badge>;
 }
 
 function ActionBtn({ onClick, title, colorClass, children }) {

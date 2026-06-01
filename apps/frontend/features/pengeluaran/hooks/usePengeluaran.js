@@ -58,8 +58,10 @@ export function usePengeluaran() {
   const allRows = list.data?.data || [];
 
   const rows = useMemo(() => {
-    if (jenisFilter === "all") return allRows;
-    return allRows.filter((r) => r.jenis === jenisFilter);
+    // refund_pelanggan dibuat otomatis oleh sistem retur, bukan pengeluaran operasional manual
+    const operasional = allRows.filter((r) => r.jenis !== "refund_pelanggan");
+    if (jenisFilter === "all") return operasional;
+    return operasional.filter((r) => r.jenis === jenisFilter);
   }, [allRows, jenisFilter]);
 
   // Reset ke halaman 1 saat filter berubah
