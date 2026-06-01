@@ -139,7 +139,7 @@ export default function LaporanPage() {
               label="Total Pengeluaran"
               value={rupiah(totalPengeluaran)}
               tone="bad"
-              hint="Pembelian + Operasional"
+              hint="Pembelian Supplier + Pengeluaran Operasional"
               icon={<ReceiptText size={18} />}
             />
             <StatCard
@@ -223,7 +223,7 @@ export default function LaporanPage() {
                   Daftar Pengeluaran
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  {l.unifiedRows.length} entri
+                  {l.unifiedRows.length} transaksi
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -331,7 +331,7 @@ export default function LaporanPage() {
                   Rincian Stok Masuk
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  {l.stockInRows.length} nota pembelian
+                  {l.stockInRows.length} items
                 </p>
               </div>
               <span className="text-sm font-bold text-blue-600">

@@ -35,39 +35,23 @@ async function getSummary({ from, to } = {}) {
 
   const tx_today_count = salesPeriod?.length || 0;
   const revenue_today = (salesPeriod || []).reduce(
-    (acc, s) => acc + Number(s.total_harga || 0),
-    0
+    (acc, s) => acc + Number(s.total_harga || 0), 0
   );
 
-  // (2) Pengeluaran operasional (expenses, kolom tanggal = DATE)
-  const expFrom = startDate.slice(0, 10);
-  const expTo = endDate.slice(0, 10);
-  const { data: expRows, error: expErr } = await supabase
-    .from("expenses")
-    .select("nominal")
-    .gte("tanggal", expFrom)
-    .lte("tanggal", expTo);
-  if (expErr) throw new Error("Gagal memuat pengeluaran operasional");
-  const total_operasional = (expRows || []).reduce(
-    (a, r) => a + Number(r.nominal || 0), 0
-  );
+  // (2) Gross Profit = Σ max(0, (harga_jual − harga_beli) × qty) dalam periode
+  const { data: itemsData, error: gpErr } = await supabase
+    .from("sale_items")
+    .select("qty, harga_satuan, sales!inner(created_at), products!inner(harga_beli)")
+    .gte("sales.created_at", startDate)
+    .lte("sales.created_at", endDate);
+  if (gpErr) throw new Error("Gagal memuat data gross profit");
 
-  // (3) Pembelian supplier tervalidasi dalam periode
-  const { data: purchRows, error: purchErr } = await supabase
-    .from("purchases")
-    .select("total")
-    .eq("status_validasi", "tervalidasi")
-    .gte("created_at", startDate)
-    .lte("created_at", endDate);
-  if (purchErr) throw new Error("Gagal memuat pembelian supplier");
-  const total_pembelian = (purchRows || []).reduce(
-    (a, r) => a + Number(r.total || 0), 0
-  );
+  const gross_profit = (itemsData || []).reduce((acc, it) => {
+    const margin = Number(it.harga_satuan || 0) - Number(it.products?.harga_beli || 0);
+    return acc + Math.max(0, margin * Number(it.qty || 0));
+  }, 0);
 
-  const total_pengeluaran = total_operasional + total_pembelian;
-  const laba_bersih = revenue_today - total_pengeluaran;
-
-  // (4) Jumlah R1 REJECTED hari ini (selalu today — bukti R1 aktif)
+  // (3) R1 REJECTED hari ini (selalu today — bukti R1 aktif)
   const { count: r1_rejected_today, error: r1Err } = await supabase
     .from("stock_logs")
     .select("id", { count: "exact", head: true })
@@ -77,29 +61,24 @@ async function getSummary({ from, to } = {}) {
     .lte("created_at", todayEnd);
   if (r1Err) throw new Error("Gagal memuat R1 rejected hari ini");
 
-  // (5) Stok menipis + negatif (selalu kondisi saat ini)
-  const { data: lowStockRows, error: lsErr } = await supabase
-    .from("products")
-    .select("id, stok, min_stock")
-    .eq("status", "aktif");
-  if (lsErr) throw new Error("Gagal memuat produk aktif");
+  // (4) Stok dari v_restock_recommendation — konsisten dengan halaman Restock (R5)
+  const { data: restockData, error: restockErr } = await supabase
+    .from("v_restock_recommendation")
+    .select("tingkat_urgensi");
+  if (restockErr) throw new Error("Gagal memuat data restock");
 
-  const low_stock_count = (lowStockRows || []).filter(
-    (p) => Number(p.stok) <= Number(p.min_stock)
-  ).length;
-
-  const negative_stock_count = (lowStockRows || []).filter(
-    (p) => Number(p.stok) < 0
-  ).length;
+  const low_stock_count   = (restockData || []).filter((r) => r.tingkat_urgensi === "MENIPIS").length;
+  const stok_habis_count  = (restockData || []).filter((r) => r.tingkat_urgensi === "HABIS").length;
+  const stok_kritis_count = (restockData || []).filter((r) => r.tingkat_urgensi === "KRITIS").length;
 
   return {
     tx_today_count,
     revenue_today,
-    laba_bersih,
-    total_pengeluaran,
+    gross_profit,
     r1_rejected_today: r1_rejected_today || 0,
     low_stock_count,
-    negative_stock_count,
+    stok_habis_count,
+    stok_kritis_count,
   };
 }
 

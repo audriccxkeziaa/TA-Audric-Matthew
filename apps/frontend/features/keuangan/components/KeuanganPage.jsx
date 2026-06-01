@@ -102,7 +102,7 @@ export default function KeuanganPage() {
             label="Pengeluaran Operasional"
             value={rupiah(s?.total_pengeluaran || 0)}
             tone="bad"
-            hint={`${angka(s?.n_expenses || 0)} entri`}
+            hint={`${angka(s?.n_expenses || 0)} items`}
             icon={<TrendingDown size={18} />}
           />
           <StatCard

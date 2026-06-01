@@ -16,8 +16,9 @@ const ICONS = {
   transaksi:   <I d={<><path d="M4 4h12l1 14H3z" /><path d="M8 9h6M8 13h4" /></>} />,
   revenue:     <I d={<><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6" /></>} />,
   lowStock:    <I d={<><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /><path d="M12 9v4M12 17h.01" /></>} />,
-  laba:        <I d={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>} />,
-  pengeluaran: <I d={<><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>} />,
+  grossProfit: <I d={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>} />,
+  habis:       <I d={<><path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /><line x1="3.3" y1="7" x2="12" y2="12" /><line x1="20.7" y1="7" x2="12" y2="12" /><line x1="12" y1="22" x2="12" y2="12" /></>} />,
+  kritis:      <I d={<><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>} />,
 };
 
 const PERIOD_OPTIONS = [
@@ -64,7 +65,7 @@ export default function DashboardPage() {
           <Spinner label="Memuat ringkasan..." />
         </Card>
       ) : (
-        <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid shrink-0 gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
           <StatCard
             label="Total Transaksi"
             value={angka(s?.tx_today_count || 0)}
@@ -72,7 +73,7 @@ export default function DashboardPage() {
             icon={ICONS.transaksi}
           />
           <StatCard
-            label="Revenue"
+            label="Total Omzet"
             value={rupiah(s?.revenue_today || 0)}
             tone="good"
             hint="omzet kotor"
@@ -82,22 +83,29 @@ export default function DashboardPage() {
             label="Stok Menipis"
             value={angka(s?.low_stock_count || 0)}
             tone="warn"
-            hint="produk ≤ min stok"
+            hint="Produk ≤ Min Stok"
             icon={ICONS.lowStock}
           />
           <StatCard
-            label="Laba Bersih"
-            value={rupiah(s?.laba_bersih || 0)}
-            tone={(s?.laba_bersih ?? 0) >= 0 ? "good" : "bad"}
-            hint="omzet − total pengeluaran"
-            icon={ICONS.laba}
+            label="Gross Profit"
+            value={rupiah(s?.gross_profit || 0)}
+            tone="good"
+            hint="Total Omzet − Total Pengeluaran"
+            icon={ICONS.grossProfit}
           />
           <StatCard
-            label="Total Pengeluaran"
-            value={rupiah(s?.total_pengeluaran || 0)}
-            tone="bad"
-            hint="supplier + operasional"
-            icon={ICONS.pengeluaran}
+            label="Stok Habis"
+            value={angka(s?.stok_habis_count || 0)}
+            tone={(s?.stok_habis_count || 0) > 0 ? "bad" : "good"}
+            hint="produk dengan stok = 0"
+            icon={ICONS.habis}
+          />
+          <StatCard
+            label="Stok Kritis"
+            value={angka(s?.stok_kritis_count || 0)}
+            tone={(s?.stok_kritis_count || 0) > 0 ? "bad" : "good"}
+            hint="di bawah reorder point"
+            icon={ICONS.kritis}
           />
         </div>
       )}
