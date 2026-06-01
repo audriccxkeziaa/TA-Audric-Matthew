@@ -10,7 +10,6 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  Legend,
 } from "recharts";
 import { rupiah } from "@/lib/format";
 import { Card, Spinner, EmptyState } from "@/components/ui";
@@ -27,7 +26,7 @@ function TrenTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   const labelMap = {
     pendapatan: "Omzet",
-    pendapatan_bersih: "",
+    pendapatan_bersih: "Est. Pendapatan Bersih",
     n_tx: "Transaksi",
   };
   return (
@@ -44,6 +43,16 @@ function TrenTooltip({ active, payload, label }) {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Satu item legend kustom (dot + teks)
+function LegendItem({ color, label }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      <span className="text-xs text-slate-500">{label}</span>
     </div>
   );
 }
@@ -114,104 +123,99 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
           <span className="text-xs text-slate-400">30 hari terakhir</span>
         </div>
 
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 flex flex-col gap-2">
           {isLoadingCombined ? (
             <Spinner label="Memuat..." />
           ) : !hasData ? (
             <EmptyState title="Belum ada data" />
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={combinedData} margin={{ top: 8, right: 36, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradOmzet" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
-                  </linearGradient>
-                  <linearGradient id="gradBersih" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.45} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+            <>
+              <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={combinedData} margin={{ top: 8, right: 36, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gradOmzet" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="gradBersih" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.45} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
 
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  fontSize={10}
-                  tick={{ fill: "#94a3b8" }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={4}
-                />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis
+                      dataKey="label"
+                      fontSize={10}
+                      tick={{ fill: "#94a3b8" }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval={4}
+                    />
+                    <YAxis
+                      yAxisId="rp"
+                      fontSize={10}
+                      tick={{ fill: "#94a3b8" }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={fmtAxis}
+                      width={48}
+                    />
+                    <YAxis
+                      yAxisId="tx"
+                      orientation="right"
+                      fontSize={10}
+                      tick={{ fill: "#94a3b8" }}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                      width={28}
+                    />
+                    <Tooltip content={<TrenTooltip />} />
 
-                {/* Sumbu kiri: rupiah */}
-                <YAxis
-                  yAxisId="rp"
-                  fontSize={10}
-                  tick={{ fill: "#94a3b8" }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={fmtAxis}
-                  width={48}
-                />
-                {/* Sumbu kanan: jumlah transaksi */}
-                <YAxis
-                  yAxisId="tx"
-                  orientation="right"
-                  fontSize={10}
-                  tick={{ fill: "#94a3b8" }}
-                  tickLine={false}
-                  axisLine={false}
-                  allowDecimals={false}
-                  width={28}
-                />
+                    <Bar
+                      yAxisId="tx"
+                      dataKey="n_tx"
+                      name="Total Transaksi"
+                      fill="#fb923c"
+                      fillOpacity={0.55}
+                      radius={[3, 3, 0, 0]}
+                      barSize={8}
+                    />
+                    <Area
+                      yAxisId="rp"
+                      type="monotone"
+                      dataKey="pendapatan"
+                      name="Omzet"
+                      stroke="#6366f1"
+                      strokeWidth={2}
+                      fill="url(#gradOmzet)"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 0 }}
+                    />
+                    <Area
+                      yAxisId="rp"
+                      type="monotone"
+                      dataKey="pendapatan_bersih"
+                      name="Estimasi Pendapatan Bersih"
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      fill="url(#gradBersih)"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 0 }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
 
-                <Tooltip content={<TrenTooltip />} />
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  formatter={(val, entry) => (
-                    <span className="text-xs text-slate-600">{entry.name}</span>
-                  )}
-                />
-
-                {/* Bar transaksi (layer bawah) */}
-                <Bar
-                  yAxisId="tx"
-                  dataKey="n_tx"
-                  name="Total Transaksi"
-                  fill="#fb923c"
-                  fillOpacity={0.55}
-                  radius={[3, 3, 0, 0]}
-                  barSize={8}
-                />
-
-                {/* Area omzet */}
-                <Area
-                  yAxisId="rp"
-                  type="monotone"
-                  dataKey="pendapatan"
-                  name="Omzet"
-                  stroke="#6366f1"
-                  strokeWidth={2}
-                  fill="url(#gradOmzet)"
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 0 }}
-                />
-
-                {/* Area pendapatan bersih */}
-                <Area
-                  yAxisId="rp"
-                  type="monotone"
-                  dataKey="pendapatan_bersih"
-                  name="Net Income"
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  fill="url(#gradBersih)"
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 0 }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+              {/* Legend kustom — dot + label teks */}
+              <div className="shrink-0 flex items-center justify-center gap-5 flex-wrap pb-1">
+                <LegendItem color="#fb923c" label="Total Transaksi" />
+                <LegendItem color="#6366f1" label="Omzet" />
+                <LegendItem color="#10b981" label="Estimasi Pendapatan Bersih" />
+              </div>
+            </>
           )}
         </div>
       </Card>

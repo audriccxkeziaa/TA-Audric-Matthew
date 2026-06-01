@@ -160,28 +160,13 @@ export function useReturSupplier() {
     setResolveTarget(ret);
   }
 
-  // Tahap 2: barang ganti sudah datang, stok bertambah kembali + auto-print struk
+  // Tahap 2: barang ganti sudah datang, stok bertambah kembali
   async function handleResolve() {
     if (!resolveId) return;
     setResolveSubmitting(true);
     try {
       await adjustmentsApi.resolveSupplier(resolveId);
       toast.success("Barang ganti diterima — stok sudah ditambahkan!");
-      if (resolveTarget) {
-        printReturnReceipt({
-          kode_adjustment: resolveTarget.kode_adjustment,
-          type: resolveTarget.type,
-          created_at: resolveTarget.created_at,
-          supplier_name: resolveTarget.supplier_name_ref || null,
-          username: resolveTarget.username,
-          alasan: resolveTarget.alasan,
-          items: (resolveTarget.items || []).map((it) => ({
-            nama_barang: it.nama_barang,
-            qty: it.qty,
-            harga_satuan: it.harga_satuan || it.harga_beli || 0,
-          })),
-        });
-      }
       setResolveId(null);
       setResolveTarget(null);
       refetchPending();
