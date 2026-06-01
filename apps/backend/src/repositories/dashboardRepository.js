@@ -86,16 +86,10 @@ async function getSummary() {
   };
 }
 
-// Tren penjualan harian (30 hari terakhir). Group by tanggal di JS karena
-// supabase-js tidak punya fungsi date_trunc langsung.
+// Tren penjualan harian (30 hari terakhir) + gross profit per hari.
+// gross_profit = Σ (harga_jual - harga_beli) × qty untuk semua item terjual.
 async function getSalesTrend(days = 30) {
   const start = daysAgoIso(days);
-  const { data, error } = await supabase
-    .from("sales")
-    .select("id, total_harga, created_at")
-    .gte("created_at", start)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error("Gagal memuat tren penjualan");
 
   // Buat bucket per tanggal (zona waktu lokal server)
   const buckets = new Map();
@@ -104,15 +98,38 @@ async function getSalesTrend(days = 30) {
     d.setDate(d.getDate() - i);
     d.setHours(0, 0, 0, 0);
     const key = d.toISOString().slice(0, 10);
-    buckets.set(key, { date: key, tx_count: 0, total_revenue: 0 });
+    buckets.set(key, { date: key, tx_count: 0, total_revenue: 0, gross_profit: 0 });
   }
 
-  for (const s of data || []) {
+  // (1) Aggregasi tx_count dan total_revenue dari sales
+  const { data: salesData, error: salesErr } = await supabase
+    .from("sales")
+    .select("id, total_harga, created_at")
+    .gte("created_at", start)
+    .order("created_at", { ascending: true });
+  if (salesErr) throw new Error("Gagal memuat tren penjualan");
+
+  for (const s of salesData || []) {
     const key = new Date(s.created_at).toISOString().slice(0, 10);
-    if (!buckets.has(key)) continue; // di luar window
+    if (!buckets.has(key)) continue;
     const b = buckets.get(key);
     b.tx_count += 1;
     b.total_revenue += Number(s.total_harga || 0);
+  }
+
+  // (2) Aggregasi gross profit dari sale_items + harga_beli produk
+  const { data: itemsData, error: itemsErr } = await supabase
+    .from("sale_items")
+    .select("qty, harga_satuan, sales!inner(created_at), products!inner(harga_beli)")
+    .gte("sales.created_at", start);
+  if (itemsErr) throw new Error("Gagal memuat item penjualan untuk gross profit");
+
+  for (const it of itemsData || []) {
+    const key = new Date(it.sales?.created_at).toISOString().slice(0, 10);
+    if (!buckets.has(key)) continue;
+    const b = buckets.get(key);
+    const margin = Number(it.harga_satuan || 0) - Number(it.products?.harga_beli || 0);
+    b.gross_profit += Math.max(0, margin * Number(it.qty || 0));
   }
 
   return Array.from(buckets.values());

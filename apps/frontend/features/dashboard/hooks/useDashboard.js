@@ -52,6 +52,7 @@ export function useDashboard() {
       date: d.date,
       label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
       pendapatan: d.total_revenue,
+      gross_profit: d.gross_profit || 0,
       pendapatan_bersih: Math.max(0, d.total_revenue - avgDailyExp),
       n_tx: d.tx_count || 0,
     }));
