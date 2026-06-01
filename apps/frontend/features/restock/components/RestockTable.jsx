@@ -2,17 +2,8 @@
 import { Card, Spinner, EmptyState, Badge, Table, THead, TH, TBody, TR, TD } from "@/components/ui";
 import { angka } from "@/lib/format";
 import { UrgensiBadge } from "./UrgensiBadge";
-import { Pencil } from "lucide-react";
 
-export function RestockTable({
-  rows,
-  isEmpty,
-  isLoading,
-  isAdmin,
-  page,
-  pageSize,
-  onEdit,
-}) {
+export function RestockTable({ rows, isEmpty, isLoading, page, pageSize }) {
   return (
     <Card className="flex min-h-0 flex-1 flex-col p-0">
       {isLoading ? (
@@ -33,13 +24,11 @@ export function RestockTable({
               <TH>Kode Barang</TH>
               <TH>Nama Barang</TH>
               <TH className="text-right">Stok</TH>
-              <TH className="text-right">Min Stok</TH>
               <TH className="text-right">Perlu Beli</TH>
               <TH className="text-right" title="Total terjual 30 hari terakhir ÷ 30">Laju Jual/Hari</TH>
-              <TH className="text-right" title="Prediksi berapa hari lagi stok akan habis jika laju jual tetap sama (= Stok ÷ Laju Jual/Hari). Merah <7 hari, kuning <14 hari.">Estimasi Habis</TH>
-              <TH className="text-center" title="Reorder Point (ROP): batas stok sebelum harus pesan ulang agar tidak kehabisan. ROP = (laju jual × 3 hari lead time) + (laju jual × 2 hari safety stock). Merah = stok sudah di bawah ROP, pesan segera!">Status ROP</TH>
+              <TH className="text-right" title="Prediksi berapa hari lagi stok akan habis (Stok ÷ Laju Jual/Hari). Merah <7 hari, kuning <14 hari.">Estimasi Habis</TH>
+              <TH className="text-center" title="Reorder Point: batas stok sebelum harus pesan ulang.">Status ROP</TH>
               <TH>Status</TH>
-              {isAdmin && <TH className="text-right">Aksi</TH>}
             </THead>
             <TBody>
               {rows.map((it, index) => (
@@ -51,7 +40,6 @@ export function RestockTable({
                     <span className="block text-xs text-slate-400">{it.merk || "-"}</span>
                   </TD>
                   <TD className="text-right font-semibold">{angka(it.stok)}</TD>
-                  <TD className="text-right">{angka(it.min_stock)}</TD>
                   <TD className="text-right font-semibold text-red-600">{angka(it.kekurangan)} unit</TD>
                   <TD className="text-right">
                     {Number(it.avg_sales_30d || 0) === 0 ? (
@@ -87,19 +75,6 @@ export function RestockTable({
                     )}
                   </TD>
                   <TD><UrgensiBadge level={it.tingkat_urgensi} /></TD>
-                  {isAdmin && (
-                    <TD>
-                      <div className="flex justify-end gap-0.5">
-                        <button
-                          onClick={() => onEdit(it)}
-                          className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
-                          title="Edit min. stok"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </TD>
-                  )}
                 </TR>
               ))}
             </TBody>
@@ -121,26 +96,12 @@ export function RestockTable({
                       {it.kode_barang} · {it.merk || "-"}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <UrgensiBadge level={it.tingkat_urgensi} />
-                    {isAdmin && (
-                      <button
-                        onClick={() => onEdit(it)}
-                        className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-100 transition text-amber-500 hover:text-amber-700"
-                        title="Edit min. stok"
-                        aria-label="Edit min. stok"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+                  <UrgensiBadge level={it.tingkat_urgensi} />
                 </div>
 
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
-                  <span className="text-slate-500">Stok / Min</span>
-                  <span className="text-right text-slate-600">
-                    <b className="text-slate-900">{angka(it.stok)}</b> / {angka(it.min_stock)}
-                  </span>
+                  <span className="text-slate-500">Stok</span>
+                  <span className="text-right font-semibold text-slate-900">{angka(it.stok)}</span>
                   <span className="text-slate-500">Perlu Beli</span>
                   <span className="text-right font-semibold text-red-600">
                     {angka(it.kekurangan)} unit
