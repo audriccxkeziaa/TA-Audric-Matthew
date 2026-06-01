@@ -274,6 +274,9 @@ export function useLaporanTerpadu() {
     expenseTotalPages,
     expensePageSize: EXPENSE_PAGE,
     isUnifiedLoading: expensesList.isLoading || purchasesList.isLoading,
+    // rincian stok masuk
+    stockInRows: purchasesList.data?.data || [],
+    isStockInLoading: purchasesList.isLoading,
     viewExpense, setViewExpense,
     detailPurchase, setDetailPurchase, detailPurchaseLoading, openPurchaseDetail,
     // rincian pemasukan

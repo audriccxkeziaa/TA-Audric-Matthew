@@ -303,6 +303,14 @@ export function HistoryTab() {
                 <span className="text-xs text-slate-400">Dibuat Oleh</span>
                 <p className="font-medium">{h.detail.username || "-"}</p>
               </div>
+              {h.detail.reference_nota && (
+                <div className="col-span-2">
+                  <span className="text-xs text-slate-400">
+                    {h.detail.type === "sales_return" ? "Dari Transaksi" : "Dari Nota Pembelian"}
+                  </span>
+                  <p className="font-mono font-medium text-brand-700">{h.detail.reference_nota}</p>
+                </div>
+              )}
               {h.detail.approved_at && (
                 <div>
                   <span className="text-xs text-slate-400">Tanggal Keputusan</span>

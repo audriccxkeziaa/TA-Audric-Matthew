@@ -16,7 +16,7 @@ export const JENIS_LABELS = {
   listrik: "Listrik",
   air: "Air (PDAM)",
   custom: "Custom",
-  refund_pelanggan: "Refund Pelanggan",
+  refund_pelanggan: "Retur Pelanggan",
   pembelian_supplier: "Pembelian Supplier",
 };
 

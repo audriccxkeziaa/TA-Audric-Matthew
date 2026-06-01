@@ -9,7 +9,7 @@ import {
 import { rupiah, angka, tanggal } from "@/lib/format";
 import {
   TrendingUp, TrendingDown, Package, Wallet, Printer, ReceiptText,
-  ChevronLeft, ChevronRight, CalendarDays, Eye,
+  ChevronLeft, ChevronRight, CalendarDays,
 } from "lucide-react";
 import { useLaporanTerpadu } from "../hooks/useLaporanTerpadu";
 import { LaporanDetailModal } from "./LaporanDetailModal";
@@ -236,14 +236,16 @@ export default function LaporanPage() {
               ) : (
                 <Table desktopOnly={false}>
                   <THead>
+                    <TH className="w-8">No</TH>
                     <TH>Tanggal</TH>
                     <TH>Kode Transaksi</TH>
                     <TH>Kasir</TH>
                     <TH className="text-right">Total</TH>
                   </THead>
                   <TBody>
-                    {l.filteredSales.map((g) => (
+                    {l.filteredSales.map((g, idx) => (
                       <TR key={g.sale_id} onClick={() => l.openSaleDetail(g)}>
+                        <TD className="text-xs text-slate-400">{idx + 1}</TD>
                         <TD className="text-xs">{tanggal(g.created_at)}</TD>
                         <TD className="font-mono text-xs text-brand-700">{g.kode_transaksi}</TD>
                         <TD className="text-xs text-slate-500">{g.kasir}</TD>
@@ -302,7 +304,6 @@ export default function LaporanPage() {
                     <TH>Jenis</TH>
                     <TH>Deskripsi</TH>
                     <TH className="text-right">Nominal</TH>
-                    <TH className="text-center">Aksi</TH>
                   </THead>
                   <TBody>
                     {l.paginatedUnifiedRows.map((r, idx) => (
@@ -329,20 +330,6 @@ export default function LaporanPage() {
                         <TD className="text-right font-semibold text-red-600">
                           − {rupiah(r.nominal)}
                         </TD>
-                        <TD className="text-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              r._type === "purchase"
-                                ? l.openPurchaseDetail(r._rawId)
-                                : l.setViewExpense(r);
-                            }}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded text-slate-400 transition-colors hover:text-brand-500"
-                            title="Lihat detail"
-                          >
-                            <Eye size={14} />
-                          </button>
-                        </TD>
                       </TR>
                     ))}
                   </TBody>
@@ -363,9 +350,9 @@ export default function LaporanPage() {
                     <ChevronLeft size={14} /> Previous
                   </Button>
                   <span className="text-xs text-slate-500">
-                    Page{" "}
+                    Halaman{" "}
                     <span className="font-semibold text-slate-700">{l.expensePage}</span>
-                    {" "}of{" "}
+                    {" "}dari{" "}
                     <span className="font-semibold text-slate-700">{l.expenseTotalPages}</span>
                   </span>
                   <Button
@@ -381,6 +368,62 @@ export default function LaporanPage() {
             )}
           </Card>
         </div>
+
+        {/* ── Rincian Stok Masuk (Pembelian Supplier) ── */}
+        <Card className="shrink-0 overflow-hidden p-0 ring-1 ring-slate-200/60">
+          <div className="shrink-0 rounded-t-xl border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                  Rincian Stok Masuk
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {l.stockInRows.length} nota pembelian
+                </p>
+              </div>
+              <span className="text-sm font-bold text-blue-600">
+                {rupiah(l.stockInRows.reduce((s, r) => s + Number(r.total || 0), 0))}
+              </span>
+            </div>
+          </div>
+          <div className="max-h-64 overflow-auto thin-scroll">
+            {l.isStockInLoading ? (
+              <div className="p-4"><Spinner label="Memuat..." /></div>
+            ) : l.stockInRows.length === 0 ? (
+              <EmptyState title="Belum ada stok masuk" />
+            ) : (
+              <Table desktopOnly={false}>
+                <THead>
+                  <TH className="w-8">No</TH>
+                  <TH>Tanggal</TH>
+                  <TH>No. Nota</TH>
+                  <TH>Supplier</TH>
+                  <TH className="text-right">Total Nilai</TH>
+                </THead>
+                <TBody>
+                  {l.stockInRows.map((r, idx) => (
+                    <TR
+                      key={r.id}
+                      onClick={() => l.openPurchaseDetail(r.id)}
+                    >
+                      <TD className="text-xs text-slate-400">{idx + 1}</TD>
+                      <TD className="text-xs">{tanggal(r.created_at)}</TD>
+                      <TD className="font-mono text-xs text-brand-700">
+                        {r.no_nota_supplier || "(tanpa nomor)"}
+                      </TD>
+                      <TD className="text-xs text-slate-500">
+                        {r.supplier_name || "-"}
+                      </TD>
+                      <TD className="text-right font-semibold text-blue-600">
+                        {rupiah(r.total)}
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </div>
+        </Card>
       </Card>
 
       {/* ── Modals ── */}

@@ -84,6 +84,24 @@ async function getDetail(adjustmentId) {
     userMap = new Map(users?.map((u) => [u.id, u.username]) || []);
   }
 
+  // Resolve nota asal: kode_transaksi (sales_return) atau no_nota_supplier (return_supplier)
+  let reference_nota = null;
+  if (adj.reference_sale_id) {
+    const { data: sale } = await supabase
+      .from("sales")
+      .select("kode_transaksi")
+      .eq("id", adj.reference_sale_id)
+      .single();
+    reference_nota = sale?.kode_transaksi || null;
+  } else if (adj.reference_purchase_id) {
+    const { data: purchase } = await supabase
+      .from("purchases")
+      .select("no_nota_supplier")
+      .eq("id", adj.reference_purchase_id)
+      .single();
+    reference_nota = purchase?.no_nota_supplier || "(tanpa nomor)";
+  }
+
   const { data: items, error: itemsErr } = await supabase
     .from("stock_adjustment_items")
     .select(
@@ -97,6 +115,7 @@ async function getDetail(adjustmentId) {
     ...adj,
     username: userMap.get(adj.user_id) || null,
     approved_by_username: userMap.get(adj.approved_by) || null,
+    reference_nota,
     items: (items || []).map((it) => ({
       id: it.id,
       product_id: it.product_id,
