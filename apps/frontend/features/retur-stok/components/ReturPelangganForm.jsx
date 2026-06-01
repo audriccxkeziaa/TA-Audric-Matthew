@@ -197,38 +197,57 @@ export function ReturPelangganForm() {
             </tr>
           </thead>
           <tbody>
-            {r.returnItems.map((it, idx) => (
-              <tr key={it.id} className="border-b border-slate-100">
-                <td className="py-2 pr-2">
-                  <input
-                    type="checkbox"
-                    checked={it.checked}
-                    onChange={() => r.toggleItem(idx)}
-                    className="rounded"
-                  />
-                </td>
-                <td className="py-2 pr-2">
-                  <p className="font-medium text-slate-800">{it.nama_barang}</p>
-                  <p className="text-xs text-slate-400">{it.kode_barang}</p>
-                </td>
-                <td className="py-2 pr-2 text-right">{angka(it.qty)}</td>
-                <td className="py-2 pr-2 text-right">{rupiah(it.harga_satuan)}</td>
-                <td className="py-2 pr-2 text-right">
-                  {it.checked ? (
+            {r.returnItems.map((it, idx) => {
+              const fullyReturned = it.max_qty <= 0;
+              return (
+                <tr
+                  key={it.id}
+                  className={`border-b border-slate-100 ${fullyReturned ? "opacity-50" : ""}`}
+                >
+                  <td className="py-2 pr-2">
                     <input
-                      type="number"
-                      min={1}
-                      max={it.qty}
-                      value={it.return_qty}
-                      onChange={(e) => r.setQty(idx, parseInt(e.target.value) || 0)}
-                      className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                      type="checkbox"
+                      checked={it.checked}
+                      onChange={() => r.toggleItem(idx)}
+                      disabled={fullyReturned}
+                      className="rounded disabled:cursor-not-allowed"
                     />
-                  ) : (
-                    <span className="text-slate-300">-</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="py-2 pr-2">
+                    <p className="font-medium text-slate-800">{it.nama_barang}</p>
+                    <p className="text-xs text-slate-400">{it.kode_barang}</p>
+                    {fullyReturned && (
+                      <span className="mt-0.5 inline-block rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
+                        Sudah diretur semua
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 pr-2 text-right">
+                    <span className="tabular-nums">{angka(it.qty)}</span>
+                    {it.already_returned_qty > 0 && !fullyReturned && (
+                      <p className="text-[10px] text-amber-600">
+                        sisa {angka(it.max_qty)}
+                      </p>
+                    )}
+                  </td>
+                  <td className="py-2 pr-2 text-right">{rupiah(it.harga_satuan)}</td>
+                  <td className="py-2 pr-2 text-right">
+                    {it.checked ? (
+                      <input
+                        type="number"
+                        min={1}
+                        max={it.max_qty}
+                        value={it.return_qty}
+                        onChange={(e) => r.setQty(idx, parseInt(e.target.value) || 0)}
+                        className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                      />
+                    ) : (
+                      <span className="text-slate-300">-</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

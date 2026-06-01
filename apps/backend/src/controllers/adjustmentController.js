@@ -90,13 +90,14 @@ async function approvePIN(req, res) {
 
 async function listAdjustments(req, res) {
   try {
-    const { type, from, to, limit, status } = req.query;
+    const { type, from, to, limit, status, reference_sale_id } = req.query;
     const data = await adjustmentService.listAdjustments({
       type: type || null,
       from,
       to,
       limit: limit ? parseInt(limit, 10) : 50,
       status: status || null,
+      reference_sale_id: reference_sale_id || null,
     });
     return res.json({ data });
   } catch (err) {
@@ -182,6 +183,16 @@ async function voidAdjustment(req, res) {
   }
 }
 
+async function getReturnsForSale(req, res) {
+  try {
+    const { saleId } = req.params;
+    const data = await adjustmentService.getReturnsForSale(saleId);
+    return res.json({ data });
+  } catch (err) {
+    return res.status(500).json({ error: "Gagal memuat data retur untuk transaksi ini" });
+  }
+}
+
 module.exports = {
   createAdjustment,
   approveAdjustment,
@@ -194,4 +205,5 @@ module.exports = {
   pendingCount,
   lookupSale,
   lookupPurchase,
+  getReturnsForSale,
 };

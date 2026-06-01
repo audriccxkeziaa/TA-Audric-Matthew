@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { reportsApi, usersApi, expensesApi, purchasesApi } from "@/lib/api";
+import { reportsApi, usersApi, expensesApi, purchasesApi, adjustmentsApi } from "@/lib/api";
 import { downloadFile } from "@/lib/api-client";
 import { useToast } from "@/hooks/useToast";
 import { groupSalesRows } from "../lib/groupRows";
@@ -201,6 +201,20 @@ export function useLaporanTerpadu() {
 
   const [kasirFilter, setKasirFilter] = useState("");
   const [detailData, setDetailData] = useState(null);
+  // Map product_id → returned_qty untuk detail sale yang sedang dibuka
+  const [saleReturMap, setSaleReturMap] = useState(new Map());
+
+  async function openSaleDetail(g) {
+    setDetailData(g);
+    setSaleReturMap(new Map());
+    try {
+      const res = await adjustmentsApi.returnsForSale(g.sale_id);
+      const m = new Map((res.data || []).map((r) => [r.product_id, r.returned_qty]));
+      setSaleReturMap(m);
+    } catch {
+      // non-critical — tetap tampilkan detail tanpa badge retur
+    }
+  }
 
   const { data: usersData } = useQuery({
     queryKey: ["users-list"],
@@ -269,7 +283,7 @@ export function useLaporanTerpadu() {
     filteredSales,
     kasirFilter, setKasirFilter,
     kasirOptions,
-    detailData, setDetailData,
+    detailData, setDetailData, openSaleDetail, saleReturMap,
     exportCsv,
   };
 }

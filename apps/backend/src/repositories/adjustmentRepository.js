@@ -110,7 +110,7 @@ async function getDetail(adjustmentId) {
   };
 }
 
-async function list({ type, from, to, limit = 50, status }) {
+async function list({ type, from, to, limit = 50, status, reference_sale_id }) {
   let query = supabase
     .from("stock_adjustments")
     .select(
@@ -123,6 +123,7 @@ async function list({ type, from, to, limit = 50, status }) {
   if (status) query = query.eq("status", status);
   if (from) query = query.gte("created_at", from);
   if (to) query = query.lte("created_at", to);
+  if (reference_sale_id) query = query.eq("reference_sale_id", reference_sale_id);
 
   const { data, error } = await query;
   if (error) throw new Error("Gagal memuat daftar penyesuaian stok");
@@ -176,23 +177,81 @@ async function lookupSaleByKode(kode) {
   if (error) throw new Error("Gagal mencari transaksi penjualan");
   if (!data || data.length === 0) return [];
 
+  // Hitung qty yang sudah diretur (pending/approved/selesai) per (sale_id, product_id)
+  const saleIds = data.map((s) => s.id);
+  const returMap = new Map(); // key: `${saleId}_${productId}`, value: total returned qty
+
+  const { data: adjData } = await supabase
+    .from("stock_adjustments")
+    .select("id, reference_sale_id")
+    .in("reference_sale_id", saleIds)
+    .eq("type", "sales_return")
+    .in("status", ["pending", "approved", "selesai"]);
+
+  if (adjData && adjData.length > 0) {
+    const adjIds = adjData.map((a) => a.id);
+    const adjToSale = new Map(adjData.map((a) => [a.id, a.reference_sale_id]));
+    const { data: itemData } = await supabase
+      .from("stock_adjustment_items")
+      .select("adjustment_id, product_id, qty")
+      .in("adjustment_id", adjIds);
+    for (const it of itemData || []) {
+      const saleId = adjToSale.get(it.adjustment_id);
+      if (!saleId) continue;
+      const key = `${saleId}_${it.product_id}`;
+      returMap.set(key, (returMap.get(key) || 0) + it.qty);
+    }
+  }
+
   return data.map((sale) => ({
     id: sale.id,
     kode_transaksi: sale.kode_transaksi,
     user_id: sale.user_id,
     total_harga: sale.total_harga,
     created_at: sale.created_at,
-    items: (sale.sale_items || []).map((it) => ({
-      id: it.id,
-      product_id: it.product_id,
-      kode_barang: it.products?.kode_barang,
-      nama_barang: it.products?.nama_barang,
-      merk: it.products?.merk,
-      qty: it.qty,
-      harga_satuan: Number(it.harga_satuan),
-      diskon_persen: Number(it.diskon_persen || 0),
-      subtotal: Number(it.subtotal),
-    })),
+    items: (sale.sale_items || []).map((it) => {
+      const already_returned_qty = returMap.get(`${sale.id}_${it.product_id}`) || 0;
+      return {
+        id: it.id,
+        product_id: it.product_id,
+        kode_barang: it.products?.kode_barang,
+        nama_barang: it.products?.nama_barang,
+        merk: it.products?.merk,
+        qty: it.qty,
+        harga_satuan: Number(it.harga_satuan),
+        diskon_persen: Number(it.diskon_persen || 0),
+        subtotal: Number(it.subtotal),
+        already_returned_qty,
+        available_qty: Math.max(0, it.qty - already_returned_qty),
+      };
+    }),
+  }));
+}
+
+// Kembalikan qty yang sudah diretur per product_id untuk satu sale
+async function getReturnsForSale(saleId) {
+  const { data: adjs } = await supabase
+    .from("stock_adjustments")
+    .select("id")
+    .eq("reference_sale_id", saleId)
+    .eq("type", "sales_return")
+    .in("status", ["approved", "selesai"]);
+
+  if (!adjs || adjs.length === 0) return [];
+
+  const adjIds = adjs.map((a) => a.id);
+  const { data: items } = await supabase
+    .from("stock_adjustment_items")
+    .select("product_id, qty")
+    .in("adjustment_id", adjIds);
+
+  const map = new Map();
+  for (const it of items || []) {
+    map.set(it.product_id, (map.get(it.product_id) || 0) + it.qty);
+  }
+  return Array.from(map.entries()).map(([product_id, returned_qty]) => ({
+    product_id,
+    returned_qty,
   }));
 }
 
@@ -274,4 +333,5 @@ module.exports = {
   countPending,
   lookupSaleByKode,
   lookupPurchaseByNota,
+  getReturnsForSale,
 };

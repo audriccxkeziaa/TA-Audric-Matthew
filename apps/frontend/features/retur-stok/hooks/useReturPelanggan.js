@@ -93,24 +93,31 @@ export function useReturPelanggan() {
   function selectSale(s) {
     setSelected(s);
     setReturnItems(
-      s.items.map((it) => ({ ...it, return_qty: 0, checked: false }))
+      s.items.map((it) => ({
+        ...it,
+        return_qty: 0,
+        checked: false,
+        // available_qty dari backend sudah memperhitungkan retur sebelumnya
+        max_qty: it.available_qty ?? it.qty,
+      }))
     );
   }
 
   function toggleItem(idx) {
     setReturnItems((prev) =>
-      prev.map((it, i) =>
-        i === idx
-          ? { ...it, checked: !it.checked, return_qty: !it.checked ? 1 : 0 }
-          : it
-      )
+      prev.map((it, i) => {
+        if (i !== idx) return it;
+        // Jangan izinkan check jika tidak ada sisa qty
+        if (!it.checked && it.max_qty <= 0) return it;
+        return { ...it, checked: !it.checked, return_qty: !it.checked ? 1 : 0 };
+      })
     );
   }
 
   function setQty(idx, val) {
     setReturnItems((prev) =>
       prev.map((it, i) =>
-        i === idx ? { ...it, return_qty: Math.max(0, Math.min(val, it.qty)) } : it
+        i === idx ? { ...it, return_qty: Math.max(0, Math.min(val, it.max_qty)) } : it
       )
     );
   }

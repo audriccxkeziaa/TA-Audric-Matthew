@@ -1,7 +1,7 @@
 "use client";
 import { Card, Button, Badge, Modal, Spinner, EmptyState } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
-import { XCircle, CheckCircle, Undo2 } from "lucide-react";
+import { Eye } from "lucide-react";
 import { TYPE_BADGES, getStatusBadge } from "../lib/badges";
 import { printReturnReceipt } from "@/lib/receipt";
 import { useHistory } from "../hooks/useHistory";
@@ -191,58 +191,14 @@ export function HistoryTab() {
                         </td>
                         <td className="py-2 px-4 text-right">{angka(row.total_qty)}</td>
                         <td className="py-2 pr-2 text-xs text-slate-500">{tanggalJam(row.created_at)}</td>
-                        <td className="py-2">
-                          <div className="flex items-center justify-center gap-0.5">
-                            <button
-                              onClick={() => h.openDetail(row.id)}
-                              className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
-                              title="Lihat detail"
-                            >
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                                <circle cx="12" cy="12" r="3" />
-                              </svg>
-                            </button>
-                            {row.status === "pending" && (
-                              <>
-                                <button
-                                  onClick={() => h.cancelEntry(row.id)}
-                                  disabled={h.processing === row.id}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-40"
-                                  title="Tolak"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => h.approveEntry(row.id)}
-                                  disabled={h.processing === row.id}
-                                  className="inline-flex h-6 w-6 items-center justify-center rounded text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"
-                                  title="Setujui"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </button>
-                              </>
-                            )}
-                            {(row.status === "approved" || row.status === "selesai") && (
-                              <button
-                                onClick={() => h.voidEntry(row.id)}
-                                disabled={h.processing === row.id}
-                                className="inline-flex h-6 w-6 items-center justify-center rounded text-orange-500 transition hover:bg-orange-50 hover:text-orange-700 disabled:opacity-40"
-                                title="Batalkan (Void)"
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </button>
-                            )}
-                            {row.status === "cancelled" && (
-                              <button
-                                disabled
-                                className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-300 cursor-not-allowed"
-                                title="Sudah dibatalkan"
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
+                        <td className="py-2 text-center">
+                          <button
+                            onClick={() => h.openDetail(row.id)}
+                            className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
+                            title="Lihat detail"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     );
@@ -268,45 +224,6 @@ export function HistoryTab() {
                         </button>
                         <div className="flex shrink-0 items-center gap-1">
                           <span className="text-xs text-slate-500">Qty {angka(row.total_qty)}</span>
-                          {row.status === "pending" && (
-                            <>
-                              <button
-                                onClick={() => h.cancelEntry(row.id)}
-                                disabled={h.processing === row.id}
-                                className="flex h-7 w-7 items-center justify-center rounded text-red-500 transition hover:bg-red-50 disabled:opacity-40"
-                                title="Tolak"
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => h.approveEntry(row.id)}
-                                disabled={h.processing === row.id}
-                                className="flex h-7 w-7 items-center justify-center rounded text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-40"
-                                title="Setujui"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                          {(row.status === "approved" || row.status === "selesai") && (
-                            <button
-                              onClick={() => h.voidEntry(row.id)}
-                              disabled={h.processing === row.id}
-                              className="flex h-7 w-7 items-center justify-center rounded text-orange-500 transition hover:bg-orange-50 disabled:opacity-40"
-                              title="Batalkan (Void)"
-                            >
-                              <Undo2 className="h-4 w-4" />
-                            </button>
-                          )}
-                          {row.status === "cancelled" && (
-                            <button
-                              disabled
-                              className="flex h-7 w-7 items-center justify-center rounded text-slate-300 cursor-not-allowed"
-                              title="Sudah dibatalkan"
-                            >
-                              <Undo2 className="h-4 w-4" />
-                            </button>
-                          )}
                         </div>
                       </div>
                       <button

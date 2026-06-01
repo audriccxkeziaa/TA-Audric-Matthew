@@ -95,7 +95,7 @@ function ReceiptPreview({ data }) {
   );
 }
 
-export function LaporanDetailModal({ detailData, isSales, onClose }) {
+export function LaporanDetailModal({ detailData, isSales, returMap, onClose }) {
   if (!detailData) return null;
 
   return (
@@ -171,7 +171,14 @@ export function LaporanDetailModal({ detailData, isSales, onClose }) {
                   <tr key={idx} className="hover:bg-slate-50/50">
                     <td className="px-3 py-2 text-xs text-slate-400">{idx + 1}</td>
                     <td className="px-3 py-2">
-                      <span className="font-medium">{it.nama_barang}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium">{it.nama_barang}</span>
+                        {isSales && returMap?.get(it.product_id) > 0 && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                            Retur {returMap.get(it.product_id)} unit
+                          </span>
+                        )}
+                      </div>
                       <span className="block font-mono text-xs text-slate-400">
                         {it.kode_barang}
                       </span>

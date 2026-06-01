@@ -307,6 +307,10 @@ async function getAdjustmentDetail(id) {
   return adjustmentRepository.getDetail(id);
 }
 
+async function getReturnsForSale(saleId) {
+  return adjustmentRepository.getReturnsForSale(saleId);
+}
+
 async function countPending() {
   return adjustmentRepository.countPending();
 }
@@ -414,4 +418,5 @@ module.exports = {
   countPending,
   lookupSale,
   lookupPurchase,
+  getReturnsForSale,
 };

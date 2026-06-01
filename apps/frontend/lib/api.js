@@ -91,6 +91,8 @@ export const adjustmentsApi = {
     apiFetch(`/adjustments/${id}/resolve`, { method: "POST" }),
   void: (id) =>
     apiFetch(`/adjustments/${id}/void`, { method: "POST" }),
+  returnsForSale: (saleId) =>
+    apiFetch(`/adjustments/returns-for-sale/${saleId}`),
   approve: (id) =>
     apiFetch(`/adjustments/${id}/approve`, { method: "POST" }),
   approvePin: (id, { username, password }) =>

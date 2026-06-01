@@ -77,6 +77,14 @@ async function createExpense(req, res) {
     console.log(
       `[POS-EXPENSES] +${nominal} ${jenis} oleh ${req.user.username}`
     );
+    // Audit trail — fire-and-forget, jangan blokir response utama
+    supabase.from("audit_trail").insert({
+      user_id: req.user.id,
+      action: "CREATE_EXPENSE",
+      table_name: "expenses",
+      record_id: data.id,
+      new_value: { jenis, deskripsi: deskripsi.trim(), nominal, tanggal: tgl },
+    }).then(() => {}).catch(() => {});
     res.status(201).json({ message: "Pengeluaran dicatat", data });
   } catch (err) {
     console.error("[POS-EXPENSES] create:", err);
@@ -167,6 +175,12 @@ async function deleteExpense(req, res) {
     const { error } = await supabase.from("expenses").delete().eq("id", id);
     if (error) throw error;
     console.log(`[POS-EXPENSES] hapus ${id} oleh ${req.user.username}`);
+    supabase.from("audit_trail").insert({
+      user_id: req.user.id,
+      action: "DELETE_EXPENSE",
+      table_name: "expenses",
+      record_id: id,
+    }).then(() => {}).catch(() => {});
     res.json({ message: "Pengeluaran dihapus" });
   } catch (err) {
     console.error("[POS-EXPENSES] delete:", err.message);

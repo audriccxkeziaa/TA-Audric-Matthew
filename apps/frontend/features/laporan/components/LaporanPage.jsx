@@ -243,7 +243,7 @@ export default function LaporanPage() {
                   </THead>
                   <TBody>
                     {l.filteredSales.map((g) => (
-                      <TR key={g.sale_id} onClick={() => l.setDetailData(g)}>
+                      <TR key={g.sale_id} onClick={() => l.openSaleDetail(g)}>
                         <TD className="text-xs">{tanggal(g.created_at)}</TD>
                         <TD className="font-mono text-xs text-brand-700">{g.kode_transaksi}</TD>
                         <TD className="text-xs text-slate-500">{g.kasir}</TD>
@@ -396,7 +396,12 @@ export default function LaporanPage() {
         salesGrouped={l.salesGrouped}
       />
 
-      <LaporanDetailModal detailData={l.detailData} isSales={true} onClose={() => l.setDetailData(null)} />
+      <LaporanDetailModal
+        detailData={l.detailData}
+        isSales={true}
+        returMap={l.saleReturMap}
+        onClose={() => l.setDetailData(null)}
+      />
 
       <PurchaseDetailModal
         detailPurchase={l.detailPurchase}

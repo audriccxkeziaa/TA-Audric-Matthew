@@ -11,6 +11,8 @@ router.get("/", ctrl.listAdjustments);
 router.get("/pending/count", ctrl.pendingCount);
 router.get("/lookup/sale", ctrl.lookupSale);
 router.get("/lookup/purchase", ctrl.lookupPurchase);
+// Harus sebelum /:id agar tidak di-intercept sebagai detail request
+router.get("/returns-for-sale/:saleId", ctrl.getReturnsForSale);
 
 // Retur Supplier Tahap 2: barang ganti diterima (admin only — enforced in service layer)
 router.post("/:id/resolve", ctrl.resolveSupplierReturn);
