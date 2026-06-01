@@ -15,10 +15,8 @@ function I({ d }) {
 const ICONS = {
   transaksi:   <I d={<><path d="M4 4h12l1 14H3z" /><path d="M8 9h6M8 13h4" /></>} />,
   revenue:     <I d={<><path d="M12 1v22" /><path d="M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6" /></>} />,
-  lowStock:    <I d={<><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /><path d="M12 9v4M12 17h.01" /></>} />,
   grossProfit: <I d={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>} />,
-  habis:       <I d={<><path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /><line x1="3.3" y1="7" x2="12" y2="12" /><line x1="20.7" y1="7" x2="12" y2="12" /><line x1="12" y1="22" x2="12" y2="12" /></>} />,
-  kritis:      <I d={<><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>} />,
+  stok:        <I d={<><path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /><path d="M3.3 7L12 12l8.7-5M12 22V12" /></>} />,
 };
 
 const PERIOD_OPTIONS = [
@@ -48,6 +46,33 @@ function PeriodToggle({ period, setPeriod }) {
   );
 }
 
+function StokCard({ menipis, habis, kritis }) {
+  const items = [
+    { label: "Menipis", value: menipis, color: "text-amber-600", bg: "bg-amber-50/60 ring-1 ring-amber-100/60" },
+    { label: "Habis",   value: habis,   color: "text-red-600",   bg: "bg-red-50/60 ring-1 ring-red-100/60" },
+    { label: "Kritis",  value: kritis,  color: "text-red-700",   bg: "bg-red-50/60 ring-1 ring-red-100/60" },
+  ];
+
+  return (
+    <Card className="p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Status Stok</p>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50/50 text-brand-600 ring-1 ring-brand-100/50">
+          {ICONS.stok}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((item) => (
+          <div key={item.label} className={`rounded-lg px-2 py-2 text-center ${item.bg}`}>
+            <p className={`text-xl font-bold tabular-nums ${item.color}`}>{angka(item.value || 0)}</p>
+            <p className="mt-0.5 text-[10px] font-medium text-slate-500">{item.label}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
   const d = useDashboard();
   const { s } = d;
@@ -65,7 +90,7 @@ export default function DashboardPage() {
           <Spinner label="Memuat ringkasan..." />
         </Card>
       ) : (
-        <div className="grid shrink-0 gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+        <div className="grid shrink-0 gap-3 grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Total Transaksi"
             value={angka(s?.tx_today_count || 0)}
@@ -80,32 +105,16 @@ export default function DashboardPage() {
             icon={ICONS.revenue}
           />
           <StatCard
-            label="Stok Menipis"
-            value={angka(s?.low_stock_count || 0)}
-            tone="warn"
-            hint="Produk ≤ Min Stok"
-            icon={ICONS.lowStock}
-          />
-          <StatCard
             label="Gross Profit"
             value={rupiah(s?.gross_profit || 0)}
             tone="good"
-            hint="Total Omzet − Total Pengeluaran"
+            hint="Total Omzet − Harga Beli"
             icon={ICONS.grossProfit}
           />
-          <StatCard
-            label="Stok Habis"
-            value={angka(s?.stok_habis_count || 0)}
-            tone={(s?.stok_habis_count || 0) > 0 ? "bad" : "good"}
-            hint="produk dengan stok = 0"
-            icon={ICONS.habis}
-          />
-          <StatCard
-            label="Stok Kritis"
-            value={angka(s?.stok_kritis_count || 0)}
-            tone={(s?.stok_kritis_count || 0) > 0 ? "bad" : "good"}
-            hint="di bawah reorder point"
-            icon={ICONS.kritis}
+          <StokCard
+            menipis={s?.low_stock_count}
+            habis={s?.stok_habis_count}
+            kritis={s?.stok_kritis_count}
           />
         </div>
       )}
