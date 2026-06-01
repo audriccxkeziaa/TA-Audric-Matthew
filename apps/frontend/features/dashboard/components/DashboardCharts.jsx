@@ -134,13 +134,15 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={combinedData} margin={{ top: 8, right: 36, left: 0, bottom: 0 }}>
                     <defs>
+                      {/* gradOmzet = green (Omzet) */}
                       <linearGradient id="gradOmzet" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.02} />
-                      </linearGradient>
-                      <linearGradient id="gradBersih" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.45} />
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
                         <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                      </linearGradient>
+                      {/* gradBersih = indigo/brand (Estimasi Pendapatan Bersih) */}
+                      <linearGradient id="gradBersih" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.45} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.04} />
                       </linearGradient>
                     </defs>
 
@@ -183,25 +185,27 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                       radius={[3, 3, 0, 0]}
                       barSize={8}
                     />
-                    <Area
-                      yAxisId="rp"
-                      type="monotone"
-                      dataKey="pendapatan"
-                      name="Omzet"
-                      stroke="#6366f1"
-                      strokeWidth={2}
-                      fill="url(#gradOmzet)"
-                      dot={false}
-                      activeDot={{ r: 4, strokeWidth: 0 }}
-                    />
+                    {/* Estimasi Pendapatan Bersih — indigo, digambar PERTAMA (di bawah Omzet) */}
                     <Area
                       yAxisId="rp"
                       type="monotone"
                       dataKey="pendapatan_bersih"
                       name="Estimasi Pendapatan Bersih"
-                      stroke="#10b981"
+                      stroke="#6366f1"
                       strokeWidth={2.5}
                       fill="url(#gradBersih)"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 0 }}
+                    />
+                    {/* Omzet — green, digambar KEDUA (di atas Estimasi) */}
+                    <Area
+                      yAxisId="rp"
+                      type="monotone"
+                      dataKey="pendapatan"
+                      name="Omzet"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      fill="url(#gradOmzet)"
                       dot={false}
                       activeDot={{ r: 4, strokeWidth: 0 }}
                     />
@@ -209,11 +213,11 @@ export function DashboardCharts({ combinedData, isLoadingCombined, top, topData 
                 </ResponsiveContainer>
               </div>
 
-              {/* Legend kustom — dot + label teks */}
+              {/* Legend kustom — urutan & warna sesuai dashboardd.png */}
               <div className="shrink-0 flex items-center justify-center gap-5 flex-wrap pb-1">
+                <LegendItem color="#6366f1" label="Estimasi Pendapatan Bersih" />
+                <LegendItem color="#10b981" label="Omzet" />
                 <LegendItem color="#fb923c" label="Total Transaksi" />
-                <LegendItem color="#6366f1" label="Omzet" />
-                <LegendItem color="#10b981" label="Estimasi Pendapatan Bersih" />
               </div>
             </>
           )}

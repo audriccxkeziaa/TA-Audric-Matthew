@@ -37,32 +37,25 @@ export function useDashboard() {
   const s = summary.data?.data;
   const trendRaw = trend.data?.data || [];
 
-  // Buat map pengeluaran per tanggal (YYYY-MM-DD → total nominal)
-  const expenseByDate = useMemo(() => {
-    const map = new Map();
-    for (const r of expense.data?.data || []) {
-      const key = r.tanggal?.slice(0, 10);
-      if (key) map.set(key, (map.get(key) || 0) + Number(r.nominal || 0));
-    }
-    return map;
-  }, [expense.data]);
+  // 30 hari terakhir — gabungkan pendapatan, pendapatan_bersih (estimasi), n_tx per hari.
+  // Pengeluaran TIDAK harian → distribusi rata-rata per hari agar estimasi bersih
+  // konsisten di bawah omzet dan tidak identik dengannya.
+  const combinedData = useMemo(() => {
+    const days = trendRaw.slice(-30);
+    const totalExp = (expense.data?.data || []).reduce(
+      (sum, r) => sum + Number(r.nominal || 0),
+      0
+    );
+    const avgDailyExp = days.length > 0 ? totalExp / days.length : 0;
 
-  // 30 hari terakhir — gabungkan pendapatan, pengeluaran, pendapatan_bersih, n_tx per hari
-  const combinedData = useMemo(
-    () =>
-      trendRaw.slice(-30).map((d) => {
-        const exp = expenseByDate.get(d.date) || 0;
-        return {
-          date: d.date,
-          label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
-          pendapatan: d.total_revenue,
-          pengeluaran: exp,
-          pendapatan_bersih: Math.max(0, d.total_revenue - exp),
-          n_tx: d.tx_count || 0,
-        };
-      }),
-    [trendRaw, expenseByDate]
-  );
+    return days.map((d) => ({
+      date: d.date,
+      label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
+      pendapatan: d.total_revenue,
+      pendapatan_bersih: Math.max(0, d.total_revenue - avgDailyExp),
+      n_tx: d.tx_count || 0,
+    }));
+  }, [trendRaw, expense.data]);
 
   const topData = (top.data?.data || []).map((d) => ({
     ...d,
