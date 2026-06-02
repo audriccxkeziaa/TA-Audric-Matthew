@@ -39,6 +39,7 @@ export function useStokMasuk() {
   const [supplierList, setSupplierList] = useState([]);
   const [notaTypeChoice, setNotaTypeChoice] = useState("auto"); // auto|cetak|tulisan_tangan
   const [dragOver, setDragOver] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false); // overlay kamera in-app (getUserMedia)
 
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocr, setOcr] = useState(null); // hasil mentah response.data
@@ -91,6 +92,13 @@ export function useStokMasuk() {
     e.preventDefault();
     setDragOver(false);
     pickFile(e.dataTransfer.files?.[0]);
+  }
+
+  // Frame hasil kamera in-app (getUserMedia) → perlakukan sama seperti file biasa,
+  // lalu masuk pipeline OCR (Tesseract → Groq Vision) saat user tekan Process OCR.
+  function onCameraCapture(f) {
+    pickFile(f);
+    setCameraOpen(false);
   }
 
   // ---------- Proses OCR ----------
@@ -451,6 +459,7 @@ export function useStokMasuk() {
     supplierName, setSupplierName, supplierList,
     notaTypeChoice, setNotaTypeChoice,
     dragOver, setDragOver, pickFile, onDrop,
+    cameraOpen, setCameraOpen, onCameraCapture,
     ocrLoading, runOcr, startManualInput, goBackToModeSelect,
     // ocr result
     ocr, ambiguous, setAmbiguous, notaType, isHandwritten,

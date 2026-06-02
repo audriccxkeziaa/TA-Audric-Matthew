@@ -274,6 +274,55 @@ async function getReturnsForSale(saleId) {
   }));
 }
 
+// Konteks server-authoritative untuk retur pelanggan: per product_id →
+// { qty_sold, unit_price (harga efektif termasuk diskon), already_returned }.
+// Dipakai untuk validasi over-return + menentukan nominal refund yang benar.
+async function getSaleReturnContext(saleId) {
+  const { data: items, error } = await supabase
+    .from("sale_items")
+    .select("product_id, qty, harga_satuan, subtotal")
+    .eq("sale_id", saleId);
+  if (error) throw new Error("Gagal memuat item transaksi referensi");
+
+  const { data: adjs } = await supabase
+    .from("stock_adjustments")
+    .select("id")
+    .eq("reference_sale_id", saleId)
+    .eq("type", "sales_return")
+    .in("status", ["pending", "approved", "selesai"]);
+
+  const returnedMap = new Map();
+  if (adjs && adjs.length > 0) {
+    const { data: ritems } = await supabase
+      .from("stock_adjustment_items")
+      .select("product_id, qty")
+      .in("adjustment_id", adjs.map((a) => a.id));
+    for (const r of ritems || []) {
+      returnedMap.set(
+        r.product_id,
+        (returnedMap.get(r.product_id) || 0) + Number(r.qty)
+      );
+    }
+  }
+
+  const map = new Map();
+  for (const it of items || []) {
+    const qty = Number(it.qty) || 0;
+    const subtotal = Number(it.subtotal) || 0;
+    // Harga efektif per unit (sudah memperhitungkan diskon transaksi); fallback harga_satuan.
+    const unit =
+      qty > 0 && subtotal > 0
+        ? Math.round(subtotal / qty)
+        : Number(it.harga_satuan) || 0;
+    map.set(it.product_id, {
+      qty_sold: qty,
+      unit_price: unit,
+      already_returned: returnedMap.get(it.product_id) || 0,
+    });
+  }
+  return map;
+}
+
 async function lookupPurchaseByNota(nota) {
   let query = supabase
     .from("purchases")
@@ -353,4 +402,5 @@ module.exports = {
   lookupSaleByKode,
   lookupPurchaseByNota,
   getReturnsForSale,
+  getSaleReturnContext,
 };

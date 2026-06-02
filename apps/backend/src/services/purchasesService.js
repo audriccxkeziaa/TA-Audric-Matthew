@@ -88,7 +88,7 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
         `[POS-OCR] PDF detected: ${extracted.pageCount} pages, ${extracted.alphanumCount} alphanumeric chars, isDigital=${extracted.isDigital}`
       );
       if (extracted.isDigital) {
-        // Parse text PDF langsung pakai parser yang sama, tanpa Tesseract.
+        // Baseline: parser regex pada text-layer (tanpa Tesseract).
         const fakeData = { text: extracted.text, lines: [], confidence: 99 };
         let items = ocrService.validateAndFlagItems(
           ocrService.flagLowConfidence(
@@ -96,6 +96,20 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
             60
           )
         );
+        // Tingkatkan dengan Groq (teks → JSON terstruktur), seperti jalur gambar.
+        // Bila Groq gagal / tidak ada API key → tetap pakai hasil regex baseline.
+        let pdfPipeline = "pdf/text-layer-extract";
+        const aiPdfItems = await ocrService.parseWithGroqText(
+          extracted.text,
+          items.length
+        );
+        if (aiPdfItems && aiPdfItems.length > 0) {
+          items = ocrService.validateAndFlagItems(aiPdfItems);
+          pdfPipeline += " + GroqText";
+          console.log(
+            `[POS-OCR] PDF text-layer ditingkatkan Groq → ${items.length} item`
+          );
+        }
         // Levenshtein matching
         const catalog = await purchaseRepository.listActiveProductsForMatching();
         const itemsWithCandidates = items.map((item, idx) => ({
@@ -129,7 +143,7 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
           classification: null,
           raw_text: extracted.text,
           preprocessing: {
-            pipeline: "pdf/text-layer-extract",
+            pipeline: pdfPipeline,
             page_count: extracted.pageCount,
             alphanum_chars: extracted.alphanumCount,
           },
@@ -428,12 +442,9 @@ async function commitPurchase({ user, payload }) {
     );
   }
 
-  // Auto-hapus nota dari Storage setelah commit berhasil (R4 sudah memproses data)
-  if (file_nota_url) {
-    purchaseRepository.deleteNotaFile(file_nota_url).catch((e) =>
-      console.warn("[POS-PURCHASES] post-commit file delete:", e.message)
-    );
-  }
+  // Nota SENGAJA disimpan di Storage setelah commit (untuk keperluan audit —
+  // sesuai Bab 3.2.6.4 skripsi). Admin dapat menghapusnya manual via Supabase
+  // bila perlu. Jangan auto-delete di sini.
   return detail;
 }
 

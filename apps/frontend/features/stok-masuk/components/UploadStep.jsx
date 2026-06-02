@@ -5,6 +5,7 @@
 import { Card, Button, Input, Select, Spinner } from "@/components/ui";
 import { DraftsPanel } from "./DraftsPanel";
 import { SupplierCombobox } from "./SupplierCombobox";
+import { CameraCapture } from "./CameraCapture";
 
 export function UploadStep({ m }) {
   return (
@@ -113,7 +114,7 @@ export function UploadStep({ m }) {
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => m.cameraInputRef.current?.click()}
+                  onClick={() => m.setCameraOpen(true)}
                   className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-400 bg-brand-50 p-5 text-brand-700 transition hover:bg-brand-100"
                 >
                   <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -205,6 +206,19 @@ export function UploadStep({ m }) {
             </div>
           )}
         </Card>
+      )}
+
+      {/* Kamera in-app (getUserMedia). Fallback ke kamera bawaan (<input capture>)
+          bila izin ditolak / tidak didukung. */}
+      {m.cameraOpen && (
+        <CameraCapture
+          onCapture={m.onCameraCapture}
+          onClose={() => m.setCameraOpen(false)}
+          onFallback={() => {
+            m.setCameraOpen(false);
+            m.cameraInputRef.current?.click();
+          }}
+        />
       )}
     </div>
   );

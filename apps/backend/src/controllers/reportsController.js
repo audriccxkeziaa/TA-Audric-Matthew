@@ -35,7 +35,12 @@ const PURCHASE_CSV_COLUMNS = [
 async function getSalesReport(req, res) {
   try {
     const { from, to, format } = req.query;
-    const data = await reportsRepository.listSalesReport({ from, to });
+    const data = await reportsRepository.listSalesReport({
+      from,
+      to,
+      // IDOR guard: kasir hanya laporan transaksinya sendiri; admin semua.
+      userId: req.user.role === "admin" ? null : req.user.id,
+    });
     if (format === "csv") {
       const filename = `laporan-penjualan_${new Date()
         .toISOString()

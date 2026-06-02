@@ -51,8 +51,10 @@ function validatePayload({ type, alasan, items, reference_sale_id, reference_pur
     if (!Number.isInteger(it.qty) || it.qty <= 0) {
       return `Item baris #${i + 1}: qty wajib bilangan bulat > 0`;
     }
-    if (type === "sales_return" && !["bagus", "rusak"].includes(it.kondisi)) {
-      return `Item baris #${i + 1}: kondisi wajib 'bagus' atau 'rusak' untuk retur pelanggan`;
+    // Kebijakan bisnis CV Asia Jaya Maju: retur pelanggan HANYA barang bagus
+    // (barang rusak tidak diterima). 'rusak' ditolak eksplisit.
+    if (type === "sales_return" && it.kondisi != null && it.kondisi !== "bagus") {
+      return `Item baris #${i + 1}: retur pelanggan hanya untuk barang kondisi bagus`;
     }
   }
   return null;
@@ -88,16 +90,51 @@ async function createAdjustment({ user, payload }) {
     throw e;
   }
 
-  const normalizedItems = items.map((it) => ({
-    product_id: it.product_id,
-    qty: Number(it.qty),
-    // sales_return selalu kondisi 'bagus': stok kembali + refund dicatat ke expenses
-    kondisi: type === "sales_return" ? "bagus" : null,
-    harga_satuan: Number(it.harga_satuan || 0),
-    // stock_adjustment dikunci ke 'kurang' (penyusutan) — tambah tidak diizinkan
-    ...(type === "stock_adjustment" && { arah: "kurang" }),
-    ...(type !== "stock_adjustment" && it.arah && { arah: it.arah }),
-  }));
+  // Retur pelanggan: validasi server-authoritative terhadap transaksi asli —
+  // (1) item harus ada di transaksi referensi, (2) qty retur ≤ qty terjual −
+  // yang sudah diretur, (3) harga refund diambil dari harga ASLI transaksi
+  // (bukan input client) → cegah manipulasi nominal refund.
+  let saleCtx = null;
+  if (type === "sales_return") {
+    saleCtx = await adjustmentRepository.getSaleReturnContext(reference_sale_id);
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const info = saleCtx.get(it.product_id);
+      if (!info) {
+        const e = new Error(
+          `Item baris #${i + 1} tidak ada pada transaksi penjualan referensi`
+        );
+        e.status = 400;
+        throw e;
+      }
+      const available = info.qty_sold - info.already_returned;
+      if (Number(it.qty) > available) {
+        const e = new Error(
+          `Item baris #${i + 1}: qty retur melebihi sisa yang bisa diretur (maks ${Math.max(0, available)})`
+        );
+        e.status = 400;
+        throw e;
+      }
+    }
+  }
+
+  const normalizedItems = items.map((it) => {
+    const base = {
+      product_id: it.product_id,
+      qty: Number(it.qty),
+      // sales_return selalu 'bagus' (kebijakan bisnis); tipe lain null.
+      kondisi: type === "sales_return" ? "bagus" : null,
+      // Harga: sales_return pakai harga ASLI transaksi (server); tipe lain dari input.
+      harga_satuan:
+        type === "sales_return"
+          ? saleCtx.get(it.product_id)?.unit_price || 0
+          : Number(it.harga_satuan || 0),
+    };
+    // stock_adjustment dikunci ke 'kurang' (penyusutan); tipe lain boleh kirim arah.
+    if (type === "stock_adjustment") base.arah = "kurang";
+    else if (it.arah) base.arah = it.arah;
+    return base;
+  });
 
   const kode = await nextDocumentNumber(type);
 

@@ -17,6 +17,9 @@ const expensesRoutes = require("./routes/expenses");
 const adjustmentRoutes = require("./routes/adjustments");
 
 const app = express();
+// Di belakang proxy Railway → percayai X-Forwarded-* agar req.ip = IP klien asli
+// (dipakai rate limiter login per-IP).
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 
 //  HTTP security headers (HSTS, CSP, X-Frame-Options, dll)

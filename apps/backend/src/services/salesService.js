@@ -17,14 +17,24 @@ function validatePayload(items) {
     if (!Number.isInteger(it.qty) || it.qty <= 0) {
       return "qty wajib bilangan bulat > 0";
     }
+    if (
+      it.diskon_persen != null &&
+      (typeof it.diskon_persen !== "number" ||
+        it.diskon_persen < 0 ||
+        it.diskon_persen > 100)
+    ) {
+      return "diskon_persen harus angka 0-100";
+    }
   }
   return null;
 }
 
-// Field harga yang dilarang masuk dari request — jika terdeteksi, catat warning.
+// Field yang HARUS dihitung server (otoritatif) — dilarang dari request.
+// CATATAN: diskon_persen TIDAK di daftar ini — diskon per item adalah input
+// sah dari kasir (divalidasi 0-100), bukan manipulasi harga.
 const BLACKLISTED_PRICE_FIELDS = [
   "harga_satuan", "harga_jual", "harga_beli",
-  "diskon_persen", "diskon_rate",
+  "diskon_rate",
   "subtotal", "grand_total", "total",
 ];
 
@@ -39,9 +49,14 @@ async function createSale({ user, items }) {
     );
   }
 
-  // Hanya ambil product_id + qty — buang sisanya secara eksplisit.
+  // Ambil product_id + qty + diskon_persen (diskon = input sah kasir).
+  // Harga TETAP dibuang di sini — server menentukan harga dari DB.
   const safeItems = Array.isArray(items)
-    ? items.map(({ product_id, qty }) => ({ product_id, qty }))
+    ? items.map(({ product_id, qty, diskon_persen }) => ({
+        product_id,
+        qty,
+        diskon_persen,
+      }))
     : [];
 
   const payloadError = validatePayload(safeItems);
@@ -90,15 +105,16 @@ async function createSale({ user, items }) {
   const kodeTransaksi = await nextDocumentNumber("sale");
   const productMap = new Map(products.map((p) => [p.id, p]));
 
-  // Pilar 2 — Kalkulasi mandiri di server: harga & diskon 100% dari DB.
-  // Tidak ada nilai dari request yang masuk ke sini.
+  // Pilar 2 — Harga 100% dari DB (otoritatif). Diskon per item diambil dari
+  // input kasir yang sudah divalidasi (0-100); subtotal final dihitung di
+  // fn_create_sale: qty × harga × (1 − diskon/100).
   const secureItems = safeItems.map((it) => {
     const dbProduct = productMap.get(it.product_id);
     return {
       product_id: it.product_id,
       qty: it.qty,
-      harga_satuan: Number(dbProduct.harga_jual), // authoritative dari DB
-      diskon_persen: 0,                           // tidak ada diskon dari frontend
+      harga_satuan: Number(dbProduct.harga_jual),   // authoritative dari DB
+      diskon_persen: Number(it.diskon_persen) || 0, // diskon per item dari kasir (0-100)
     };
   });
 

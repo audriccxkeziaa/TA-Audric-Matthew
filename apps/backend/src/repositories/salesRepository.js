@@ -69,13 +69,14 @@ async function getReceipt(saleId) {
 }
 
 // Listing untuk GET /api/sales
-async function list({ from, to, limit = 50 }) {
+async function list({ from, to, limit = 50, userId = null }) {
   let query = supabase
     .from("sales")
     .select("id, kode_transaksi, user_id, total_harga, created_at, sale_items(id)")
     .order("created_at", { ascending: false })
     .limit(limit);
 
+  if (userId) query = query.eq("user_id", userId);
   if (from) query = query.gte("created_at", from);
   if (to) query = query.lte("created_at", to);
 

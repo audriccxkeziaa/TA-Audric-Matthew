@@ -23,18 +23,29 @@ export function printReceipt(receipt) {
   if (typeof window === "undefined") return;
 
   const rows = (receipt.items || [])
-    .map(
-      (it) => `
+    .map((it) => {
+      const disc = Number(it.diskon_persen) || 0;
+      const detail =
+        `${it.qty} x ${rupiah(it.harga_satuan)}` +
+        (disc > 0 ? ` (disk ${disc}%)` : "");
+      return `
       <tr>
         <td class="item-name" colspan="3">${escapeHtml(it.nama_barang || "")}</td>
       </tr>
       <tr>
-        <td class="item-detail">${it.qty} x ${rupiah(it.harga_satuan)}</td>
+        <td class="item-detail">${detail}</td>
         <td></td>
         <td class="item-subtotal">${rupiah(it.subtotal)}</td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join("");
+
+  // Ringkasan diskon: subtotal kotor (Σ qty×harga) vs total setelah diskon per item.
+  const grossTotal = (receipt.items || []).reduce(
+    (s, it) => s + Number(it.qty) * Number(it.harga_satuan),
+    0
+  );
+  const totalDiskon = Math.max(0, grossTotal - Number(receipt.total_harga || 0));
 
   const tunai = receipt.tunai ? `
     <tr>
@@ -117,6 +128,15 @@ export function printReceipt(receipt) {
   <hr class="divider"/>
 
   <table class="totals">
+    ${totalDiskon > 0 ? `
+    <tr>
+      <td>Subtotal</td><td></td>
+      <td class="val">${rupiah(grossTotal)}</td>
+    </tr>
+    <tr>
+      <td>Diskon</td><td></td>
+      <td class="val">-${rupiah(totalDiskon)}</td>
+    </tr>` : ""}
     <tr class="grand">
       <td>TOTAL</td><td></td>
       <td class="val">${rupiah(receipt.total_harga)}</td>

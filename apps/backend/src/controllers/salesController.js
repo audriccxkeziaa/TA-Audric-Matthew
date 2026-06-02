@@ -6,6 +6,10 @@ async function getSaleDetail(req, res) {
   try {
     const data = await salesRepository.getReceipt(req.params.id);
     if (!data) return res.status(404).json({ error: "Transaksi tidak ditemukan" });
+    // IDOR guard: kasir hanya boleh melihat transaksinya sendiri (admin semua).
+    if (req.user.role !== "admin" && data.user_id !== req.user.id) {
+      return res.status(404).json({ error: "Transaksi tidak ditemukan" });
+    }
     return res.json({ data });
   } catch (err) {
     console.error("[POS-SALES] getSaleDetail error:", err.message);
@@ -49,6 +53,8 @@ async function listSales(req, res) {
       from,
       to,
       limit: limit ? parseInt(limit, 10) : 50,
+      // IDOR guard: kasir hanya melihat transaksinya sendiri; admin semua.
+      userId: req.user.role === "admin" ? null : req.user.id,
     });
     return res.json({ data });
   } catch (err) {

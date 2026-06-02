@@ -87,22 +87,9 @@ async function createExpense(req, res) {
     }).then(() => {}).catch(() => {});
     res.status(201).json({ message: "Pengeluaran dicatat", data });
   } catch (err) {
+    // Detail teknis hanya di log server; pesan ke user generik (anti info-disclosure).
     console.error("[POS-EXPENSES] create:", err);
-    // Bedakan error spesifik biar mudah debug
-    const msg = err?.message || "";
-    if (/invalid input value for enum/i.test(msg)) {
-      return res.status(500).json({
-        error:
-          "Tipe enum expense_kind di database belum sinkron dengan aplikasi. Jalankan migrasi 015_expenses_rename_jenis.sql di Supabase SQL Editor.",
-      });
-    }
-    if (/relation .* does not exist/i.test(msg) && /expenses/i.test(msg)) {
-      return res.status(500).json({
-        error:
-          "Tabel expenses belum dibuat. Jalankan migrasi 013_expenses.sql di Supabase SQL Editor.",
-      });
-    }
-    res.status(500).json({ error: msg || "Gagal menyimpan pengeluaran" });
+    res.status(500).json({ error: "Gagal menyimpan pengeluaran" });
   }
 }
 
@@ -157,14 +144,7 @@ async function updateExpense(req, res) {
     res.json({ message: "Pengeluaran diperbarui", data });
   } catch (err) {
     console.error("[POS-EXPENSES] update:", err);
-    const msg = err?.message || "";
-    if (/invalid input value for enum/i.test(msg)) {
-      return res.status(500).json({
-        error:
-          "Tipe enum expense_kind di database belum sinkron. Jalankan migrasi 015 di Supabase SQL Editor.",
-      });
-    }
-    res.status(500).json({ error: msg || "Gagal memperbarui pengeluaran" });
+    res.status(500).json({ error: "Gagal memperbarui pengeluaran" });
   }
 }
 

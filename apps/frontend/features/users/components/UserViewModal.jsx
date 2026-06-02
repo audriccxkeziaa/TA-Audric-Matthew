@@ -1,8 +1,6 @@
 
 "use client";
 
-import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { Modal, Button, Badge } from "@/components/ui";
 import { tanggal, tanggalJam } from "@/lib/format";
 
@@ -16,8 +14,6 @@ function InfoRow({ label, children }) {
 }
 
 export function UserViewModal({ open, onClose, target }) {
-  const [showPassword, setShowPassword] = useState(false);
-
   if (!target) return null;
   const active = target.is_active !== false;
 
@@ -40,25 +36,9 @@ export function UserViewModal({ open, onClose, target }) {
             {target.total_transaksi ?? 0} transaksi
           </InfoRow>
           <InfoRow label="Password">
-            <div className="flex items-center gap-2">
-              <span className="font-mono tracking-widest">
-                {target.password_plain
-                  ? showPassword
-                    ? target.password_plain
-                    : "••••••••"
-                  : "-"}
-              </span>
-              {target.password_plain && (
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="text-slate-400 hover:text-slate-600 transition"
-                  aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              )}
-            </div>
+            <span className="text-slate-500">
+              Tersimpan aman (terenkripsi). Untuk mengganti, gunakan Edit → set password baru.
+            </span>
           </InfoRow>
           <InfoRow label="Tanggal Bergabung">{tanggal(target.created_at)}</InfoRow>
           <InfoRow label="Terakhir Diubah">{tanggalJam(target.updated_at)}</InfoRow>

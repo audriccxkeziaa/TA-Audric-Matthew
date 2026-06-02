@@ -905,6 +905,10 @@ Keluarkan TEPAT array JSON dengan struktur:
 const GROQ_VISION_MODEL =
   process.env.GROQ_VISION_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct";
 
+// Model untuk ekstraksi berbasis TEKS (PDF lahir-digital / text-layer). Default
+// memakai model vision yang sama (menerima input teks). Override via GROQ_TEXT_MODEL.
+const GROQ_TEXT_MODEL = process.env.GROQ_TEXT_MODEL || GROQ_VISION_MODEL;
+
 // Ekstrak array JSON dari respons model, toleran terhadap pembungkus markdown
 // atau objek pembungkus ({ items: [...] }, dst).
 function extractJsonArray(text) {
@@ -1015,6 +1019,49 @@ async function parseWithGroqVision(imageBuffer, rawText, expectedRows = 0) {
   }
 }
 
+// AI PARSER (TEKS) — untuk PDF lahir-digital yang sudah punya text-layer bersih.
+// Tidak butuh gambar/canvas: teks dikirim ke Groq untuk distrukturkan jadi JSON.
+// Bila GROQ_API_KEY tidak ada / gagal → return null (caller fallback ke regex).
+async function parseWithGroqText(rawText, expectedRows = 0) {
+  if (!process.env.GROQ_API_KEY) return null;
+  if (!rawText || !String(rawText).trim()) return null;
+  try {
+    const Groq = require("groq-sdk");
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const rowHint =
+      expectedRows > 0
+        ? `Perkiraan ada sekitar ${expectedRows} baris barang. Ekstrak SEMUA baris.\n\n`
+        : "";
+    const userText =
+      rowHint +
+      "Berikut teks hasil ekstraksi text-layer dari PDF nota pembelian supplier. " +
+      "Ekstrak SEMUA baris item menjadi array JSON sesuai schema. " +
+      "Field nama_barang HANYA nama produk (tanpa kode/angka/nomor urut). " +
+      "Keluarkan HANYA array JSON.\n\n<pdf_text>\n" +
+      String(rawText).slice(0, 12000) +
+      "\n</pdf_text>";
+    const result = await groq.chat.completions.create({
+      model: GROQ_TEXT_MODEL,
+      temperature: 0,
+      max_tokens: 8000,
+      messages: [
+        { role: "system", content: AI_SYSTEM_PROMPT },
+        { role: "user", content: userText },
+      ],
+    });
+    const arr = extractJsonArray(result.choices?.[0]?.message?.content || "");
+    if (!Array.isArray(arr) || arr.length === 0) {
+      console.warn("[POS-OCR] Groq Text → array kosong/tidak valid.");
+      return null;
+    }
+    console.log(`[POS-OCR] Groq Text berhasil ekstrak ${arr.length} item dari PDF.`);
+    return formatAiItems(arr, "Groq-Text");
+  } catch (error) {
+    console.error("[POS-OCR] Groq Text GAGAL:", error.message);
+    return null;
+  }
+}
+
 // Lapisan validasi akhir: cek aritmetika (qty×harga vs Total), auto-koreksi
 // harga yang kosong, dan tandai item meragukan agar WAJIB ditinjau user.
 // Tujuan: error yang lolos ke data tersimpan mendekati nol.
@@ -1091,6 +1138,7 @@ function formatAiItems(parsedArray, source) {
 module.exports = {
   recognizePrintedReceipt,
   recognizeHandwrittenReceipt,
+  parseWithGroqText,
   preprocessPrinted,
   preprocessHandwritten,
   computeOtsuThreshold,

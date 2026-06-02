@@ -41,14 +41,16 @@ async function getSummary({ from, to } = {}) {
   // (2) Gross Profit = Σ max(0, (harga_jual − harga_beli) × qty) dalam periode
   const { data: itemsData, error: gpErr } = await supabase
     .from("sale_items")
-    .select("qty, harga_satuan, sales!inner(created_at), products!inner(harga_beli)")
+    .select("qty, subtotal, sales!inner(created_at), products!inner(harga_beli)")
     .gte("sales.created_at", startDate)
     .lte("sales.created_at", endDate);
   if (gpErr) throw new Error("Gagal memuat data gross profit");
 
+  // Revenue per baris = subtotal (SUDAH termasuk diskon per item) − HPP (qty × harga_beli).
+  // Catatan: HPP masih pakai products.harga_beli terkini (snapshot HPP = item H4).
   const gross_profit = (itemsData || []).reduce((acc, it) => {
-    const margin = Number(it.harga_satuan || 0) - Number(it.products?.harga_beli || 0);
-    return acc + Math.max(0, margin * Number(it.qty || 0));
+    const cost = Number(it.products?.harga_beli || 0) * Number(it.qty || 0);
+    return acc + Math.max(0, Number(it.subtotal || 0) - cost);
   }, 0);
 
   // (3) R1 REJECTED hari ini (selalu today — bukti R1 aktif)
@@ -116,7 +118,7 @@ async function getSalesTrend(days = 30) {
   // (2) Aggregasi gross profit dari sale_items + harga_beli produk
   const { data: itemsData, error: itemsErr } = await supabase
     .from("sale_items")
-    .select("qty, harga_satuan, sales!inner(created_at), products!inner(harga_beli)")
+    .select("qty, subtotal, sales!inner(created_at), products!inner(harga_beli)")
     .gte("sales.created_at", start);
   if (itemsErr) throw new Error("Gagal memuat item penjualan untuk gross profit");
 
@@ -124,8 +126,9 @@ async function getSalesTrend(days = 30) {
     const key = new Date(it.sales?.created_at).toISOString().slice(0, 10);
     if (!buckets.has(key)) continue;
     const b = buckets.get(key);
-    const margin = Number(it.harga_satuan || 0) - Number(it.products?.harga_beli || 0);
-    b.gross_profit += Math.max(0, margin * Number(it.qty || 0));
+    // Revenue = subtotal (termasuk diskon per item) − HPP (qty × harga_beli).
+    const cost = Number(it.products?.harga_beli || 0) * Number(it.qty || 0);
+    b.gross_profit += Math.max(0, Number(it.subtotal || 0) - cost);
   }
 
   return Array.from(buckets.values());

@@ -11,7 +11,7 @@ function toStartOfDay(dateStr) {
 }
 
 // Sales report — query dari tabel sales dulu (filter tanggal di sini), lalu join items
-async function listSalesReport({ from = null, to = null, limit = 5000 }) {
+async function listSalesReport({ from = null, to = null, limit = 5000, userId = null }) {
   let query = supabase
     .from("sales")
     .select(
@@ -20,6 +20,7 @@ async function listSalesReport({ from = null, to = null, limit = 5000 }) {
     .order("created_at", { ascending: false })
     .limit(limit);
 
+  if (userId) query = query.eq("user_id", userId);
   if (from) query = query.gte("created_at", toStartOfDay(from));
   if (to) query = query.lte("created_at", toEndOfDay(to));
 

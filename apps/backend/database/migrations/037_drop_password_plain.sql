@@ -1,0 +1,11 @@
+-- Migration 037 — Hapus kolom users.password_plain (audit S-C2)
+--
+-- Password TIDAK boleh disimpan dalam bentuk teks asli. Hash dikelola sepenuhnya
+-- oleh Supabase Auth (tabel auth.users). Reset password dilakukan in-place via
+-- auth.admin.updateUserById (lihat updateUser di authController) tanpa menyimpan
+-- plaintext, sehingga data profil & relasi user (penjualan, dll) tetap utuh.
+--
+-- URUTAN PENTING: deploy dulu kode backend yang sudah BERHENTI menulis/membaca
+-- kolom ini (register/updateUser/listUsers), BARU jalankan migrasi ini. Bila
+-- dijalankan sebelum deploy, query lama yang masih SELECT password_plain akan error.
+ALTER TABLE users DROP COLUMN IF EXISTS password_plain;

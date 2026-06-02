@@ -233,6 +233,7 @@ export function useKasir() {
         items: cart.map((x) => ({
           product_id: x.id,
           qty: x.qty,
+          diskon_persen: Number(x.diskon_persen) || 0,
         })),
       }),
     onSuccess: (res) => {
