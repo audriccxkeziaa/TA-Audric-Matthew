@@ -6,6 +6,7 @@
 //   GET    /api/expenses/summary      ringkasan saldo (omset, biaya, bersih)
 
 const supabase = require("../config/supabase");
+const stockLogRepository = require("../repositories/stockLogRepository");
 
 const ALLOWED_JENIS = ["gaji", "listrik", "air", "supplier", "custom"];
 
@@ -77,14 +78,18 @@ async function createExpense(req, res) {
     console.log(
       `[POS-EXPENSES] +${nominal} ${jenis} oleh ${req.user.username}`
     );
-    // Audit trail — fire-and-forget, jangan blokir response utama
-    supabase.from("audit_trail").insert({
+    // Audit ke stock_logs (source_type='manual') agar muncul di menu Audit Trail —
+    // pengeluaran adalah transaksi kas, wajib teraudit. Pola sama dgn edit master barang.
+    await stockLogRepository.write({
+      product_id: null,
       user_id: req.user.id,
-      action: "CREATE_EXPENSE",
-      table_name: "expenses",
-      record_id: data.id,
-      new_value: { jenis, deskripsi: deskripsi.trim(), nominal, tanggal: tgl },
-    }).then(() => {}).catch(() => {});
+      delta_qty: 0,
+      source_type: "manual",
+      rule_triggered: null,
+      rule_action: "ACCEPTED",
+      reason_detail: `Pengeluaran dicatat oleh ${req.user.username}: ${jenis} — ${deskripsi.trim()}`,
+      context_payload: { jenis, deskripsi: deskripsi.trim(), nominal, tanggal: tgl },
+    });
     res.status(201).json({ message: "Pengeluaran dicatat", data });
   } catch (err) {
     // Detail teknis hanya di log server; pesan ke user generik (anti info-disclosure).
@@ -148,15 +153,22 @@ async function updateExpense(req, res) {
     console.log(
       `[POS-EXPENSES] update ${id} oleh ${req.user.username} (${Object.keys(patch).join(",")})`
     );
-    // Audit trail (fire-and-forget) — pengeluaran adalah transaksi kas, wajib teraudit.
-    supabase.from("audit_trail").insert({
+    // Audit ke stock_logs — diff sebelum/sesudah tampil di menu Audit Trail.
+    await stockLogRepository.write({
+      product_id: null,
       user_id: req.user.id,
-      action: "UPDATE_EXPENSE",
-      table_name: "expenses",
-      record_id: id,
-      old_value: oldRow || null,
-      new_value: data,
-    }).then(() => {}).catch(() => {});
+      delta_qty: 0,
+      source_type: "manual",
+      rule_triggered: null,
+      rule_action: "ACCEPTED",
+      reason_detail: `Pengeluaran diubah oleh ${req.user.username} (${Object.keys(patch).join(", ")})`,
+      context_payload: {
+        before: oldRow || null,
+        after: data,
+        changed_by: req.user.username,
+        edited_at: new Date().toISOString(),
+      },
+    });
     res.json({ message: "Pengeluaran diperbarui", data });
   } catch (err) {
     console.error("[POS-EXPENSES] update:", err);
@@ -177,13 +189,19 @@ async function deleteExpense(req, res) {
     const { error } = await supabase.from("expenses").delete().eq("id", id);
     if (error) throw error;
     console.log(`[POS-EXPENSES] hapus ${id} oleh ${req.user.username}`);
-    supabase.from("audit_trail").insert({
+    // Audit ke stock_logs — simpan nilai lama yang dihapus sbg jejak.
+    await stockLogRepository.write({
+      product_id: null,
       user_id: req.user.id,
-      action: "DELETE_EXPENSE",
-      table_name: "expenses",
-      record_id: id,
-      old_value: oldRow || null,
-    }).then(() => {}).catch(() => {});
+      delta_qty: 0,
+      source_type: "manual",
+      rule_triggered: null,
+      rule_action: "ACCEPTED",
+      reason_detail: oldRow
+        ? `Pengeluaran dihapus oleh ${req.user.username}: ${oldRow.jenis} — ${oldRow.deskripsi}`
+        : `Pengeluaran dihapus oleh ${req.user.username}`,
+      context_payload: oldRow || { id },
+    });
     res.json({ message: "Pengeluaran dihapus" });
   } catch (err) {
     console.error("[POS-EXPENSES] delete:", err.message);
