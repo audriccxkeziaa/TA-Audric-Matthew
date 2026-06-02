@@ -35,7 +35,7 @@ export default function LaporanPage() {
         actions={
           <div className="flex gap-2 no-print">
             <Button onClick={() => l.setPrintOpen(true)}>
-              <Printer size={16} /> Cetak Laporan
+              <Printer size={16} /> Print Report
             </Button>
           </div>
         }

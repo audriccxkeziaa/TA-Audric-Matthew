@@ -129,6 +129,13 @@ async function updateExpense(req, res) {
       return res.status(400).json({ error: "Tidak ada field yang diubah" });
     }
 
+    // Ambil nilai lama untuk audit
+    const { data: oldRow } = await supabase
+      .from("expenses")
+      .select("id, jenis, deskripsi, nominal, tanggal")
+      .eq("id", id)
+      .single();
+
     const { data, error } = await supabase
       .from("expenses")
       .update(patch)
@@ -141,6 +148,15 @@ async function updateExpense(req, res) {
     console.log(
       `[POS-EXPENSES] update ${id} oleh ${req.user.username} (${Object.keys(patch).join(",")})`
     );
+    // Audit trail (fire-and-forget) — pengeluaran adalah transaksi kas, wajib teraudit.
+    supabase.from("audit_trail").insert({
+      user_id: req.user.id,
+      action: "UPDATE_EXPENSE",
+      table_name: "expenses",
+      record_id: id,
+      old_value: oldRow || null,
+      new_value: data,
+    }).then(() => {}).catch(() => {});
     res.json({ message: "Pengeluaran diperbarui", data });
   } catch (err) {
     console.error("[POS-EXPENSES] update:", err);
@@ -152,6 +168,12 @@ async function updateExpense(req, res) {
 async function deleteExpense(req, res) {
   try {
     const { id } = req.params;
+    // Ambil data lama untuk audit SEBELUM dihapus.
+    const { data: oldRow } = await supabase
+      .from("expenses")
+      .select("id, jenis, deskripsi, nominal, tanggal")
+      .eq("id", id)
+      .single();
     const { error } = await supabase.from("expenses").delete().eq("id", id);
     if (error) throw error;
     console.log(`[POS-EXPENSES] hapus ${id} oleh ${req.user.username}`);
@@ -160,6 +182,7 @@ async function deleteExpense(req, res) {
       action: "DELETE_EXPENSE",
       table_name: "expenses",
       record_id: id,
+      old_value: oldRow || null,
     }).then(() => {}).catch(() => {});
     res.json({ message: "Pengeluaran dihapus" });
   } catch (err) {
