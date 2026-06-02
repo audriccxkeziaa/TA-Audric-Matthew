@@ -1,61 +1,80 @@
 # POS — CV Asia Jaya Maju
 
 Sistem Point of Sale berbasis web untuk toko suku cadang sepeda motor
-**CV Asia Jaya Maju (Surabaya)**, dibuat untuk skripsi S1 Informatika
+**CV Asia Jaya Maju (Banjarbaru)**, dibuat untuk skripsi S1 Informatika
 UK Petra (Audric Matthew Wirawan, C14220332).
 
 Mengintegrasikan:
 
-- **Tesseract OCR** untuk input stok masuk dari nota supplier (cetak
-  & tulisan tangan), dengan preprocessing OpenCV + string matching
-  Levenshtein.
+- **OCR input stok masuk** dari nota supplier (cetak & tulisan tangan).
+  Pipeline: preprocessing citra (`sharp`; `@u4/opencv4nodejs` opsional untuk
+  jalur tulisan tangan) → **Tesseract.js** sebagai baseline → **Groq Vision
+  (LLM multimodal)** sebagai lapisan ekstraksi utama → pencocokan ke katalog
+  via **Levenshtein** (top-3). Hasil selalu **divalidasi user** sebelum
+  disimpan. Jalur PDF lahir-digital diekstrak via Groq Text.
+  > Catatan: bila `GROQ_API_KEY` tidak diset, sistem fallback ke hasil
+  > Tesseract + parser regex.
 - **Rule-Based System** untuk menjaga konsistensi data persediaan
   (R1 Pencegahan Stok Negatif, R2 Validasi Stok Masuk, R3 Stok Terpusat,
-  R4 Konsistensi Stok, R5 Rekomendasi Restock).
-- **Dashboard analitik** + audit trail + laporan penjualan/pembelian
-  + manajemen pengguna.
+  R4 Konsistensi Stok, R5 Rekomendasi Restock) — ditegakkan **dua lapis**
+  (service Express + trigger/fungsi PostgreSQL).
+- **Dashboard analitik** (tren penjualan, heatmap stok menipis), **audit
+  trail**, **laporan** penjualan/pembelian, **manajemen pengguna (RBAC)**,
+  serta modul tambahan: **retur/penyesuaian stok**, **pengeluaran &
+  ringkasan keuangan**, dan **notifikasi stok menipis**.
 
 ## Struktur Repo
 
 ```
 .
 ├── apps/
-│   ├── backend/         Express.js (Node) — REST API
-│   └── frontend/        Next.js 14 (React 18) — Web UI
-├── database/
-│   └── migrations/      *.sql — di-apply manual di Supabase
+│   ├── backend/                Express.js (Node) — REST API
+│   │   ├── src/                routes → middleware → controllers → services → repositories
+│   │   └── database/
+│   │       ├── migrations/     *.sql — SATU-SATUNYA sumber migrasi (apply manual di Supabase)
+│   │       └── seed.js         data demo (idempotent)
+│   └── frontend/               Next.js 15 (React 18) — Web UI (App Router, feature-based)
+│       ├── app/(app)/<fitur>/  page.jsx tipis → re-export dari features/
+│       ├── features/<fitur>/   hooks + components + lib per fitur
+│       └── lib/                api.js (service layer tunggal) + api-client.js + supabase.js
 ├── docs/
-│   ├── black-box-testing/   Tabel skenario pengujian (67 skenario)
-│   ├── security-testing/    Prosedur uji keamanan 4 lapisan
-│   └── uat/                 Template UAT + kuesioner SUS
+│   ├── black-box-testing/      Tabel skenario pengujian fungsional
+│   ├── security-testing/       Prosedur uji keamanan 4 lapisan
+│   ├── uat/                    Template UAT + kuesioner SUS
+│   └── DEPLOY_RAILWAY.md        Panduan deploy Railway
 └── tests/
-    ├── perf/            Skrip uji beban k6 (sales & purchases)
-    └── security/        Skrip uji RBAC & JWT tampering
+    ├── perf/                   Skrip uji beban k6 (sales & purchases)
+    └── security/               Skrip uji RBAC & JWT tampering
 ```
+
+> **Penting:** migrasi database hanya ada di **`apps/backend/database/migrations/`**.
+> (Folder `database/` lama di root sudah dihapus karena duplikat & membingungkan.)
 
 ## Tech Stack
 
-| Layer       | Teknologi                                                       |
-| ----------- | --------------------------------------------------------------- |
-| Frontend    | Next.js 14 (App Router) · React 18 · Tailwind 3 · React Query   |
-| Backend     | Node.js · Express 5 · Multer · Sharp · Tesseract.js             |
-| OCR (HW)    | `@u4/opencv4nodejs` (preprocessing) · fast-levenshtein          |
-| Database    | PostgreSQL via Supabase (Auth + Storage + RLS)                  |
-| Charts      | Recharts                                                         |
+| Layer       | Teknologi                                                          |
+| ----------- | ------------------------------------------------------------------ |
+| Frontend    | Next.js 15 (App Router) · React 18 · Tailwind 3 · React Query      |
+| Backend     | Node.js · Express 5 · Multer · Sharp · Tesseract.js · pdf-parse    |
+| OCR         | Tesseract.js + Groq Vision (LLM) · `@u4/opencv4nodejs` (opsional) · fast-levenshtein |
+| Database    | PostgreSQL via Supabase (Auth + Storage + RLS)                     |
+| Keamanan    | JWT (Supabase Auth) · RBAC middleware · Helmet · RLS · rate-limit  |
+| Charts      | Recharts                                                           |
 
 ## Quick Start (development)
 
 Prasyarat:
 - Node.js ≥ 20
 - Akun Supabase (project baru)
-- Untuk OCR tulisan tangan (opsional): Visual Studio Build Tools
-  (C++ workload) + CMake — supaya `@u4/opencv4nodejs` autobuild.
+- (Opsional) `GROQ_API_KEY` dari [groq.com](https://groq.com) untuk OCR LLM.
+- (Opsional, OCR tulisan tangan) Visual Studio Build Tools (C++) + CMake
+  agar `@u4/opencv4nodejs` ter-build.
 
 ### 1. Clone dan install
 
 ```bash
 git clone <repo>
-cd TA-Audric_Matthew
+cd TA-Audric-Matthew
 
 cd apps/backend && npm install && cd ../..
 cd apps/frontend && npm install && cd ../..
@@ -63,114 +82,111 @@ cd apps/frontend && npm install && cd ../..
 
 ### 2. Setup Supabase
 
-1. Buat project baru di [supabase.com](https://supabase.com).
-2. Salin **Project URL**, **anon key**, dan **service role key**
-   ke clipboard.
-3. Di SQL Editor Supabase, jalankan migrasi **secara berurutan** dari
-   `database/migrations/`:
-   ```
-   001_users.sql       → 002_products.sql      → 003_sales.sql
-   004_purchases.sql   → 005_stock_logs.sql    → 006_triggers_R3_R4.sql
-   007_view_R5.sql     → 008_fn_create_sale.sql
-   009_fn_commit_purchase.sql                  → 010_view_R5_avg_sales.sql
-   011_fn_commit_purchase_v2.sql               → 012_users_is_active.sql
-   ```
-   Plus migrasi yang ada di `apps/backend/database/migrations/` (saat ini
-   `010_purchase_drafts.sql`).
-4. Di Storage, buat bucket bernama **`nota-supplier`** (private).
+1. Buat project baru di [supabase.com](https://supabase.com); salin
+   **Project URL**, **anon key**, dan **service role key**.
+2. Di **SQL Editor**, jalankan SELURUH migrasi di
+   `apps/backend/database/migrations/` **secara berurutan** mulai dari
+   `001_initial_schema.sql` sampai migrasi tertinggi (`037_…`).
+   - Termasuk `036_rls_hardening.sql` (pengetatan RLS) dan
+     `037_drop_password_plain.sql` (hapus kolom password plaintext).
+   - Penomoran boleh ada loncatan kecil (mis. tidak ada `035`); itu normal.
+3. Di **Storage**, buat bucket **`nota-supplier`** (private).
 
 ### 3. Konfigurasi env
 
 ```bash
-# apps/backend/.env (salin dari .env.example, lalu isi)
+# apps/backend/.env
 PORT=5000
 NODE_ENV=development
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 SUPABASE_ANON_KEY=eyJ...
 FRONTEND_URL=http://localhost:3000
+GROQ_API_KEY=gsk_...            # opsional — untuk OCR berbasis LLM
 
-# apps/frontend/.env (salin dari .env.example)
+# apps/frontend/.env.local
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
-`FRONTEND_URL` bisa comma-separated (`http://localhost:3000,http://192.168.1.10:3000`)
-supaya satu backend melayani laptop dan HP via LAN bersamaan untuk
-testing live-scan kamera.
+`FRONTEND_URL` boleh comma-separated (`http://localhost:3000,http://192.168.1.10:3000`)
+agar satu backend melayani laptop & HP via LAN sekaligus untuk testing.
 
 ### 4. Seed data demo
 
 ```bash
-cd apps/backend
-npm run seed
+cd apps/backend && npm run seed
 ```
 
-Membuat 2 user, 50+ produk suku cadang motor, 6 stok masuk, dan 25
-transaksi penjualan terdistribusi 14 hari ke belakang. Idempotent
-(aman dijalankan ulang).
+Membuat 2 user, 50+ produk, 6 stok masuk, dan 25 transaksi (tersebar 14 hari).
+Idempotent (aman dijalankan ulang).
 
-Login demo:
-- `admin@asiajaya.local` / `password123` (admin/owner)
-- `kasir@asiajaya.local` / `password123` (kasir)
+**Login demo (login pakai USERNAME):**
+- `owner_asia` / `password123` — admin/owner
+- `kasir_lina` / `password123` — kasir
 
-> Ganti password setelah demo selesai.
+> Ganti password & bersihkan data demo sebelum dipakai operasional nyata.
 
 ### 5. Jalankan
 
 ```bash
 # Terminal 1 — backend
-cd apps/backend
-npm run dev          # nodemon-like via node --watch
+cd apps/backend && npm run dev
 
 # Terminal 2 — frontend
-cd apps/frontend
-npm run dev          # Next.js di http://localhost:3000
+cd apps/frontend && npm run dev    # http://localhost:3000
 ```
-
-Akses: <http://localhost:3000> → otomatis redirect ke `/login`.
 
 ## Aturan Bisnis (Rule-Based System)
 
-| Kode | Aturan                              | Letak penegakan                                  |
-| ---- | ----------------------------------- | ------------------------------------------------ |
-| R1   | Pencegahan Stok Negatif             | Service layer `salesService` + trigger DB        |
-| R2   | Validasi Stok Masuk                 | `purchasesService` (semua item harus terverifikasi user) |
-| R3   | Stok Terpusat                       | Trigger `BEFORE UPDATE products` (45R03)         |
-| R4   | Konsistensi Stok                    | Trigger `AFTER INSERT sale_items / purchase_items` |
-| R5   | Rekomendasi Restock                 | View `v_restock_recommendation` (read-only)      |
+| Kode | Aturan                  | Letak penegakan                                          |
+| ---- | ----------------------- | -------------------------------------------------------- |
+| R1   | Pencegahan Stok Negatif | Service `salesService` + fungsi/trigger DB (SQLSTATE 45R01) |
+| R2   | Validasi Stok Masuk     | `purchasesService` (semua item harus tervalidasi user)   |
+| R3   | Stok Terpusat           | Trigger `BEFORE UPDATE products.stok` (45R03)            |
+| R4   | Konsistensi Stok        | Trigger `AFTER INSERT sale_items / purchase_items`       |
+| R5   | Rekomendasi Restock     | View `v_restock_recommendation` (read-only)              |
 
-Semua perubahan stok ter-audit di `stock_logs` (kolom `rule_triggered`
-+ `rule_action` IN `TRIGGERED|REJECTED|ACCEPTED`).
+Semua perubahan stok ter-audit di `stock_logs` (`rule_triggered` +
+`rule_action` ∈ `TRIGGERED|REJECTED|ACCEPTED`). Transaksi penjualan &
+pembelian dijalankan via fungsi PostgreSQL atomik (`fn_create_sale`,
+`fn_commit_purchase`) dengan penguncian baris (`FOR UPDATE`).
+
+## Keamanan
+
+- **Autentikasi**: JWT via Supabase Auth; backend memverifikasi token tiap request.
+- **RBAC**: middleware peran (admin/kasir) pada setiap route.
+- **RLS** (migrasi 036): tabel transaksi read-only untuk klien; semua tulis
+  hanya lewat backend (service role). Akses langsung tulis via PostgREST ditutup.
+- **Password**: tidak disimpan plaintext (dikelola Supabase Auth). Reset via
+  Edit user (set password baru). Lupa password admin → admin lain / Supabase
+  Dashboard / `node scripts/set-admin-password.js <baru>`.
+- **Lainnya**: rate-limit login, security headers (Helmet di API + `headers()`
+  di Next.js), parameterized query via supabase-js.
 
 ## Pengujian
 
 | Jenis | Lokasi | Keterangan |
 | --- | --- | --- |
-| Black-box | [`docs/black-box-testing/`](./docs/black-box-testing/) | 67 skenario fungsional ter-tabulasi |
+| Black-box | [`docs/black-box-testing/`](./docs/black-box-testing/) | Skenario fungsional ter-tabulasi |
 | Performa | [`tests/perf/`](./tests/perf/) | Skrip k6 — target p95 < 500 ms |
 | Keamanan | [`docs/security-testing/`](./docs/security-testing/) · [`tests/security/`](./tests/security/) | SQL injection, RBAC/JWT, HTTP headers |
-| UAT | [`docs/uat/`](./docs/uat/) | Template skenario UAT + kuesioner SUS |
+| UAT | [`docs/uat/`](./docs/uat/) | Skenario UAT + kuesioner SUS |
 
-Uji RBAC & JWT otomatis: `node tests/security/rbac-jwt-test.js`
-(backend harus hidup). Uji beban: `k6 run tests/perf/sales-load.js`.
+Contoh: `node tests/security/rbac-jwt-test.js` (backend hidup) ·
+`k6 run tests/perf/sales-load.js`.
 
 ## Deployment
 
-- **Frontend**: Vercel (set env vars `NEXT_PUBLIC_*`).
-- **Backend**: Railway / Render / fly.io (set env vars + `npm start`).
-- **Database & Storage**: Supabase (cukup project gratis untuk skala
-  toko kecil).
+- **Frontend & Backend**: Railway (lihat [`docs/DEPLOY_RAILWAY.md`](./docs/DEPLOY_RAILWAY.md)) — set env vars, build/start otomatis. Railway menyediakan HTTPS.
+- **Database & Storage**: Supabase.
 
-Untuk deploy ke Railway, lihat `docs/DEPLOY_RAILWAY.md`.
-
-Untuk produksi:
-1. Update `FRONTEND_URL` di backend dengan domain Vercel atau Railway.
-2. Update `NEXT_PUBLIC_API_URL` di frontend dengan URL backend.
-3. Ganti password user demo.
-4. Aktifkan Supabase Auth email confirmation (saat ini auto-confirm
-   di seed).
+Checklist sebelum operasional nyata:
+1. Jalankan SEMUA migrasi (termasuk 036 & 037) di Supabase.
+2. Ganti password user demo & **bersihkan data seed**.
+3. Set `FRONTEND_URL` (backend) & `NEXT_PUBLIC_API_URL` (frontend) ke domain produksi.
+4. Pertimbangkan strategi backup data (Supabase) untuk data toko nyata.
 
 ## Lisensi
 
