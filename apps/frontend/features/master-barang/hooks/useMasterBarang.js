@@ -1,16 +1,13 @@
 "use client";
 // features/master-barang/hooks/useMasterBarang.js
 // Logika & state halaman Master Barang: pencarian (debounce 300ms), filter
-// merk, paging, scan barcode, serta kontrol modal form. Data di-fetch via
-// React Query memakai service layer lib/api.js. Tidak ada logika bisnis baru —
-// semuanya dipindahkan apa adanya dari page.jsx.
+// merk, filter kondisi stok, filter status, paging, scan barcode, kontrol modal.
 
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { productsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
-// Normalisasi kode barang: buang non-alfanumerik, uppercase.
 function normKode(k) {
   return (k || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
@@ -22,6 +19,8 @@ export function useMasterBarang() {
   const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
   const [merkFilter, setMerkFilter] = useState("");
+  const [stockFilter, setStockFilter] = useState(""); // "" | "out" | "low" | "normal"
+  const [statusFilter, setStatusFilter] = useState("aktif"); // "aktif" | "nonaktif"
   const [page, setPage] = useState(1);
 
   const [showForm, setShowForm] = useState(false);
@@ -32,7 +31,6 @@ export function useMasterBarang() {
   const barcodeRef = useRef(null);
   const [barcodeInput, setBarcodeInput] = useState("");
 
-  // Debounce: hanya kirim query ke backend 300ms setelah user berhenti mengetik
   useEffect(() => {
     const t = setTimeout(() => setQ(searchInput), 300);
     return () => clearTimeout(t);
@@ -44,7 +42,7 @@ export function useMasterBarang() {
     if (!code) return;
     const norm = normKode(code);
     setSearchInput(norm);
-    setQ(norm); // langsung set tanpa debounce untuk barcode
+    setQ(norm);
     setPage(1);
     setBarcodeInput("");
   }
@@ -83,11 +81,12 @@ export function useMasterBarang() {
   const merkList = merksQ.data?.data || [];
 
   const { data, isLoading } = useQuery({
-    queryKey: ["products", q, merkFilter, page],
+    queryKey: ["products", q, merkFilter, stockFilter, statusFilter, page],
     queryFn: () =>
       productsApi.list({
         q,
-        status: "aktif",
+        status: statusFilter || "aktif",
+        stock: stockFilter || undefined,
         merk: merkFilter || undefined,
         limit: 20,
         page,
@@ -101,6 +100,10 @@ export function useMasterBarang() {
     setSearchInput,
     merkFilter,
     setMerkFilter,
+    stockFilter,
+    setStockFilter,
+    statusFilter,
+    setStatusFilter,
     merkList,
     barcodeInput,
     setBarcodeInput,

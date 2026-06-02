@@ -53,7 +53,6 @@ async function listDistinctMerks() {
   const { data, error } = await supabase
     .from("products")
     .select("merk")
-    .eq("status", "aktif")
     .not("merk", "is", null)
     .order("merk", { ascending: true });
   if (error) {
@@ -76,9 +75,10 @@ async function search({ q = "", status = null, stockFilter = null, merk = null, 
     .order("nama_barang", { ascending: true })
     .range(offset, offset + limit - 1);
 
-  if (status) {
+  if (status === "aktif" || status === "nonaktif") {
     query = query.eq("status", status);
-  } else {
+  } else if (status !== "all") {
+    // "all" = tampilkan semua status; undefined/null/lain = default aktif
     query = query.eq("status", "aktif");
   }
 

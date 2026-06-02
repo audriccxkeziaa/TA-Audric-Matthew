@@ -43,7 +43,7 @@ export function ValidateStep({ m }) {
               />
             </div>
             <Input
-              label="No. Nota Supplier *"
+              label={<>No. Nota Supplier <span className="text-red-500">*</span></>}
               value={m.noNota}
               onChange={(e) => m.setNoNota(e.target.value)}
               placeholder="mis. INV-2026-0481"

@@ -1,10 +1,10 @@
 "use client";
 // features/master-barang/hooks/useProductForm.js
-// State + mutation form tambah/edit barang. Validasi sisi klien & payload
-// dipindahkan apa adanya dari komponen ProductForm lama (tidak diubah):
+// State + mutation form tambah/edit barang. Validasi sisi klien & payload:
 //   - kode & nama wajib
 //   - alasan wajib saat admin meng-edit (audit trail)
 //   - min_stock hanya dikirim oleh admin (RBAC field-level; backend tolak kasir)
+//   - toggleStatus: nonaktifkan / aktifkan kembali produk (admin only)
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -33,7 +33,6 @@ export function useProductForm({ editing, isAdmin, onClose }) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      // Validasi sisi klien sebelum kirim.
       if (!form.kode_barang.trim() || !form.nama_barang.trim()) {
         throw new Error("Kode dan nama barang wajib diisi");
       }
@@ -47,7 +46,6 @@ export function useProductForm({ editing, isAdmin, onClose }) {
         harga_beli: Number(form.harga_beli) || 0,
         harga_jual: Number(form.harga_jual) || 0,
       };
-      // min_stock hanya disertakan oleh admin (backend tolak kasir).
       if (isAdmin) body.min_stock = parseInt(form.min_stock, 10) || 0;
 
       if (isEdit) {
@@ -58,7 +56,28 @@ export function useProductForm({ editing, isAdmin, onClose }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product-merks"] });
       toast.success(isEdit ? "Barang diperbarui" : "Barang ditambahkan");
+      onClose();
+    },
+    onError: (e) => setErr(e.message),
+  });
+
+  // Toggle status: nonaktifkan atau aktifkan kembali produk
+  const toggleStatusMutation = useMutation({
+    mutationFn: async () => {
+      if (!isEdit || !isAdmin) throw new Error("Tidak diizinkan");
+      if (!alasan.trim()) throw new Error("Alasan wajib diisi sebelum mengubah status produk.");
+      const newStatus = editing.status === "nonaktif" ? "aktif" : "nonaktif";
+      const autoAlasan = newStatus === "nonaktif"
+        ? `Produk dinonaktifkan (discontinue) — ${alasan.trim()}`
+        : `Produk diaktifkan kembali — ${alasan.trim()}`;
+      return productsApi.update(editing.id, { status: newStatus, alasan: autoAlasan });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      const isNow = editing.status === "nonaktif" ? "diaktifkan kembali" : "dinonaktifkan";
+      toast.success(`Produk berhasil ${isNow}`);
       onClose();
     },
     onError: (e) => setErr(e.message),
@@ -67,6 +86,11 @@ export function useProductForm({ editing, isAdmin, onClose }) {
   function submit() {
     setErr("");
     mutation.mutate();
+  }
+
+  function toggleStatus() {
+    setErr("");
+    toggleStatusMutation.mutate();
   }
 
   return {
@@ -78,5 +102,7 @@ export function useProductForm({ editing, isAdmin, onClose }) {
     err,
     submit,
     saving: mutation.isPending,
+    toggleStatus,
+    togglingStatus: toggleStatusMutation.isPending,
   };
 }

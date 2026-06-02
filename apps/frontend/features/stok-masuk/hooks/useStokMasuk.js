@@ -266,6 +266,13 @@ export function useStokMasuk() {
         merk: c?.merk || row.merk || "",
         harga_beli: c?.harga_beli ?? row.harga_beli ?? 0,
         harga_jual: c?.harga_jual ?? row.harga_jual ?? 0,
+        _orig_product: c ? {
+          kode_barang: c.kode_barang,
+          nama_barang: c.nama_barang,
+          merk: c.merk || "",
+          harga_beli: c.harga_beli ?? 0,
+          harga_jual: c.harga_jual ?? 0,
+        } : row._orig_product || null,
       });
     }
   }
@@ -277,14 +284,14 @@ export function useStokMasuk() {
     if (!supplierName.trim()) return false;
     return rows.every((r) => {
       const qtyOk = Number(r.qty) > 0;
-      const hargaOk = Number(r.harga_beli) > 0; // wajib > 0
+      const hargaOk = Number(r.harga_beli) > 0;
       if (!qtyOk || !hargaOk) return false;
       if (!r.merk?.trim()) return false;
+      // Kode dan nama wajib untuk semua jenis item (new maupun restock)
+      if (!r.kode_barang.trim() || !r.nama_barang.trim()) return false;
       if (r.action === "restock") {
         if (!r.product_id) return false;
-      } else if (r.action === "new") {
-        if (!r.kode_barang.trim() || !r.nama_barang.trim()) return false;
-      } else {
+      } else if (r.action !== "new") {
         return false; // belum ada keputusan
       }
       // Strategi 3 — jalur tulisan tangan: tiap baris wajib ditandai diperiksa.
@@ -330,7 +337,28 @@ export function useStokMasuk() {
           if (Number(r.harga_jual) > 0) obj.harga_jual = Number(r.harga_jual);
           return obj;
         }
-        return { ...base, action: "restock", product_id: r.product_id };
+        // Restock: deteksi perubahan field vs data asli produk untuk update master barang
+        const restockObj = { ...base, action: "restock", product_id: r.product_id };
+        if (r._orig_product && r.product_id) {
+          const orig = r._orig_product;
+          const updates = {};
+          if (r.kode_barang.trim() && r.kode_barang.trim() !== orig.kode_barang)
+            updates.kode_barang = r.kode_barang.trim();
+          if (r.nama_barang.trim() && r.nama_barang.trim() !== orig.nama_barang)
+            updates.nama_barang = r.nama_barang.trim();
+          const currMerk = (r.merk || "").trim();
+          const origMerk = (orig.merk || "").trim();
+          if (currMerk !== origMerk) updates.merk = currMerk || null;
+          if (Number(r.harga_beli) !== Number(orig.harga_beli))
+            updates.harga_beli = Number(r.harga_beli);
+          // harga_jual: bandingkan jika ada data asli, atau tambahkan jika user set nilai
+          if (orig.harga_jual != null && Number(r.harga_jual) !== Number(orig.harga_jual))
+            updates.harga_jual = Number(r.harga_jual);
+          else if (orig.harga_jual == null && Number(r.harga_jual) > 0)
+            updates.harga_jual = Number(r.harga_jual);
+          if (Object.keys(updates).length > 0) restockObj.product_updates = updates;
+        }
+        return restockObj;
       });
 
       const res = await purchasesApi.commit({

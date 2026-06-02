@@ -43,7 +43,7 @@ export function ProductViewModal({ open, onClose, product }) {
           {product.status === "nonaktif" && (
             <div className="col-span-2">
               <InfoRow label="Status Barang">
-                <Badge tone="slate">nonaktif</Badge>
+                <Badge tone="slate">Discontinue</Badge>
               </InfoRow>
             </div>
           )}

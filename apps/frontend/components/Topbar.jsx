@@ -97,9 +97,9 @@ export default function Topbar({ onToggleSidebar }) {
                 </>
               )}
 
-              {/* Stok Menipis */}
+              {/* Stok Habis & Menipis */}
               <div className="border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700">
-                Stok Menipis ({count})
+                Stok Habis &amp; Menipis ({count})
               </div>
               <div className="max-h-72 overflow-y-auto thin-scroll">
                 {items.length === 0 ? (

@@ -42,6 +42,16 @@ export default function MasterBarangPage() {
           m.setPage(1);
         }}
         merkList={m.merkList}
+        stockFilter={m.stockFilter}
+        onStock={(v) => {
+          m.setStockFilter(v);
+          m.setPage(1);
+        }}
+        statusFilter={m.statusFilter}
+        onStatus={(v) => {
+          m.setStatusFilter(v);
+          m.setPage(1);
+        }}
       />
 
       <ProductTable
@@ -85,6 +95,7 @@ export default function MasterBarangPage() {
           editing={m.editing}
           isAdmin={m.isAdmin}
           onClose={m.closeForm}
+          merkList={m.merkList}
         />
       )}
     </PageShell>

@@ -13,6 +13,7 @@ const stringMatcher = require("./stringMatchingService");
 const pdfService = require("./pdfService");
 const ruleEngine = require("./ruleEngine");
 const purchaseRepository = require("../repositories/purchaseRepository");
+const productRepository = require("../repositories/productRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
 
 // Strategi 4 — ambang fallback (untuk jalur tulisan tangan).
@@ -333,6 +334,8 @@ async function commitPurchase({ user, payload }) {
   }
 
   // action='restock' → product_id, action='new' → kode_barang + nama_barang
+  // product_updates: perubahan field master barang yang diinput user untuk restock items
+  const productUpdatesList = [];
   const normalizedItems = items.map((it) => {
     const action = it.action === "new" ? "new" : "restock";
     const base = {
@@ -349,6 +352,12 @@ async function commitPurchase({ user, payload }) {
       if (it.harga_jual) base.harga_jual = Number(it.harga_jual);
     } else {
       base.product_id = it.product_id;
+      if (it.product_updates && Object.keys(it.product_updates).length > 0) {
+        productUpdatesList.push({
+          product_id: it.product_id,
+          updates: it.product_updates,
+        });
+      }
     }
     return base;
   });
@@ -390,6 +399,35 @@ async function commitPurchase({ user, payload }) {
   console.log(
     `[POS-PURCHASES] Commit purchase_id=${rpcResult.purchase_id} oleh user=${user.username} total=${rpcResult.total} (${normalizedItems.length} item, ${detail.products_created} produk baru)`
   );
+
+  // Proses pembaruan master data produk untuk restock items yang diedit user
+  if (productUpdatesList.length > 0) {
+    await Promise.all(
+      productUpdatesList.map(async ({ product_id, updates }) => {
+        try {
+          const existing = await productRepository.findById(product_id);
+          if (!existing) return;
+          const updated = await productRepository.update(product_id, updates);
+          await stockLogRepository.write({
+            product_id,
+            user_id: user.id,
+            delta_qty: 0,
+            stok_sebelum: existing.stok,
+            stok_sesudah: existing.stok,
+            source_type: "manual",
+            rule_triggered: null,
+            rule_action: "ACCEPTED",
+            reason_detail: `Data barang diperbarui oleh ${user.username} selama proses stok masuk`,
+            context_payload: { before: existing, after: updated, changed_by: user.username, changes: updates },
+          });
+          console.log(`[POS-PURCHASES] Updated product ${product_id} master data`);
+        } catch (err) {
+          console.warn(`[POS-PURCHASES] Gagal update produk ${product_id}:`, err.message);
+        }
+      })
+    );
+  }
+
   // Auto-hapus nota dari Storage setelah commit berhasil (R4 sudah memproses data)
   if (file_nota_url) {
     purchaseRepository.deleteNotaFile(file_nota_url).catch((e) =>

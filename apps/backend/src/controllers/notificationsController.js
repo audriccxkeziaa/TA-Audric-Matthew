@@ -6,7 +6,7 @@
 const supabase = require("../config/supabase");
 
 // GET /api/notifications/low-stock
-// Response: { count, items: [{id, kode_barang, nama_barang, stok, min_stock, level}] (top 5 paling kritis) }
+// Response: { count, items: [{id, kode_barang, nama_barang, stok, min_stock, level}] (semua barang kritis) }
 async function getLowStockNotifications(req, res) {
   try {
     const { data, error } = await supabase
@@ -30,7 +30,7 @@ async function getLowStockNotifications(req, res) {
       return gapB - gapA;
     });
 
-    const items = flagged.slice(0, 5).map((p) => ({
+    const items = flagged.map((p) => ({
       id: p.id,
       kode_barang: p.kode_barang,
       nama_barang: p.nama_barang,

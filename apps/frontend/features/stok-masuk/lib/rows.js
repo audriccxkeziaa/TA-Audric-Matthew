@@ -33,6 +33,14 @@ export function ocrItemToRow(item) {
     product_id: exactMatch ? top.product_id : null,
     picked_label: exactMatch ? top.nama_barang : "",
     reviewed: false,
+    // Snapshot data produk asli saat auto-fill — untuk deteksi perubahan di commit
+    _orig_product: exactMatch ? {
+      kode_barang: top.kode_barang,
+      nama_barang: top.nama_barang,
+      merk: top.merk || "",
+      harga_beli: top.harga_beli ?? 0,
+      harga_jual: top.harga_jual ?? 0,
+    } : null,
   };
 }
 
@@ -55,7 +63,8 @@ export function blankManualRow() {
     action: null,
     product_id: null,
     picked_label: "",
-    reviewed: true, // manual = sudah pasti diketik user
+    reviewed: true,
+    _orig_product: null,
   };
 }
 
@@ -81,6 +90,7 @@ export function rowToDraftItem(r) {
     product_id: r.product_id || null,
     picked_label: r.picked_label || "",
     reviewed: !!r.reviewed,
+    _orig_product: r._orig_product || null,
   };
 }
 
@@ -106,6 +116,7 @@ export function draftItemToRow(it) {
     product_id: it.product_id || null,
     picked_label: it.picked_label || "",
     reviewed: !!it.reviewed,
+    _orig_product: it._orig_product || null,
   };
 }
 

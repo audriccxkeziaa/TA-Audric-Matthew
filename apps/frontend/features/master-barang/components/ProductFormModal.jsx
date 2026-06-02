@@ -1,14 +1,28 @@
 "use client";
 // Modal tambah / edit barang — murni UI. Semua state & mutation ada di
 // hook useProductForm. Kolom stok TIDAK bisa diedit manual (R3); min_stock
-// hanya bisa diubah admin.
+// hanya bisa diubah admin. Merk via MerkPopup (popup searchable).
+// Admin dapat nonaktifkan/aktifkan kembali produk (status toggle).
 
 import { Modal, Button, Input, Textarea } from "@/components/ui";
+import { MerkPopup } from "@/components/MerkPopup";
 import { useProductForm } from "../hooks/useProductForm";
 
-export function ProductFormModal({ open, onClose, editing, isAdmin }) {
-  const { isEdit, form, set, alasan, setAlasan, err, submit, saving } =
-    useProductForm({ editing, isAdmin, onClose });
+export function ProductFormModal({ open, onClose, editing, isAdmin, merkList = [] }) {
+  const {
+    isEdit,
+    form,
+    set,
+    alasan,
+    setAlasan,
+    err,
+    submit,
+    saving,
+    toggleStatus,
+    togglingStatus,
+  } = useProductForm({ editing, isAdmin, onClose });
+
+  const isDiscontinue = editing?.status === "nonaktif";
 
   return (
     <Modal
@@ -17,24 +31,33 @@ export function ProductFormModal({ open, onClose, editing, isAdmin }) {
       title={isEdit ? "Edit Barang" : "Tambah Barang Baru"}
     >
       <div className="space-y-3">
-        <Input
-          label="Kode Barang"
-          value={form.kode_barang}
-          onChange={(e) => set("kode_barang", e.target.value)}
-          placeholder="mis. SCM-001"
-        />
-        <Input
-          label="Nama Barang"
-          value={form.nama_barang}
-          onChange={(e) => set("nama_barang", e.target.value)}
-          placeholder="mis. Kampas Rem Beat"
-        />
-        <Input
-          label="Merk"
-          value={form.merk}
-          onChange={(e) => set("merk", e.target.value)}
-          placeholder="mis. Aspira"
-        />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input
+            label={<>Kode Barang <span className="text-red-500">*</span></>}
+            value={form.kode_barang}
+            onChange={(e) => set("kode_barang", e.target.value)}
+            placeholder="mis. SCM-001"
+          />
+          <Input
+            label={<>Nama Barang <span className="text-red-500">*</span></>}
+            value={form.nama_barang}
+            onChange={(e) => set("nama_barang", e.target.value)}
+            placeholder="mis. Kampas Rem Beat"
+          />
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-slate-700">
+            Merk <span className="text-red-500">*</span>
+          </span>
+          <MerkPopup
+            value={form.merk}
+            onChange={(v) => set("merk", v)}
+            merkList={merkList}
+            placeholder="Pilih atau buat merk..."
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Harga Beli"
@@ -51,6 +74,7 @@ export function ProductFormModal({ open, onClose, editing, isAdmin }) {
             onChange={(e) => set("harga_jual", e.target.value)}
           />
         </div>
+
         <Input
           label={`Min. Stok ${isAdmin ? "" : "(admin saja)"}`}
           type="number"
@@ -60,7 +84,7 @@ export function ProductFormModal({ open, onClose, editing, isAdmin }) {
           onChange={(e) => set("min_stock", e.target.value)}
         />
 
-        {/* Alasan perubahan — WAJIB saat edit (admin) untuk audit trail */}
+        {/* Alasan perubahan — WAJIB saat edit (admin) untuk audit trail & toggle status */}
         {isEdit && isAdmin && (
           <Textarea
             label={
@@ -81,13 +105,30 @@ export function ProductFormModal({ open, onClose, editing, isAdmin }) {
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          {/* Toggle status produk — admin & edit saja */}
+          {isEdit && isAdmin && (
+            <Button
+              variant={isDiscontinue ? "success" : "danger"}
+              onClick={toggleStatus}
+              disabled={togglingStatus || saving}
+              size="sm"
+            >
+              {togglingStatus
+                ? "Memproses..."
+                : isDiscontinue
+                ? "Aktifkan Kembali"
+                : "Nonaktifkan Produk"}
+            </Button>
+          )}
+          <div className="flex gap-2 ml-auto">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={submit} disabled={saving || togglingStatus}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>

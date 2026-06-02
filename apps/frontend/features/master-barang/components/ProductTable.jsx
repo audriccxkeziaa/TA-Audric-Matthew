@@ -49,7 +49,7 @@ export function ProductTable({ products, isLoading, isAdmin, page, onEdit }) {
                     {p.nama_barang}
                     {p.status === "nonaktif" && (
                       <span className="ml-2">
-                        <Badge tone="slate">nonaktif</Badge>
+                        <Badge tone="slate">Discontinue</Badge>
                       </span>
                     )}
                   </TD>

@@ -2,13 +2,14 @@
 // Satu baris item pada tabel validasi: keputusan produk (restock/baru/cari),
 // lookup kode (debounce + Enter scanner, auto-fill bila cocok 100%), field
 // editable, subtotal, dan checkbox 'Diperiksa' untuk jalur tulisan tangan.
+// Untuk restock: field TIDAK dikunci — user bisa edit untuk update master barang.
 
 import { useState, useRef, useEffect } from "react";
 import { productsApi } from "@/lib/api";
 import { rupiah, persen } from "@/lib/format";
 import { Badge } from "@/components/ui";
 import { kodeSimilarity } from "../lib/rows";
-import { MerkCombobox } from "./MerkCombobox";
+import { MerkPopup } from "@/components/MerkPopup";
 
 export function ItemRow({
   index,
@@ -26,7 +27,8 @@ export function ItemRow({
   onPatchRef.current = onPatch;
   onDecisionRef.current = onDecisionChange;
 
-  // Lookup kode ke database — dipakai oleh debounce (onChange) dan Enter (scanner)
+  // Lookup kode ke database — dipakai oleh debounce (onChange) dan Enter (scanner).
+  // Tidak dipakai untuk item yang sudah berstatus 'restock' (jaga product_id).
   async function lookupKode(trimmed) {
     if (!trimmed || trimmed.length < 3) return;
     try {
@@ -42,6 +44,13 @@ export function ItemRow({
           harga_jual: exact.harga_jual ?? 0,
           merk: exact.merk || "",
           candidates: [{ product_id: exact.id, kode_barang: exact.kode_barang, nama_barang: exact.nama_barang, merk: exact.merk, harga_beli: exact.harga_beli, harga_jual: exact.harga_jual, similarity: 1.0 }],
+          _orig_product: {
+            kode_barang: exact.kode_barang,
+            nama_barang: exact.nama_barang,
+            merk: exact.merk || "",
+            harga_beli: exact.harga_beli ?? 0,
+            harga_jual: exact.harga_jual ?? 0,
+          },
         });
         onDecisionRef.current(`cand:${exact.id}`);
         setAutoFillMsg(`Kode cocok 100% — data terisi dari "${exact.nama_barang}"`);
@@ -74,6 +83,10 @@ export function ItemRow({
     onPatch({ kode_barang: val });
     setAutoFillMsg("");
 
+    // Untuk restock: mengedit kode hanya mengubah nilai untuk update master barang,
+    // tidak men-trigger ulang product lookup agar product_id tetap.
+    if (row.action === "restock") return;
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const trimmed = val.trim();
     if (!trimmed || trimmed.length < 3) {
@@ -87,6 +100,7 @@ export function ItemRow({
   function handleKodeKeyDown(e) {
     if (e.key !== "Enter") return;
     e.preventDefault();
+    if (row.action === "restock") return; // edit kode pada restock tidak re-lookup
     if (debounceRef.current) clearTimeout(debounceRef.current);
     lookupKode(row.kode_barang.trim());
   }
@@ -114,6 +128,9 @@ export function ItemRow({
   const candidateInList = highCandidates.some((c) => c.product_id === row.product_id);
   const showHighMatchAlert = highCandidates.length > 0 && !row.action;
 
+  const inputBase =
+    "w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all";
+
   return (
     <div className="rounded-lg border border-slate-200 p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -133,7 +150,7 @@ export function ItemRow({
         </button>
       </div>
 
-      {/* Peringatan validasi: item terdeteksi meragukan → wajib diperiksa */}
+      {/* Peringatan validasi */}
       {row.needs_review && (row.review_reasons?.length > 0) && (
         <div className="mb-2 rounded-md border border-red-300 bg-red-50 px-3 py-2">
           <p className="text-xs font-semibold text-red-800">
@@ -147,7 +164,7 @@ export function ItemRow({
         </div>
       )}
 
-      {/* Alert kesamaan tinggi (>= 80% tapi bukan 100%) */}
+      {/* Alert kesamaan tinggi */}
       {showHighMatchAlert && (
         <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
           <p className="text-xs font-semibold text-amber-800">
@@ -188,7 +205,12 @@ export function ItemRow({
       </label>
 
       {row.action === "restock" && row.picked_label && (
-        <p className="mt-1 text-xs text-emerald-600">Restock: {row.picked_label}</p>
+        <p className="mt-1 text-xs text-emerald-600">
+          Restock: {row.picked_label}
+          {row._orig_product && (
+            <span className="ml-1 text-slate-400">(edit field di bawah untuk update data master)</span>
+          )}
+        </p>
       )}
       {row.action === "new" && (
         <p className="mt-1 text-xs text-blue-600">
@@ -196,23 +218,18 @@ export function ItemRow({
         </p>
       )}
 
-      {/* Field editable */}
+      {/* Field editable — semua aktif termasuk saat restock (perubahan update master barang) */}
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Kode Barang{row.action !== "restock" && <span className="ml-0.5 text-red-500">*</span>}
+            Kode Barang <span className="text-red-500">*</span>
           </span>
           <input
             value={row.kode_barang}
             onChange={handleKodeChange}
             onKeyDown={handleKodeKeyDown}
             placeholder="Ketik / scan barcode → Enter"
-            disabled={row.action === "restock"}
-            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              row.action === "restock"
-                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                : fieldClass("kode_barang") || "border-slate-300"
-            }`}
+            className={`${inputBase} ${fieldClass("kode_barang") || "border-slate-300"}`}
           />
           {autoFillMsg && (
             <span className="mt-0.5 block text-[10px] font-medium text-emerald-600">{autoFillMsg}</span>
@@ -220,64 +237,47 @@ export function ItemRow({
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Nama Barang{row.action !== "restock" && <span className="ml-0.5 text-red-500">*</span>}
+            Nama Barang <span className="text-red-500">*</span>
           </span>
           <input
             value={row.nama_barang}
             onChange={(e) => onPatch({ nama_barang: e.target.value })}
-            disabled={row.action === "restock"}
-            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              row.action === "restock"
-                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                : fieldClass("nama_barang") || "border-slate-300"
-            }`}
+            className={`${inputBase} ${fieldClass("nama_barang") || "border-slate-300"}`}
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Merk <span className="ml-0.5 text-red-500">*</span>
+            Merk <span className="text-red-500">*</span>
           </span>
-          <MerkCombobox
+          <MerkPopup
             value={row.merk || ""}
             onChange={(v) => onPatch({ merk: v })}
             merkList={merkList}
-            disabled={row.action === "restock" && !!row.merk?.trim()}
-            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              row.action === "restock" && row.merk?.trim()
-                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                : fieldClass("merk") || "border-slate-300"
-            }`}
+            placeholder="Pilih merk..."
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Qty <span className="ml-0.5 text-red-500">*</span>
+            Qty <span className="text-red-500">*</span>
           </span>
           <input
             type="number"
             min="1"
             value={row.qty}
             onChange={(e) => onPatch({ qty: e.target.value })}
-            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              fieldClass("qty") || "border-slate-300"
-            }`}
+            className={`${inputBase} ${fieldClass("qty") || "border-slate-300"}`}
           />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
-            Harga Beli <span className="ml-0.5 text-red-500">*</span>
+            Harga Beli <span className="text-red-500">*</span>
           </span>
           <input
             type="number"
             min="0"
             value={row.harga_beli}
             onChange={(e) => onPatch({ harga_beli: e.target.value })}
-            disabled={row.action === "restock"}
-            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              row.action === "restock"
-                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                : fieldClass("harga_beli") || "border-slate-300"
-            }`}
+            className={`${inputBase} ${fieldClass("harga_beli") || "border-slate-300"}`}
           />
         </label>
         <label className="block">
@@ -288,15 +288,11 @@ export function ItemRow({
             value={row.harga_jual || ""}
             onChange={(e) => onPatch({ harga_jual: e.target.value })}
             placeholder="0"
-            disabled={row.action === "restock"}
-            className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-              row.action === "restock"
-                ? "border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
-                : "border-slate-300"
-            }`}
+            className={`${inputBase} border-slate-300`}
           />
         </label>
       </div>
+
       {/* Subtotal per item */}
       {Number(row.harga_beli) > 0 && Number(row.qty) > 0 && (
         <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">

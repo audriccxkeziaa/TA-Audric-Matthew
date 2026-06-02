@@ -119,11 +119,11 @@ async function list({ from, to, limit = 50 }) {
   return data || [];
 }
 
-// Catalog produk aktif untuk Levenshtein matching
+// Catalog produk aktif untuk Levenshtein matching (termasuk harga_jual untuk _orig_product)
 async function listActiveProductsForMatching() {
   const { data, error } = await supabase
     .from("products")
-    .select("id, kode_barang, nama_barang, merk, harga_beli")
+    .select("id, kode_barang, nama_barang, merk, harga_beli, harga_jual")
     .eq("status", "aktif");
   if (error) {
     console.error("[POS-PURREPO] listActiveProductsForMatching:", error.message);

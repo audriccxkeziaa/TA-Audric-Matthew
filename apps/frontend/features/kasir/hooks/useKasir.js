@@ -3,15 +3,16 @@
 //   - state keranjang + operasi (tambah, qty, diskon, hapus, kosongkan)
 //   - total/subtotal/diskon/qty (useMemo) & deteksi over-stock
 //   - submit barcode/kode (exact → parsial → multi-match)
+//   - realtime sync harga dan data produk di keranjang (via Supabase subscription)
 //   - shortcut F1/F2/F12/Esc
 //   - mutation transaksi (R1 ditangani backend)
-// Logika dipindahkan apa adanya dari page.jsx.
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { productsApi, salesApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { useDebounce } from "@/hooks/useDebounce";
+import { supabase } from "@/lib/supabase";
 
 export function useKasir() {
   const toast = useToast();
@@ -25,15 +26,15 @@ export function useKasir() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300);
-  const [cart, setCart] = useState([]); // [{id, kode_barang, nama_barang, harga_jual, stok, qty}]
+  const [cart, setCart] = useState([]); // [{id, kode_barang, nama_barang, harga_jual, stok, qty, status}]
   const [bayarOpen, setBayarOpen] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
-  // ----- Pencarian produk untuk panel cari -----
+  // ----- Pencarian produk — termasuk nonaktif agar kasir bisa melihatnya -----
   const { data: searchRes, isFetching: searchFetching } = useQuery({
     queryKey: ["pos-products", debouncedQ],
     queryFn: () =>
-      productsApi.list({ q: debouncedQ, status: "aktif", limit: 30 }),
+      productsApi.list({ q: debouncedQ, status: "all", limit: 30 }),
     enabled: searchOpen,
   });
   const results = searchRes?.data || [];
@@ -69,7 +70,7 @@ export function useKasir() {
         next[idx] = {
           ...next[idx],
           qty: next[idx].qty + qty,
-          stok: Number(p.stok), // update stok from fresh data
+          stok: Number(p.stok),
         };
         return next;
       }
@@ -85,6 +86,7 @@ export function useKasir() {
           stok: Number(p.stok),
           qty,
           diskon_persen: 0,
+          status: p.status || "aktif",
         },
       ];
     });
@@ -114,20 +116,54 @@ export function useKasir() {
     setTimeout(() => searchRef.current?.focus(), 50);
   }
 
+  // ----- Realtime sync: update harga & data produk di keranjang secara langsung -----
+  useEffect(() => {
+    if (!supabase) return;
+    const channel = supabase
+      .channel("kasir-cart-product-sync")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "products" },
+        (payload) => {
+          const p = payload.new;
+          setCart((c) => {
+            if (!c.some((x) => x.id === p.id)) return c;
+            return c.map((x) =>
+              x.id === p.id
+                ? {
+                    ...x,
+                    harga_jual: Number(p.harga_jual),
+                    harga_beli: Number(p.harga_beli) || 0,
+                    stok: Number(p.stok),
+                    nama_barang: p.nama_barang,
+                    kode_barang: p.kode_barang,
+                    merk: p.merk || x.merk,
+                    status: p.status,
+                  }
+                : x
+            );
+          });
+        }
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, []);
+
   // ----- Submit barcode/kode -----
   async function handleBarcodeSubmit(e) {
     e?.preventDefault();
     const code = barcode.trim();
     if (!code) return;
     try {
-      // Cari by kode (backend ILIKE — kita filter exact match di FE)
-      const res = await productsApi.list({ q: code, status: "aktif", limit: 5 });
+      const res = await productsApi.list({ q: code, status: "all", limit: 5 });
       const items = res?.data || [];
       const norm = (k) => (k || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
       const exact = items.find((p) => norm(p.kode_barang) === norm(code));
 
       if (exact) {
-        if (Number(exact.stok) <= 0) {
+        if (exact.status === "nonaktif") {
+          toast.error(`${exact.nama_barang} sudah discontinue — tidak dapat ditambahkan`);
+        } else if (Number(exact.stok) <= 0) {
           toast.error(`${exact.nama_barang} stok habis`);
         } else {
           addToCart(exact, lastQtyRef.current);
@@ -138,9 +174,10 @@ export function useKasir() {
       }
 
       if (items.length === 1) {
-        // Hanya 1 hasil parsial → langsung tambah
         const p = items[0];
-        if (Number(p.stok) <= 0) {
+        if (p.status === "nonaktif") {
+          toast.error(`${p.nama_barang} sudah discontinue — tidak dapat ditambahkan`);
+        } else if (Number(p.stok) <= 0) {
           toast.error(`${p.nama_barang} stok habis`);
         } else {
           addToCart(p, lastQtyRef.current);
@@ -151,7 +188,6 @@ export function useKasir() {
       }
 
       if (items.length > 1) {
-        // Multiple match → buka pencarian
         toast.error(`${items.length} barang cocok dengan "${code}" — pilih dari pencarian`);
         setSearchOpen(true);
         setQ(code);
@@ -168,7 +204,6 @@ export function useKasir() {
   // ----- Shortcut F-keys -----
   useEffect(() => {
     function onKey(e) {
-      // Hanya bertindak kalau tidak sedang di textarea
       if (e.key === "F1") {
         e.preventDefault();
         barcodeRef.current?.focus();
@@ -195,7 +230,6 @@ export function useKasir() {
   const sale = useMutation({
     mutationFn: () =>
       salesApi.create({
-        // Kirim hanya product_id + qty — harga dihitung server-side (anti-tampering).
         items: cart.map((x) => ({
           product_id: x.id,
           qty: x.qty,
@@ -222,11 +256,9 @@ export function useKasir() {
   }
 
   return {
-    // refs
     barcodeRef,
     searchRef,
     lastQtyRef,
-    // barcode + search
     barcode,
     setBarcode,
     searchOpen,
@@ -237,7 +269,6 @@ export function useKasir() {
     results,
     searchFetching,
     handleBarcodeSubmit,
-    // cart
     cart,
     addToCart,
     setQty,
@@ -245,18 +276,15 @@ export function useKasir() {
     removeItem,
     clearCart,
     lineSubtotal,
-    // totals
     subtotal,
     totalDiskon,
     total,
     totalQty,
     overStock,
-    // checkout
     bayarOpen,
     setBayarOpen,
     confirmBayar,
     saleProcessing: sale.isPending,
-    // receipt
     receipt,
     setReceipt,
   };
