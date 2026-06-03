@@ -14,7 +14,7 @@
 -- Yang DIHAPUS TOTAL:
 --   sales, sale_items, purchases, purchase_items,
 --   stock_adjustments, stock_adjustment_items, stock_logs,
---   expenses, audit_trail, purchase_drafts, document_counters, products,
+--   expenses, purchase_drafts, document_counters, products,
 --   serta SEMUA user kecuali superadmin (auth.users + public.users).
 -- Yang DIPERTAHANKAN:
 --   Akun superadmin saja (profil + kredensial).
@@ -53,7 +53,6 @@ TRUNCATE TABLE
   stock_logs,
   expenses,
   purchase_drafts,
-  audit_trail,
   document_counters,
   products
 CASCADE;
