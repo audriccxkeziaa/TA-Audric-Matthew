@@ -21,9 +21,15 @@ async function login(req, res) {
       return res.status(401).json({ error: "Username atau password salah." });
     }
 
+    // canRecover: hanya untuk akun ADMIN (yang username-nya benar). Dipakai
+    // frontend untuk menampilkan opsi "Lupa Password?". Kasir TIDAK pernah
+    // dapat flag ini (mereka reset lewat admin di Manajemen User). Username
+    // yang tidak dikenal juga tidak dapat flag (cegah enumeration role).
+    const canRecover = profile.role === "admin";
+
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(profile.id);
     if (!authUser?.user?.email) {
-      return res.status(401).json({ error: "Username atau password salah." });
+      return res.status(401).json({ error: "Username atau password salah.", canRecover });
     }
 
     const supabase = createClient(
@@ -38,7 +44,7 @@ async function login(req, res) {
 
     if (error) {
       console.warn("[POS-AUTH] Login gagal untuk", username, "-", error.message);
-      return res.status(401).json({ error: "Username atau password salah" });
+      return res.status(401).json({ error: "Username atau password salah", canRecover });
     }
 
     // Status aktif dicek HANYA setelah kredensial benar → cegah enumeration

@@ -27,6 +27,8 @@ export default function LoginPage() {
   const [resetMsg, setResetMsg] = useState("");
   const [resetErr, setResetErr] = useState("");
   const [resetSending, setResetSending] = useState(false);
+  // Hanya true bila login gagal pada akun ADMIN → tampilkan opsi "Lupa Password?".
+  const [canRecover, setCanRecover] = useState(false);
 
   // Sudah login → langsung arahkan sesuai role.
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setCanRecover(false);
     if (!username || !password) {
       setError("Username dan password wajib diisi");
       return;
@@ -50,6 +53,9 @@ export default function LoginPage() {
       setAuthenticated(profil);
     } catch (err) {
       setError(err.message || "Gagal login");
+      // Backend hanya kirim canRecover=true untuk akun admin → kasir/unknown
+      // tidak akan melihat opsi reset.
+      setCanRecover(!!err?.canRecover);
       setSubmitting(false);
     }
   }
@@ -178,7 +184,7 @@ export default function LoginPage() {
         </form>
         )}
 
-        {!forgotMode && (
+        {!forgotMode && canRecover && (
           <button
             type="button"
             onClick={() => {

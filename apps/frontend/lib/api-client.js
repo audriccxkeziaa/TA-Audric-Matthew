@@ -13,12 +13,13 @@ const TAB_USER_KEY = "pos.active_user";
 
 // ---------- Error khusus ----------
 export class ApiError extends Error {
-  constructor(message, { status, rule, failures } = {}) {
+  constructor(message, { status, rule, failures, canRecover } = {}) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.rule = rule || null;
     this.failures = failures || null;
+    this.canRecover = canRecover || false;
   }
 }
 
@@ -160,6 +161,7 @@ export async function apiFetch(path, options = {}) {
       status: res.status,
       rule: json?.rule,
       failures: json?.failures,
+      canRecover: json?.canRecover,
     });
   }
 
