@@ -72,6 +72,9 @@ function findTopCandidates({ ocrName, ocrKode, products, topN = 3 }) {
       kode_barang: p.kode_barang,
       nama_barang: p.nama_barang,
       merk: p.merk,
+      // Harga master terakhir — dipakai frontend untuk autofill baris restock.
+      harga_beli: p.harga_beli != null ? Number(p.harga_beli) : null,
+      harga_jual: p.harga_jual != null ? Number(p.harga_jual) : null,
       harga_beli_terakhir: p.harga_beli ? Number(p.harga_beli) : null,
       similarity: Math.round(score * 1000) / 1000,
       similarity_nama: Math.round(simNama * 1000) / 1000,

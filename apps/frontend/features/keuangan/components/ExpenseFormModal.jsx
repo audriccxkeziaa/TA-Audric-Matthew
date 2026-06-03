@@ -84,7 +84,7 @@ export function ExpenseFormModal({ open, onClose, editing, onDelete }) {
               Cancel
             </Button>
             <Button onClick={f.submit} disabled={f.saving}>
-              {f.saving ? "Menyimpan..." : f.isEdit ? "Save changes" : "Save"}
+              {f.saving ? "Saving..." : f.isEdit ? "Save changes" : "Save"}
             </Button>
           </div>
         </div>

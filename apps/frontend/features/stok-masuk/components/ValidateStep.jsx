@@ -228,7 +228,7 @@ export function ValidateStep({ m }) {
               disabled={m.savingDraft || !m.ocr?.file_nota_url}
               title="Simpan progres sekarang, koreksi sisanya nanti di laptop"
             >
-              {m.savingDraft ? "Menyimpan..." : m.currentDraftId ? "Perbarui Draft" : "Save as Draft"}
+              {m.savingDraft ? "Saving..." : m.currentDraftId ? "Perbarui Draft" : "Save as Draft"}
             </Button>
           )}
           <Button onClick={m.commit} disabled={!m.canCommit || m.committing}>

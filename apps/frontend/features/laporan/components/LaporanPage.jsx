@@ -334,9 +334,21 @@ export default function LaporanPage() {
                   {l.stockInRows.length} items
                 </p>
               </div>
-              <span className="text-sm font-bold text-blue-600">
-                {rupiah(l.stockInRows.reduce((s, r) => s + Number(r.total || 0), 0))}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-blue-600">
+                  {rupiah(l.stockInRows.reduce((s, r) => s + Number(r.total || 0), 0))}
+                </span>
+                <select
+                  value={l.supplierFilter}
+                  onChange={(e) => l.setSupplierFilter(e.target.value)}
+                  className="max-w-[180px] rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 shadow-sm focus:border-brand-400 focus:outline-none"
+                >
+                  <option value="">Semua Supplier</option>
+                  {l.supplierOptions.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <div className="max-h-60 overflow-auto thin-scroll">

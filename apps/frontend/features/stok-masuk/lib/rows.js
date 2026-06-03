@@ -15,12 +15,16 @@ export function ocrItemToRow(item) {
   return {
     uid: newUid(),
     source: "ocr",
-    kode_barang: raw.kode_barang || "",
-    nama_barang: raw.nama_barang || "",
+    // Cocok 100% → autofill dari data master terakhir produk (tetap bisa diedit).
+    // Kode & nama pakai data master (kanonik); harga beli tetap dari nota (harga
+    // beli transaksi ini), fallback ke master bila OCR tak terbaca; harga jual
+    // diisi dari master karena tidak tercantum di nota pembelian.
+    kode_barang: exactMatch ? (top.kode_barang || raw.kode_barang || "") : (raw.kode_barang || ""),
+    nama_barang: exactMatch ? (top.nama_barang || raw.nama_barang || "") : (raw.nama_barang || ""),
     merk: exactMatch ? (top?.merk || "") : (raw.merk || ""),
     qty: raw.qty || 1,
-    harga_beli: raw.harga_beli || 0,
-    harga_jual: 0,
+    harga_beli: exactMatch ? (raw.harga_beli || top.harga_beli || 0) : (raw.harga_beli || 0),
+    harga_jual: exactMatch ? (top.harga_jual ?? 0) : 0,
     diskon_persen: raw.diskon_persen || 0,
     diskon_nominal: raw.diskon_nominal || 0,
     confidence: item.confidence || {},

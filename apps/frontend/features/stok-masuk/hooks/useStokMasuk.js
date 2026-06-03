@@ -284,7 +284,11 @@ export function useStokMasuk() {
         kode_barang: c?.kode_barang || row.kode_barang || "",
         nama_barang: c?.nama_barang || row.nama_barang || "",
         merk: c?.merk || row.merk || "",
-        harga_beli: c?.harga_beli ?? row.harga_beli ?? 0,
+        // Baris OCR: pertahankan harga beli dari nota (harga transaksi ini);
+        // selain itu pakai harga master. Harga jual selalu autofill dari master.
+        harga_beli: row.source === "ocr" && Number(row.harga_beli) > 0
+          ? row.harga_beli
+          : (c?.harga_beli ?? row.harga_beli ?? 0),
         harga_jual: c?.harga_jual ?? row.harga_jual ?? 0,
         _orig_product: c ? {
           kode_barang: c.kode_barang,

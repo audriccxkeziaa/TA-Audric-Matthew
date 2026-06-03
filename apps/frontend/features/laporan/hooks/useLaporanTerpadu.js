@@ -170,6 +170,23 @@ export function useLaporanTerpadu() {
     }
   }
 
+  // ── Rincian Stok Masuk — daftar nota + filter supplier ──
+  const allStockInRows = purchasesList.data?.data || [];
+  const [supplierFilter, setSupplierFilter] = useState("");
+
+  const supplierOptions = useMemo(() => {
+    const names = allStockInRows.map((r) => r.supplier_name).filter(Boolean);
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b, "id"));
+  }, [allStockInRows]);
+
+  const filteredStockInRows = useMemo(() => {
+    if (!supplierFilter) return allStockInRows;
+    return allStockInRows.filter((r) => r.supplier_name === supplierFilter);
+  }, [allStockInRows, supplierFilter]);
+
+  // Reset halaman pengeluaran ikut filter supplier juga sudah ditangani di atas;
+  // supplier filter di-reset di resetFilter().
+
   // ══════════════════════════════════════════
   // Rincian Pemasukan — Riwayat Penjualan
   // ══════════════════════════════════════════
@@ -236,6 +253,7 @@ export function useLaporanTerpadu() {
     applyPreset("bulan-ini");
     setKasirFilter("");
     setJenisFilter("all");
+    setSupplierFilter("");
     setExpensePage(1);
   }
 
@@ -258,7 +276,8 @@ export function useLaporanTerpadu() {
     expensePageSize: EXPENSE_PAGE,
     isUnifiedLoading: expensesList.isLoading || purchasesList.isLoading,
     // rincian stok masuk
-    stockInRows: purchasesList.data?.data || [],
+    stockInRows: filteredStockInRows,
+    supplierFilter, setSupplierFilter, supplierOptions,
     isStockInLoading: purchasesList.isLoading,
     viewExpense, setViewExpense,
     detailPurchase, setDetailPurchase, detailPurchaseLoading, openPurchaseDetail,
