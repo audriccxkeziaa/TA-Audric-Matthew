@@ -61,8 +61,12 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
                         </td>
                         <td className="px-3 py-2 text-right">{it.qty}</td>
                         <td className="px-3 py-2 text-right">{rupiah(it.harga_beli)}</td>
-                        <td className="px-3 py-2 text-right text-amber-600">
-                          {Number(it.diskon_persen) > 0 ? `${it.diskon_persen}%` : "-"}
+                        <td className="px-3 py-2 text-right">
+                          {Number(it.diskon_persen) > 0 ? (
+                            <span className="font-medium text-amber-600">{it.diskon_persen}%</span>
+                          ) : (
+                            <span className="text-slate-300">0%</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-right font-medium">{rupiah(sub)}</td>
                       </tr>
@@ -72,24 +76,40 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
               </table>
             </div>
           )}
-          {(Number(detailPurchase.diskon_persen) > 0 || Number(detailPurchase.potongan_harga) > 0) && (
-            <div className="mt-3 rounded-lg bg-amber-50 px-4 py-2 text-sm">
-              {Number(detailPurchase.diskon_persen) > 0 && (
+          {detailPurchase.items && detailPurchase.items.length > 0 && (() => {
+            // Subtotal setelah diskon per barang — basis diskon nota (sama seperti DB).
+            const subtotalItems = detailPurchase.items.reduce(
+              (s, it) => s + it.qty * it.harga_beli * (1 - (Number(it.diskon_persen) || 0) / 100),
+              0
+            );
+            const notaPct = Math.min(Number(detailPurchase.diskon_persen) || 0, 100);
+            const notaDiskonNilai = Math.round(subtotalItems * notaPct / 100);
+            const potongan = Number(detailPurchase.potongan_harga) || 0;
+            return (
+              <dl className="mt-3 space-y-1.5 rounded-lg bg-slate-50 px-4 py-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Diskon Nota ({detailPurchase.diskon_persen}%)</span>
-                  <span className="font-medium text-rose-600">
-                    −{rupiah(Math.round(detailPurchase.total * detailPurchase.diskon_persen / 100))}
-                  </span>
+                  <dt className="text-slate-500">Subtotal ({detailPurchase.items.length} item)</dt>
+                  <dd className="font-medium text-slate-700">{rupiah(subtotalItems)}</dd>
                 </div>
-              )}
-              {Number(detailPurchase.potongan_harga) > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Potongan Harga</span>
-                  <span className="font-medium text-rose-600">−{rupiah(detailPurchase.potongan_harga)}</span>
+                  <dt className="text-slate-500">Diskon nota ({notaPct}%)</dt>
+                  <dd className="font-medium text-rose-600">
+                    {notaDiskonNilai > 0 ? `−${rupiah(notaDiskonNilai)}` : rupiah(0)}
+                  </dd>
                 </div>
-              )}
-            </div>
-          )}
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Potongan harga</dt>
+                  <dd className="font-medium text-rose-600">
+                    {potongan > 0 ? `−${rupiah(potongan)}` : rupiah(0)}
+                  </dd>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-2">
+                  <dt className="font-semibold text-slate-700">Total</dt>
+                  <dd className="font-bold text-amber-700">{rupiah(detailPurchase.total)}</dd>
+                </div>
+              </dl>
+            );
+          })()}
           <div className="mt-4 flex justify-end">
             <Button variant="secondary" onClick={onClose}>Close</Button>
           </div>

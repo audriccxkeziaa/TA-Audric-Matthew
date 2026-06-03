@@ -111,18 +111,17 @@ export function ValidateStep({ m }) {
         </Card>
       </div>
 
-      {/* Ringkasan & Diskon Nota */}
+      {/* Ringkasan Nota — input diskon akhir + rincian potongan */}
       {m.rows.length > 0 && (
         <Card className="p-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <span className="block text-xs font-medium text-slate-500 mb-1">
-                Subtotal ({m.rows.length} item)
-              </span>
-              <span className="text-base font-semibold text-slate-800">{rupiah(m.subtotalBarang)}</span>
-            </div>
-            <div className="min-w-[120px]">
-              <span className="block text-xs font-medium text-slate-500 mb-1">Diskon (%)</span>
+          <p className="mb-3 text-sm font-semibold text-slate-700">Ringkasan Nota</p>
+
+          {/* Input diskon level nota (mewakili semua barang bila seragam) */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">
+                Diskon Akhir Nota (%)
+              </label>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -132,18 +131,18 @@ export function ValidateStep({ m }) {
                   value={m.diskonPersen}
                   onChange={(e) => m.setDiskonPersen(e.target.value)}
                   placeholder="0"
-                  className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
                 />
                 <span className="text-sm text-slate-400">%</span>
               </div>
-              {Number(m.diskonPersen) > 0 && (
-                <span className="mt-0.5 block text-[11px] text-slate-400">
-                  −{rupiah(Math.round(m.subtotalBarang * Math.min(Number(m.diskonPersen), 100) / 100))}
-                </span>
-              )}
+              <span className="mt-0.5 block text-[11px] text-slate-400">
+                Diskon untuk seluruh nota (di atas diskon per barang).
+              </span>
             </div>
-            <div className="min-w-[140px]">
-              <span className="block text-xs font-medium text-slate-500 mb-1">Potongan Harga (Rp)</span>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">
+                Potongan Harga (Rp)
+              </label>
               <input
                 type="number"
                 min="0"
@@ -153,12 +152,45 @@ export function ValidateStep({ m }) {
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
               />
-            </div>
-            <div className="min-w-[140px] text-right">
-              <span className="block text-xs font-medium text-slate-500 mb-1">Total</span>
-              <span className="text-lg font-bold text-brand-700">{rupiah(m.grandTotal)}</span>
+              <span className="mt-0.5 block text-[11px] text-slate-400">
+                Potongan nominal tambahan dari supplier.
+              </span>
             </div>
           </div>
+
+          {/* Rincian perhitungan */}
+          <dl className="mt-4 space-y-1.5 border-t border-slate-100 pt-3 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-slate-500">Subtotal ({m.rows.length} item)</dt>
+              <dd className="font-medium text-slate-800">{rupiah(m.subtotalKotor)}</dd>
+            </div>
+            {m.diskonItemNilai > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Diskon per barang</dt>
+                <dd className="font-medium text-rose-600">−{rupiah(m.diskonItemNilai)}</dd>
+              </div>
+            )}
+            {Number(m.diskonPersen) > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-slate-500">
+                  Diskon nota ({Math.min(Number(m.diskonPersen), 100)}%)
+                </dt>
+                <dd className="font-medium text-rose-600">
+                  −{rupiah(Math.round(m.subtotalSetelahItem * Math.min(Number(m.diskonPersen), 100) / 100))}
+                </dd>
+              </div>
+            )}
+            {Number(m.potonganHarga) > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-slate-500">Potongan harga</dt>
+                <dd className="font-medium text-rose-600">−{rupiah(Number(m.potonganHarga))}</dd>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+              <dt className="text-sm font-semibold text-slate-700">Total</dt>
+              <dd className="text-lg font-bold text-brand-700">{rupiah(m.grandTotal)}</dd>
+            </div>
+          </dl>
         </Card>
       )}
 

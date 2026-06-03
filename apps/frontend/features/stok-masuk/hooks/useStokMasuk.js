@@ -239,6 +239,18 @@ export function useStokMasuk() {
 
   // ---------- Operasi baris ----------
   function patchRow(uid, patch) {
+    // Carry-over merk: begitu user mengetik merk baru di satu baris, daftarkan ke
+    // merkList agar baris berikutnya tinggal memilih (tak perlu ketik ulang).
+    if (typeof patch.merk === "string") {
+      const m = patch.merk.trim();
+      if (m) {
+        setMerkList((list) =>
+          list.some((x) => x.toLowerCase() === m.toLowerCase())
+            ? list
+            : [...list, m].sort((a, b) => a.localeCompare(b, "id"))
+        );
+      }
+    }
     setRows((rs) => rs.map((r) => (r.uid === uid ? { ...r, ...patch } : r)));
   }
   function removeRow(uid) {
@@ -308,17 +320,30 @@ export function useStokMasuk() {
     });
   }, [rows, isHandwritten]);
 
-  // ---------- Hitung subtotal & diskon nota ----------
-  const subtotalBarang = useMemo(
+  // ---------- Hitung subtotal & diskon (mirror perhitungan fn_commit_purchase) ----------
+  // Subtotal kotor: sebelum diskon apa pun (Σ qty × harga_beli).
+  const subtotalKotor = useMemo(
     () => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.harga_beli) || 0), 0),
     [rows]
   );
-  const diskonNilai = useMemo(() => {
+  // Total potongan dari diskon per item.
+  const diskonItemNilai = useMemo(
+    () =>
+      rows.reduce((s, r) => {
+        const gross = (Number(r.qty) || 0) * (Number(r.harga_beli) || 0);
+        const pct = Math.min(Math.max(Number(r.diskon_persen) || 0, 0), 100);
+        return s + Math.round(gross * pct / 100);
+      }, 0),
+    [rows]
+  );
+  // Subtotal setelah diskon per item — basis untuk diskon nota (sama seperti DB).
+  const subtotalSetelahItem = Math.max(subtotalKotor - diskonItemNilai, 0);
+  const diskonNotaNilai = useMemo(() => {
     const pct = Math.min(Number(diskonPersen) || 0, 100);
     const pot = Number(potonganHarga) || 0;
-    return Math.round(subtotalBarang * pct / 100) + pot;
-  }, [diskonPersen, potonganHarga, subtotalBarang]);
-  const grandTotal = Math.max(subtotalBarang - diskonNilai, 0);
+    return Math.round(subtotalSetelahItem * pct / 100) + pot;
+  }, [diskonPersen, potonganHarga, subtotalSetelahItem]);
+  const grandTotal = Math.max(subtotalSetelahItem - diskonNotaNilai, 0);
 
   // ---------- Commit (R2) ----------
   async function commit() {
@@ -331,7 +356,8 @@ export function useStokMasuk() {
         const base = {
           qty: parseInt(r.qty, 10) || 0,
           harga_beli: Number(r.harga_beli) || 0,
-          diskon_persen: 0,
+          // Diskon per barang (opsional, default 0). Di-clamp 0–100.
+          diskon_persen: Math.min(Math.max(Number(r.diskon_persen) || 0, 0), 100),
           source: r.source,
         };
         if (r.action === "new") {
@@ -467,8 +493,9 @@ export function useStokMasuk() {
     rows, merkList, patchRow, removeRow, addManualRow, onDecisionChange,
     pickerRowUid, setPickerRowUid, pickProductForRow,
     // totals
-    subtotalBarang, diskonPersen, setDiskonPersen,
-    potonganHarga, setPotonganHarga, grandTotal, canCommit,
+    subtotalKotor, diskonItemNilai, subtotalSetelahItem,
+    diskonPersen, setDiskonPersen, potonganHarga, setPotonganHarga,
+    diskonNotaNilai, grandTotal, canCommit,
     // drafts
     drafts, draftsLoading, refreshDrafts, saveDraft, savingDraft,
     loadDraft, removeDraft, currentDraftId, draftSavedInfo,

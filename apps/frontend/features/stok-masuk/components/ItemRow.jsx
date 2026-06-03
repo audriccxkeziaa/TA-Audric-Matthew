@@ -131,6 +131,13 @@ export function ItemRow({
   const inputBase =
     "w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all";
 
+  // Subtotal per baris dengan diskon per item (opsional — kosong berarti 0).
+  const qtyNum = Number(row.qty) || 0;
+  const hargaNum = Number(row.harga_beli) || 0;
+  const diskonNum = Math.min(Math.max(Number(row.diskon_persen) || 0, 0), 100);
+  const lineGross = qtyNum * hargaNum;
+  const lineNet = Math.round(lineGross * (1 - diskonNum / 100));
+
   return (
     <div className="rounded-lg border border-slate-200 p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -281,6 +288,22 @@ export function ItemRow({
           />
         </label>
         <label className="block">
+          <span className="mb-1 block text-xs text-slate-500">
+            Diskon (%) <span className="font-normal text-slate-400">— opsional</span>
+          </span>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.5"
+            value={row.diskon_persen ? row.diskon_persen : ""}
+            onChange={(e) => onPatch({ diskon_persen: e.target.value })}
+            placeholder="0"
+            title="Diskon khusus barang ini. Kosongkan jika tidak ada."
+            className={`${inputBase} border-slate-300`}
+          />
+        </label>
+        <label className="block">
           <span className="mb-1 block text-xs text-slate-500">Harga Jual</span>
           <input
             type="number"
@@ -293,14 +316,24 @@ export function ItemRow({
         </label>
       </div>
 
-      {/* Subtotal per item */}
-      {Number(row.harga_beli) > 0 && Number(row.qty) > 0 && (
+      {/* Subtotal per item — memperhitungkan diskon per barang bila ada */}
+      {lineGross > 0 && (
         <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Subtotal: {row.qty} × {rupiah(Number(row.harga_beli))}
+          <span className="flex items-center gap-1.5">
+            Subtotal: {qtyNum} × {rupiah(hargaNum)}
+            {diskonNum > 0 && (
+              <span className="rounded bg-amber-50 px-1.5 py-0.5 font-medium text-amber-600">
+                −{diskonNum}%
+              </span>
+            )}
           </span>
           <span className="font-semibold text-slate-700">
-            {rupiah(Number(row.qty) * Number(row.harga_beli))}
+            {diskonNum > 0 && (
+              <span className="mr-1.5 font-normal text-slate-400 line-through">
+                {rupiah(lineGross)}
+              </span>
+            )}
+            {rupiah(lineNet)}
           </span>
         </div>
       )}

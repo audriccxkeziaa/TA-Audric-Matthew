@@ -162,6 +162,7 @@ export function LaporanDetailModal({ detailData, isSales, returMap, onClose }) {
                     <th className="px-3 py-2">Barang</th>
                     <th className="px-3 py-2 text-right">Qty</th>
                     <th className="px-3 py-2 text-right">Harga Beli</th>
+                    <th className="px-3 py-2 text-right">Diskon</th>
                     <th className="px-3 py-2 text-right">Subtotal</th>
                   </tr>
                 )}
@@ -187,17 +188,15 @@ export function LaporanDetailModal({ detailData, isSales, returMap, onClose }) {
                     <td className="px-3 py-2 text-right tabular-nums">
                       {rupiah(isSales ? it.harga_satuan : it.harga_beli)}
                     </td>
-                    {isSales && (
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {Number(it.diskon_persen) > 0 ? (
-                          <span className="font-medium text-rose-600">
-                            {it.diskon_persen}%
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">0%</span>
-                        )}
-                      </td>
-                    )}
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {Number(it.diskon_persen) > 0 ? (
+                        <span className="font-medium text-rose-600">
+                          {it.diskon_persen}%
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">0%</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right font-medium tabular-nums">
                       {rupiah(it.subtotal)}
                     </td>
@@ -223,34 +222,31 @@ export function LaporanDetailModal({ detailData, isSales, returMap, onClose }) {
                 </span>
               )}
             </div>
-            {!isSales && detailData.nota_diskon_persen > 0 && (
-              <div className="mt-2 flex items-center justify-between border-t border-brand-100 pt-2 text-sm">
-                <span className="text-slate-500">
-                  Diskon ({detailData.nota_diskon_persen}%)
-                </span>
-                <span className="font-semibold text-rose-600">
-                  −
-                  {rupiah(
-                    Math.round(
-                      (detailData.subtotal_before_diskon * detailData.nota_diskon_persen) / 100
-                    )
-                  )}
-                </span>
-              </div>
-            )}
-            {!isSales && detailData.nota_potongan_harga > 0 && (
-              <div
-                className={`flex items-center justify-between text-sm ${
-                  detailData.nota_diskon_persen > 0
-                    ? "mt-1"
-                    : "mt-2 border-t border-brand-100 pt-2"
-                }`}
-              >
-                <span className="text-slate-500">Potongan Harga</span>
-                <span className="font-semibold text-rose-600">
-                  −{rupiah(detailData.nota_potongan_harga)}
-                </span>
-              </div>
+            {!isSales && (
+              <>
+                <div className="mt-2 flex items-center justify-between border-t border-brand-100 pt-2 text-sm">
+                  <span className="text-slate-500">
+                    Diskon nota ({Number(detailData.nota_diskon_persen) || 0}%)
+                  </span>
+                  <span className="font-semibold text-rose-600">
+                    {Number(detailData.nota_diskon_persen) > 0
+                      ? `−${rupiah(
+                          Math.round(
+                            (detailData.subtotal_before_diskon * detailData.nota_diskon_persen) / 100
+                          )
+                        )}`
+                      : rupiah(0)}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-slate-500">Potongan harga</span>
+                  <span className="font-semibold text-rose-600">
+                    {Number(detailData.nota_potongan_harga) > 0
+                      ? `−${rupiah(detailData.nota_potongan_harga)}`
+                      : rupiah(0)}
+                  </span>
+                </div>
+              </>
             )}
             <div
               className={`flex items-center justify-between ${
