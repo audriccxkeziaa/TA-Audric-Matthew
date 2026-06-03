@@ -233,7 +233,15 @@ async function updateUser(req, res) {
 
     const authPatch = {};
     if (username) {
-      authPatch.email = `${username.trim().toLowerCase().replace(/\s+/g, "_")}@pos.local`;
+      // Email internal di-regenerasi dari username HANYA jika email saat ini
+      // masih placeholder @pos.local. Jangan timpa email asli (mis. email
+      // recovery admin spt cvasiajayamaju@gmail.com) — kalau tertimpa, alur
+      // "lupa password" lewat email jadi rusak.
+      const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(id);
+      const currentEmail = authUserData?.user?.email || "";
+      if (currentEmail.endsWith("@pos.local") || currentEmail === "") {
+        authPatch.email = `${username.trim().toLowerCase().replace(/\s+/g, "_")}@pos.local`;
+      }
     }
     if (password) {
       if (typeof password !== "string" || password.length < 6) {

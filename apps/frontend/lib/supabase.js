@@ -11,9 +11,20 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // persistSession=false: kita kelola token sendiri di localStorage (lihat
 // api-client.js) supaya sinkron dengan header Authorization ke backend.
+//
+// flowType:'implicit' + detectSessionInUrl:true → khusus alur "lupa password"
+// admin: link reset dari email mengembalikan token di URL hash sehingga bisa
+// dibaca tanpa perlu code-verifier tersimpan (PKCE gagal karena persistSession
+// false). Halaman /reset-password mengandalkan ini. Tidak memengaruhi login
+// normal (lewat backend) maupun refresh token (pakai refresh_token grant).
 export const supabase =
   url && anonKey
     ? createClient(url, anonKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          flowType: "implicit",
+          detectSessionInUrl: true,
+        },
       })
     : null;

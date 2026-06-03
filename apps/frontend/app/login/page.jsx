@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button, Input, Card, Spinner } from "@/components/ui";
 import LoginLoadingScreen from "@/components/LoginLoadingScreen";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const { user, loading, login } = useAuth();
@@ -19,6 +20,13 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [authenticated, setAuthenticated] = useState(null);
+
+  // ----- Lupa password (kirim link reset via email) -----
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetMsg, setResetMsg] = useState("");
+  const [resetErr, setResetErr] = useState("");
+  const [resetSending, setResetSending] = useState(false);
 
   // Sudah login → langsung arahkan sesuai role.
   useEffect(() => {
@@ -44,6 +52,31 @@ export default function LoginPage() {
       setError(err.message || "Gagal login");
       setSubmitting(false);
     }
+  }
+
+  async function handleForgotSubmit(e) {
+    e.preventDefault();
+    setResetErr("");
+    setResetMsg("");
+    const email = resetEmail.trim();
+    if (!email) {
+      setResetErr("Email wajib diisi");
+      return;
+    }
+    if (!supabase) {
+      setResetErr("Layanan reset password tidak tersedia");
+      return;
+    }
+    setResetSending(true);
+    // Pesan SELALU netral (sukses/gagal sama) agar tidak membocorkan
+    // apakah suatu email terdaftar.
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResetSending(false);
+    setResetMsg(
+      "Jika email terdaftar, link reset password telah dikirim. Cek inbox / folder spam."
+    );
   }
 
   // Overlay loading profesional setelah login sukses.
@@ -90,6 +123,7 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {!forgotMode && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label="Username"
@@ -142,6 +176,68 @@ export default function LoginPage() {
             {submitting ? "Please wait..." : "Login"}
           </Button>
         </form>
+        )}
+
+        {!forgotMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setForgotMode(true);
+              setError("");
+              setResetErr("");
+              setResetMsg("");
+            }}
+            className="mt-4 block w-full text-center text-sm font-medium text-brand-700 hover:underline"
+          >
+            Lupa Password?
+          </button>
+        )}
+
+        {forgotMode && (
+          <form onSubmit={handleForgotSubmit} className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Masukkan email akun Anda. Kami kirim link untuk mengatur ulang
+              password.
+            </p>
+            <Input
+              label="Email"
+              type="email"
+              placeholder="email@contoh.com"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              autoComplete="email"
+            />
+            {resetErr && (
+              <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {resetErr}
+              </div>
+            )}
+            {resetMsg && (
+              <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {resetMsg}
+              </div>
+            )}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              loading={resetSending}
+            >
+              {resetSending ? "Mengirim…" : "Kirim Link Reset"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setForgotMode(false);
+                setResetErr("");
+                setResetMsg("");
+              }}
+              className="block w-full text-center text-sm font-medium text-slate-500 hover:underline"
+            >
+              Kembali ke Login
+            </button>
+          </form>
+        )}
       </Card>
     </div>
   );

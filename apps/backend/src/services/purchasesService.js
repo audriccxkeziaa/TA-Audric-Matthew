@@ -67,13 +67,25 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
 
   // (a) Simpan file ke Supabase Storage. File tetap disimpan walau OCR
   // nantinya gagal/fallback — penting untuk audit (Strategi 4).
-  const filePath = await purchaseRepository.uploadNota({
-    userId: user.id,
-    originalName: file.originalname,
-    mimetype: file.mimetype,
-    buffer: file.buffer,
-  });
-  const signedUrl = await purchaseRepository.createNotaSignedUrl(filePath);
+  // NON-FATAL: kalau upload arsip gagal (mis. bucket menolak mimetype/size),
+  // OCR TETAP lanjut tanpa arsip file — jangan jatuhkan seluruh proses ke 500.
+  // (Arsip bisa dilengkapi setelah bucket dikonfigurasi; lihat migrasi 039.)
+  let filePath = null;
+  let signedUrl = null;
+  try {
+    filePath = await purchaseRepository.uploadNota({
+      userId: user.id,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      buffer: file.buffer,
+    });
+    signedUrl = await purchaseRepository.createNotaSignedUrl(filePath);
+  } catch (upErr) {
+    console.error(
+      `[POS-OCR] Upload arsip nota gagal (mimetype=${file.mimetype}) → lanjut OCR tanpa arsip:`,
+      upErr.message
+    );
+  }
 
   // (b1) JALUR PDF — kalau mimetype application/pdf, coba ekstrak text-layer
   // langsung dulu (akurasi ~100% kalau PDF "lahir digital"). Kalau text-layer
