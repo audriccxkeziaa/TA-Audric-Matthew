@@ -41,7 +41,9 @@ export function UserViewModal({ open, onClose, target }) {
             </span>
           </InfoRow>
           <InfoRow label="Tanggal Bergabung">{tanggal(target.created_at)}</InfoRow>
-          <InfoRow label="Terakhir Diubah">{tanggalJam(target.updated_at)}</InfoRow>
+          <InfoRow label="Terakhir Login">
+            {target.last_sign_in_at ? tanggalJam(target.last_sign_in_at) : "Belum pernah"}
+          </InfoRow>
         </div>
 
         <div className="flex justify-end">

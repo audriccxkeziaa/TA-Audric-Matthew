@@ -38,7 +38,7 @@ async function createNotaSignedUrl(path) {
 }
 
 // Panggil function plpgsql fn_commit_purchase (lihat migrasi 009).
-async function commitPurchaseViaRpc({ userId, noNotaSupplier, supplierName, fileNotaUrl, items, diskonPersen = 0, potonganHarga = 0 }) {
+async function commitPurchaseViaRpc({ userId, noNotaSupplier, supplierName, supplierAddress = null, fileNotaUrl, items, diskonPersen = 0, potonganHarga = 0 }) {
   const { data, error } = await supabase.rpc("fn_commit_purchase", {
     p_user_id: userId,
     p_no_nota_supplier: noNotaSupplier,
@@ -56,10 +56,15 @@ async function commitPurchaseViaRpc({ userId, noNotaSupplier, supplierName, file
     throw err;
   }
 
-  if (supplierName && data?.purchase_id) {
+  // Nama & alamat supplier disimpan di luar RPC (RPC tetap stabil). Alamat selalu
+  // ditulis (termasuk null) agar nota ini menjadi sumber "alamat terbaru" supplier.
+  if (data?.purchase_id && (supplierName || supplierAddress != null)) {
     await supabase
       .from("purchases")
-      .update({ supplier_name: supplierName })
+      .update({
+        ...(supplierName ? { supplier_name: supplierName } : {}),
+        supplier_address: supplierAddress,
+      })
       .eq("id", data.purchase_id);
   }
 
@@ -71,7 +76,7 @@ async function getPurchaseDetail(purchaseId) {
   const { data: purchase, error: pErr } = await supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, supplier_name, user_id, total, status_validasi, file_nota_url, diskon_persen, potongan_harga, created_at"
+      "id, no_nota_supplier, supplier_name, supplier_address, user_id, total, status_validasi, file_nota_url, diskon_persen, potongan_harga, created_at"
     )
     .eq("id", purchaseId)
     .single();
@@ -108,7 +113,7 @@ async function list({ from, to, limit = 50 }) {
   let query = supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, supplier_name, user_id, total, status_validasi, file_nota_url, created_at"
+      "id, no_nota_supplier, supplier_name, supplier_address, user_id, total, status_validasi, file_nota_url, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -135,24 +140,26 @@ async function listActiveProductsForMatching() {
 
 // =============== DRAFTS (Cross-device resume) ===============
 
+// Daftar supplier unik + ALAMAT TERBARU per supplier (untuk autofill di stok masuk).
+// Karena diurut created_at desc, baris pertama tiap nama = pembelian termutakhir.
 async function listSupplierNames() {
   const { data, error } = await supabase
     .from("purchases")
-    .select("supplier_name")
+    .select("supplier_name, supplier_address")
     .not("supplier_name", "is", null)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(500);
   if (error) throw new Error("Gagal memuat daftar supplier");
   const seen = new Set();
-  const names = [];
+  const suppliers = [];
   for (const row of data || []) {
     const name = (row.supplier_name || "").trim();
     if (name && !seen.has(name.toLowerCase())) {
       seen.add(name.toLowerCase());
-      names.push(name);
+      suppliers.push({ name, address: (row.supplier_address || "").trim() || null });
     }
   }
-  return names;
+  return suppliers;
 }
 
 async function saveDraft({
@@ -160,8 +167,10 @@ async function saveDraft({
   userId,
   noNotaSupplier,
   supplierName,
+  supplierAddress,
   fileNotaUrl,
   notaType,
+  inputMode,
   rawText,
   preprocessing,
   quality,
@@ -172,8 +181,10 @@ async function saveDraft({
     user_id: userId,
     no_nota_supplier: noNotaSupplier || null,
     supplier_name: supplierName || null,
-    file_nota_url: fileNotaUrl,
+    supplier_address: supplierAddress || null,
+    file_nota_url: fileNotaUrl || null,
     nota_type: notaType || null,
+    input_mode: inputMode || null,
     raw_text: rawText || null,
     preprocessing: preprocessing || null,
     quality: quality || null,
@@ -213,7 +224,7 @@ async function listDrafts(userId) {
   const { data, error } = await supabase
     .from("purchase_drafts")
     .select(
-      "id, no_nota_supplier, file_nota_url, nota_type, status, created_at, updated_at, items"
+      "id, no_nota_supplier, supplier_name, file_nota_url, nota_type, input_mode, status, created_at, updated_at, items"
     )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
@@ -227,9 +238,11 @@ async function listDrafts(userId) {
     result.push({
       id: d.id,
       no_nota_supplier: d.no_nota_supplier,
+      supplier_name: d.supplier_name,
       file_nota_url: d.file_nota_url,
       file_nota_signed_url: await createNotaSignedUrl(d.file_nota_url),
       nota_type: d.nota_type,
+      input_mode: d.input_mode || (d.file_nota_url ? "ocr" : "manual"),
       status: d.status,
       item_count: Array.isArray(d.items) ? d.items.length : 0,
       created_at: d.created_at,

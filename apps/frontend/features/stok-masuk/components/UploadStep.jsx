@@ -86,6 +86,19 @@ export function UploadStep({ m }) {
             />
           </div>
           <div className="mt-4">
+            <label className="mb-1 block text-xs font-medium text-slate-600">
+              Alamat Supplier{" "}
+              <span className="font-normal text-slate-400">— opsional (autofill alamat terbaru)</span>
+            </label>
+            <textarea
+              value={m.supplierAddress}
+              onChange={(e) => m.setSupplierAddress(e.target.value)}
+              rows={2}
+              placeholder="Kosongkan jika tidak ada — di laporan akan tampil '-'."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+          <div className="mt-4">
             <Select
               label="Jenis Nota"
               value={m.notaTypeChoice}

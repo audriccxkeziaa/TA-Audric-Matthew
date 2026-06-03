@@ -65,14 +65,21 @@ export function DraftsPanel({ drafts, loading, onOpen, onDelete, onRefresh }) {
                   <p className="truncate text-sm font-medium text-slate-800">
                     {d.no_nota_supplier || "(tanpa no. nota)"}
                   </p>
+                  {d.supplier_name && (
+                    <p className="truncate text-[11px] text-slate-500">{d.supplier_name}</p>
+                  )}
                   <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
-                    <Badge tone={d.nota_type === "tulisan_tangan" ? "amber" : "blue"}>
-                      {d.nota_type === "tulisan_tangan"
-                        ? "Tulisan Tangan"
-                        : d.nota_type === "cetak"
-                        ? "Cetak"
-                        : "—"}
-                    </Badge>
+                    {d.input_mode === "manual" ? (
+                      <Badge tone="green">Manual</Badge>
+                    ) : (
+                      <Badge tone={d.nota_type === "tulisan_tangan" ? "amber" : "blue"}>
+                        {d.nota_type === "tulisan_tangan"
+                          ? "Tulisan Tangan"
+                          : d.nota_type === "cetak"
+                          ? "Cetak"
+                          : "OCR"}
+                      </Badge>
+                    )}
                     <span>{d.item_count} item</span>
                     <span>· {timeAgo(d.updated_at)}</span>
                   </p>

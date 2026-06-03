@@ -74,6 +74,15 @@ export function ProductFormModal({ open, onClose, editing, isAdmin, merkList = [
             onChange={(e) => set("harga_jual", e.target.value)}
           />
         </div>
+        {Number(form.harga_jual) > 0 && Number(form.harga_jual) <= Number(form.harga_beli) ? (
+          <p className="-mt-1 text-[11px] font-medium text-red-600">
+            Harga jual harus lebih besar dari harga beli (mencegah penjualan rugi).
+          </p>
+        ) : (
+          <p className="-mt-1 text-[11px] text-slate-400">
+            Harga jual harus lebih besar dari harga beli.
+          </p>
+        )}
 
         <Input
           label={`Min. Stok ${isAdmin ? "" : "(admin saja)"}`}

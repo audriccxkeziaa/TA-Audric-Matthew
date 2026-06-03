@@ -36,7 +36,9 @@ export function useStokMasuk() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [noNota, setNoNota] = useState("");
   const [supplierName, setSupplierName] = useState("");
-  const [supplierList, setSupplierList] = useState([]);
+  const [supplierAddress, setSupplierAddress] = useState("");
+  const [supplierList, setSupplierList] = useState([]); // daftar nama (untuk combobox)
+  const [supplierAddrMap, setSupplierAddrMap] = useState({}); // nama(lower) → alamat terbaru
   const [notaTypeChoice, setNotaTypeChoice] = useState("auto"); // auto|cetak|tulisan_tangan
   const [dragOver, setDragOver] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false); // overlay kamera in-app (getUserMedia)
@@ -62,8 +64,30 @@ export function useStokMasuk() {
 
   useEffect(() => {
     productsApi.merks().then((res) => setMerkList(res?.data || [])).catch(() => {});
-    purchasesApi.suppliers().then((res) => setSupplierList(res?.data || [])).catch(() => {});
+    purchasesApi
+      .suppliers()
+      .then((res) => {
+        // Backend kini mengembalikan [{ name, address }] (alamat terbaru per supplier).
+        const arr = res?.data || [];
+        setSupplierList(arr.map((s) => s.name).filter(Boolean));
+        const map = {};
+        for (const s of arr) {
+          if (s?.name) map[s.name.toLowerCase()] = s.address || "";
+        }
+        setSupplierAddrMap(map);
+      })
+      .catch(() => {});
   }, []);
+
+  // Saat nama supplier dipilih/diketik: bila cocok supplier dikenal, autofill alamat
+  // TERBARU (tetap bisa diedit). Tidak menimpa bila supplier belum dikenal.
+  function onSupplierNameChange(name) {
+    setSupplierName(name);
+    const key = (name || "").trim().toLowerCase();
+    if (key && Object.prototype.hasOwnProperty.call(supplierAddrMap, key)) {
+      setSupplierAddress(supplierAddrMap[key] || "");
+    }
+  }
 
   // nota_type efektif untuk hasil OCR aktif (penentu highlight & aturan review)
   const notaType = ocr?.nota_type || null;
@@ -168,18 +192,23 @@ export function useStokMasuk() {
   }, [step, refreshDrafts]);
 
   async function saveDraft() {
-    if (!ocr?.file_nota_url) {
-      toast.error("Tidak ada nota terunggah — jalankan OCR dulu.");
+    // Draft didukung untuk OCR maupun MANUAL. Minimal ada supplier/no.nota/item.
+    const hasContent =
+      ocr?.file_nota_url || supplierName.trim() || noNota.trim() || rows.length > 0;
+    if (!hasContent) {
+      toast.error("Belum ada yang bisa disimpan — isi supplier atau minimal satu item.");
       return;
     }
     setSavingDraft(true);
     try {
       const res = await purchasesApi.drafts.save({
         id: currentDraftId,
-        no_nota_supplier: ocr?.no_nota_supplier || noNota.trim() || null,
+        no_nota_supplier: noNota.trim() || ocr?.no_nota_supplier || null,
         supplier_name: supplierName.trim() || null,
-        file_nota_url: ocr.file_nota_url,
+        supplier_address: supplierAddress.trim() || null,
+        file_nota_url: ocr?.file_nota_url || null,
         nota_type: ocr?.nota_type || null,
+        input_mode: inputMode || (ocr?.file_nota_url ? "ocr" : "manual"),
         raw_text: ocr?.raw_text || null,
         preprocessing: ocr?.preprocessing || null,
         quality: ocr?.quality || null,
@@ -201,17 +230,28 @@ export function useStokMasuk() {
     try {
       const res = await purchasesApi.drafts.get(draftId);
       const d = res.data;
-      setOcr({
-        no_nota_supplier: d.no_nota_supplier,
-        file_nota_url: d.file_nota_url,
-        file_nota_signed_url: d.file_nota_signed_url,
-        nota_type: d.nota_type,
-        raw_text: d.raw_text,
-        preprocessing: d.preprocessing,
-        quality: d.quality,
-      });
+      // Pulihkan mode (OCR/manual) agar form supplier & preview tampil benar saat
+      // resume lintas perangkat — tanpa ini, draft OCR yang dibuka di laptop kehilangan
+      // konteks supplier dan tak bisa disimpan.
+      const mode = d.input_mode || (d.file_nota_url ? "ocr" : "manual");
+      setInputMode(mode);
+      // Hanya simpan blok OCR bila memang mode OCR (ada file/raw_text).
+      if (mode === "ocr" || d.file_nota_url) {
+        setOcr({
+          no_nota_supplier: d.no_nota_supplier,
+          file_nota_url: d.file_nota_url,
+          file_nota_signed_url: d.file_nota_signed_url,
+          nota_type: d.nota_type,
+          raw_text: d.raw_text,
+          preprocessing: d.preprocessing,
+          quality: d.quality,
+        });
+      } else {
+        setOcr(null);
+      }
       setNoNota(d.no_nota_supplier || "");
       setSupplierName(d.supplier_name || "");
+      setSupplierAddress(d.supplier_address || "");
       const items = Array.isArray(d.items) ? d.items : [];
       setRows(items.length ? items.map(draftItemToRow) : [blankManualRow()]);
       setCurrentDraftId(d.id);
@@ -310,6 +350,8 @@ export function useStokMasuk() {
       const qtyOk = Number(r.qty) > 0;
       const hargaOk = Number(r.harga_beli) > 0;
       if (!qtyOk || !hargaOk) return false;
+      // Aturan margin: bila harga jual di-set, wajib > harga beli (tidak boleh rugi).
+      if (Number(r.harga_jual) > 0 && Number(r.harga_jual) <= Number(r.harga_beli)) return false;
       if (!r.merk?.trim()) return false;
       // Kode dan nama wajib untuk semua jenis item (new maupun restock)
       if (!r.kode_barang.trim() || !r.nama_barang.trim()) return false;
@@ -383,8 +425,8 @@ export function useStokMasuk() {
         if (r._orig_product && r.product_id) {
           const orig = r._orig_product;
           const updates = {};
-          if (r.kode_barang.trim() && r.kode_barang.trim() !== orig.kode_barang)
-            updates.kode_barang = r.kode_barang.trim();
+          // Kode barang TIDAK disinkron dari stok masuk — hanya diedit manual di
+          // master barang oleh admin (mencegah perubahan kode tak sengaja saat input).
           if (r.nama_barang.trim() && r.nama_barang.trim() !== orig.nama_barang)
             updates.nama_barang = r.nama_barang.trim();
           const currMerk = (r.merk || "").trim();
@@ -403,8 +445,9 @@ export function useStokMasuk() {
       });
 
       const res = await purchasesApi.commit({
-        no_nota_supplier: ocr?.no_nota_supplier || noNota.trim() || null,
+        no_nota_supplier: noNota.trim() || ocr?.no_nota_supplier || null,
         supplier_name: supplierName.trim() || null,
+        supplier_address: supplierAddress.trim() || null,
         file_nota_url: ocr?.file_nota_url || null,
         status_validasi: "tervalidasi",
         items,
@@ -445,6 +488,7 @@ export function useStokMasuk() {
     setPreviewUrl("");
     setNoNota("");
     setSupplierName("");
+    setSupplierAddress("");
     setNotaTypeChoice("auto");
     setOcr(null);
     setAmbiguous(null);
@@ -479,6 +523,15 @@ export function useStokMasuk() {
       merk: p.merk || "",
       harga_beli: p.harga_beli ?? 0,
       harga_jual: p.harga_jual ?? 0,
+      // Snapshot data master agar perubahan field terdeteksi & ikut update master
+      // barang saat commit (tanpa ini, edit via "cari di master" tidak tersimpan).
+      _orig_product: {
+        kode_barang: p.kode_barang,
+        nama_barang: p.nama_barang,
+        merk: p.merk || "",
+        harga_beli: p.harga_beli ?? 0,
+        harga_jual: p.harga_jual ?? 0,
+      },
     });
   }
 
@@ -489,7 +542,8 @@ export function useStokMasuk() {
     isMobile, step, inputMode, setInputMode,
     // upload
     file, previewUrl, noNota, setNoNota,
-    supplierName, setSupplierName, supplierList,
+    supplierName, setSupplierName: onSupplierNameChange, supplierList,
+    supplierAddress, setSupplierAddress,
     notaTypeChoice, setNotaTypeChoice,
     dragOver, setDragOver, pickFile, onDrop,
     cameraOpen, setCameraOpen, onCameraCapture,

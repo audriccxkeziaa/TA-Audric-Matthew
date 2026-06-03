@@ -4,6 +4,18 @@ const stockLogRepository = require("../repositories/stockLogRepository");
 const FORBIDDEN_PATCH_FIELDS = ["id", "stok", "created_at", "updated_at"];
 const ADMIN_ONLY_FIELDS = ["min_stock"];
 
+// Aturan margin: harga jual WAJIB lebih besar dari harga beli (cegah jual rugi).
+// Hanya diperiksa bila harga jual sudah di-set (> 0); harga jual 0 dianggap "belum diisi".
+// Return pesan error (string) atau null bila valid.
+function checkHargaRule(hargaBeli, hargaJual) {
+  const beli = Number(hargaBeli) || 0;
+  const jual = Number(hargaJual) || 0;
+  if (jual > 0 && jual <= beli) {
+    return "Harga jual harus lebih besar dari harga beli (mencegah penjualan rugi).";
+  }
+  return null;
+}
+
 function validateProductPayload(payload, { isUpdate = false } = {}) {
   const errors = [];
 
@@ -104,6 +116,11 @@ async function createProduct(req, res) {
       });
     }
 
+    const hargaErr = checkHargaRule(payload.harga_beli, payload.harga_jual);
+    if (hargaErr) {
+      return res.status(400).json({ error: hargaErr });
+    }
+
     if (await productRepository.existsByKodeBarang(payload.kode_barang)) {
       return res.status(409).json({ error: "Kode barang sudah dipakai" });
     }
@@ -202,6 +219,22 @@ async function updateProduct(req, res) {
 
     if (Object.keys(patch).length === 0) {
       return res.status(400).json({ error: "Tidak ada field yang diubah" });
+    }
+
+    // Aturan margin pada nilai EFEKTIF (merge patch + data lama). Hanya diperiksa
+    // bila edit menyentuh harga (form edit barang selalu mengirim keduanya) — agar
+    // aksi lain seperti toggle status produk tidak ikut terblok. Form edit yang
+    // mengirim ulang harga lama yang melanggar akan terblok → "perbaiki dulu".
+    if (
+      Object.prototype.hasOwnProperty.call(patch, "harga_beli") ||
+      Object.prototype.hasOwnProperty.call(patch, "harga_jual")
+    ) {
+      const effBeli = patch.harga_beli != null ? patch.harga_beli : existing.harga_beli;
+      const effJual = patch.harga_jual != null ? patch.harga_jual : existing.harga_jual;
+      const hargaErr = checkHargaRule(effBeli, effJual);
+      if (hargaErr) {
+        return res.status(400).json({ error: hargaErr });
+      }
     }
 
     const updated = await productRepository.update(id, patch);

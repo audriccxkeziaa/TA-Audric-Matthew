@@ -82,7 +82,7 @@ export function UsersTable({ users, isLoading, currentUserId, onView, onEdit, on
                     <TD>
                       <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
                     </TD>
-                    <TD className="text-slate-500 text-xs">{fmtWita(u.last_sign_in_at || u.updated_at)}</TD>
+                    <TD className="text-slate-500 text-xs">{u.last_sign_in_at ? fmtWita(u.last_sign_in_at) : "Belum pernah"}</TD>
                     <TD className="text-right text-slate-700">{u.total_transaksi ?? 0}</TD>
                     <TD>
                       <div className="flex items-center justify-center gap-0.5">
@@ -137,7 +137,7 @@ export function UsersTable({ users, isLoading, currentUserId, onView, onEdit, on
                       <Badge tone={active ? "green" : "red"}>{active ? "Aktif" : "Nonaktif"}</Badge>
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
-                      Login {fmtWita(u.last_sign_in_at || u.updated_at)} · {u.total_transaksi ?? 0} transaksi
+                      Login {u.last_sign_in_at ? fmtWita(u.last_sign_in_at) : "Belum pernah"} · {u.total_transaksi ?? 0} transaksi
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5">

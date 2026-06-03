@@ -23,9 +23,7 @@ export function ItemRow({
   const [autoFillMsg, setAutoFillMsg] = useState("");
   const debounceRef = useRef(null);
   const onPatchRef = useRef(onPatch);
-  const onDecisionRef = useRef(onDecisionChange);
   onPatchRef.current = onPatch;
-  onDecisionRef.current = onDecisionChange;
 
   // Lookup kode ke database — dipakai oleh debounce (onChange) dan Enter (scanner).
   // Tidak dipakai untuk item yang sudah berstatus 'restock' (jaga product_id).
@@ -38,11 +36,23 @@ export function ItemRow({
 
       const exact = products.find((p) => norm(p.kode_barang) === norm(trimmed));
       if (exact) {
+        // Autofill ATOMIK dari master TERBARU + langsung set keputusan 'restock' dalam
+        // SATU patch. (Sebelumnya onDecisionChange dipanggil terpisah memakai `row`
+        // basi sehingga autofill ke-clobber → terdeteksi tapi data lain tak terisi.)
+        // Berlaku untuk ketiga opsi: pilih tindakan, buat produk baru, & cari master.
+        // Produk yang sudah ada otomatis jadi restock (cegah duplikat kode).
+        const keepOcrBeli = row.source === "ocr" && Number(row.harga_beli) > 0;
         onPatchRef.current({
+          action: "restock",
+          product_id: exact.id,
+          picked_label: exact.nama_barang || "",
+          kode_barang: exact.kode_barang || trimmed,
           nama_barang: exact.nama_barang || "",
-          harga_beli: exact.harga_beli ?? 0,
-          harga_jual: exact.harga_jual ?? 0,
           merk: exact.merk || "",
+          // Harga beli: baris OCR pertahankan harga dari nota (harga transaksi ini),
+          // selain itu pakai harga master. Harga jual selalu dari master (terbaru).
+          harga_beli: keepOcrBeli ? row.harga_beli : (exact.harga_beli ?? 0),
+          harga_jual: exact.harga_jual ?? 0,
           candidates: [{ product_id: exact.id, kode_barang: exact.kode_barang, nama_barang: exact.nama_barang, merk: exact.merk, harga_beli: exact.harga_beli, harga_jual: exact.harga_jual, similarity: 1.0 }],
           _orig_product: {
             kode_barang: exact.kode_barang,
@@ -52,8 +62,7 @@ export function ItemRow({
             harga_jual: exact.harga_jual ?? 0,
           },
         });
-        onDecisionRef.current(`cand:${exact.id}`);
-        setAutoFillMsg(`Kode cocok 100% — data terisi dari "${exact.nama_barang}"`);
+        setAutoFillMsg(`Kode cocok 100% — data terisi otomatis dari master: "${exact.nama_barang}"`);
         return;
       }
 
@@ -140,6 +149,10 @@ export function ItemRow({
   const lineGross = qtyNum * hargaNum;
   const lineDisc = Math.round(lineGross * (diskonNum / 100) + nominalNum * qtyNum);
   const lineNet = Math.max(lineGross - lineDisc, 0);
+
+  // Aturan margin: harga jual (bila di-set) wajib lebih besar dari harga beli.
+  const hargaJualInvalid =
+    Number(row.harga_jual) > 0 && Number(row.harga_jual) <= hargaNum;
 
   return (
     <div className="rounded-lg border border-slate-200 p-3">
@@ -329,8 +342,13 @@ export function ItemRow({
             value={row.harga_jual || ""}
             onChange={(e) => onPatch({ harga_jual: e.target.value })}
             placeholder="0"
-            className={`${inputBase} border-slate-300`}
+            className={`${inputBase} ${hargaJualInvalid ? "border-red-400 bg-red-50" : "border-slate-300"}`}
           />
+          {hargaJualInvalid && (
+            <span className="mt-0.5 block text-[10px] font-medium text-red-600">
+              Harga jual harus di atas harga beli ({rupiah(hargaNum)}) agar tidak rugi.
+            </span>
+          )}
         </label>
       </div>
 

@@ -176,6 +176,22 @@ async function listUsers(req, res) {
       .order("username", { ascending: true });
     if (error) throw error;
 
+    // "Terakhir login" diambil dari Supabase Auth (auth.users.last_sign_in_at) —
+    // di-update otomatis oleh GoTrue saat signInWithPassword (lihat fn login).
+    // Non-fatal: kalau gagal, daftar user tetap tampil tanpa info login terakhir.
+    const lastSignInById = new Map();
+    try {
+      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      for (const au of authData?.users || []) {
+        lastSignInById.set(au.id, au.last_sign_in_at || null);
+      }
+    } catch (authErr) {
+      console.warn("[POS-AUTH] listUsers: gagal ambil last_sign_in_at:", authErr.message);
+    }
+
     const rows = (data || []).map((u) => ({
       id: u.id,
       username: u.username,
@@ -185,6 +201,7 @@ async function listUsers(req, res) {
       no_telepon: u.no_telepon || null,
       created_at: u.created_at,
       updated_at: u.updated_at,
+      last_sign_in_at: lastSignInById.get(u.id) ?? null,
       total_transaksi: u.sales?.[0]?.count ?? 0,
     }));
 

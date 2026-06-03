@@ -378,6 +378,9 @@ export default function LaporanPage() {
                       </TD>
                       <TD className="text-xs text-slate-500">
                         {r.supplier_name || "-"}
+                        <span className="block text-[10px] text-slate-400">
+                          {r.supplier_address || "-"}
+                        </span>
                       </TD>
                       <TD className="text-right font-semibold text-blue-600">
                         {rupiah(r.total)}

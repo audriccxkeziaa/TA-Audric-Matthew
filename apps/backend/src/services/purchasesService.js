@@ -333,6 +333,7 @@ async function commitPurchase({ user, payload }) {
   const {
     no_nota_supplier,
     supplier_name,
+    supplier_address,
     file_nota_url,
     status_validasi,
     items,
@@ -378,13 +379,40 @@ async function commitPurchase({ user, payload }) {
       base.nama_barang = String(it.nama_barang || "").trim();
       if (it.merk) base.merk = String(it.merk).trim();
       if (it.harga_jual) base.harga_jual = Number(it.harga_jual);
+      // Aturan margin: harga jual (bila di-set) wajib > harga beli.
+      if (base.harga_jual > 0 && base.harga_jual <= base.harga_beli) {
+        const e = new Error(
+          `Harga jual harus lebih besar dari harga beli untuk barang "${base.nama_barang || base.kode_barang}".`
+        );
+        e.status = 400;
+        throw e;
+      }
     } else {
       base.product_id = it.product_id;
       if (it.product_updates && Object.keys(it.product_updates).length > 0) {
-        productUpdatesList.push({
-          product_id: it.product_id,
-          updates: it.product_updates,
-        });
+        // kode_barang TIDAK pernah disinkron dari stok masuk (hanya diedit manual
+        // di master barang oleh admin). Buang dari updates sebagai pertahanan server.
+        const { kode_barang, ...safeUpdates } = it.product_updates;
+        // Aturan margin pada nilai efektif update.
+        if (safeUpdates.harga_jual != null) {
+          const jual = Number(safeUpdates.harga_jual);
+          const beli = safeUpdates.harga_beli != null
+            ? Number(safeUpdates.harga_beli)
+            : Number(base.harga_beli);
+          if (jual > 0 && jual <= beli) {
+            const e = new Error(
+              "Harga jual harus lebih besar dari harga beli pada barang yang di-restock."
+            );
+            e.status = 400;
+            throw e;
+          }
+        }
+        if (Object.keys(safeUpdates).length > 0) {
+          productUpdatesList.push({
+            product_id: it.product_id,
+            updates: safeUpdates,
+          });
+        }
       }
     }
     return base;
@@ -398,6 +426,7 @@ async function commitPurchase({ user, payload }) {
       userId: user.id,
       noNotaSupplier: no_nota_supplier || null,
       supplierName: supplier_name?.trim() || null,
+      supplierAddress: supplier_address?.trim() || null,
       fileNotaUrl: file_nota_url || null,
       items: normalizedItems,
       diskonPersen: Number(diskon_persen) || 0,
@@ -467,9 +496,17 @@ async function listPurchases(filter) {
 }
 
 // ---------- Drafts (Cross-device Resume) ----------
+// Draft bisa untuk mode OCR (punya file nota) maupun MANUAL (tanpa file). Minimal
+// ada salah satu: file nota, nama supplier, no. nota, atau item — agar tidak menyimpan
+// draft benar-benar kosong.
 async function saveDraft({ user, payload }) {
-  if (!payload?.file_nota_url) {
-    const e = new Error("file_nota_url wajib ada untuk menyimpan draft");
+  const hasContent =
+    payload?.file_nota_url ||
+    payload?.supplier_name?.trim() ||
+    payload?.no_nota_supplier?.trim() ||
+    (Array.isArray(payload?.items) && payload.items.length > 0);
+  if (!hasContent) {
+    const e = new Error("Draft kosong — isi minimal supplier atau satu item dulu.");
     e.status = 400;
     throw e;
   }
@@ -478,8 +515,10 @@ async function saveDraft({ user, payload }) {
     userId: user.id,
     noNotaSupplier: payload.no_nota_supplier,
     supplierName: payload.supplier_name?.trim() || null,
-    fileNotaUrl: payload.file_nota_url,
+    supplierAddress: payload.supplier_address?.trim() || null,
+    fileNotaUrl: payload.file_nota_url || null,
     notaType: payload.nota_type,
+    inputMode: payload.input_mode || (payload.file_nota_url ? "ocr" : "manual"),
     rawText: payload.raw_text,
     preprocessing: payload.preprocessing,
     quality: payload.quality,

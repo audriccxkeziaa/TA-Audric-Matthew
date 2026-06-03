@@ -22,6 +22,10 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
               <p className="font-mono font-medium">{detailPurchase.no_nota_supplier || "-"}</p>
             </div>
             <div>
+              <span className="text-xs text-slate-400">Supplier</span>
+              <p className="font-medium">{detailPurchase.supplier_name || "-"}</p>
+            </div>
+            <div>
               <span className="text-xs text-slate-400">Tanggal</span>
               <p className="font-medium">{detailPurchase.created_at ? new Date(detailPurchase.created_at).toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}</p>
             </div>
@@ -32,6 +36,10 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
             <div>
               <span className="text-xs text-slate-400">Total</span>
               <p className="font-bold text-amber-700">{rupiah(detailPurchase.total)}</p>
+            </div>
+            <div className="col-span-2">
+              <span className="text-xs text-slate-400">Alamat Supplier</span>
+              <p className="font-medium">{detailPurchase.supplier_address || "-"}</p>
             </div>
           </dl>
           {detailPurchase.items && detailPurchase.items.length > 0 && (

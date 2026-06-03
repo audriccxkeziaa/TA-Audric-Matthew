@@ -24,33 +24,48 @@ export function ValidateStep({ m }) {
         </Card>
       )}
 
-      {/* Manual mode header with No. Nota input */}
-      {m.inputMode === "manual" && (
-        <Card className="p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Badge tone="green">Input Manual</Badge>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Nama Supplier <span className="text-red-500">*</span>
-              </label>
-              <SupplierCombobox
-                value={m.supplierName}
-                onChange={m.setSupplierName}
-                supplierList={m.supplierList}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-              />
-            </div>
-            <Input
-              label={<>No. Nota Supplier <span className="text-red-500">*</span></>}
-              value={m.noNota}
-              onChange={(e) => m.setNoNota(e.target.value)}
-              placeholder="mis. INV-2026-0481"
+      {/* Identitas supplier — tampil untuk OCR & manual, selalu bisa diedit.
+          Penting agar draft yang di-resume (device manapun) menampilkan kembali
+          nama/no. nota/alamat supplier sehingga bisa dilengkapi & disimpan. */}
+      <Card className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <Badge tone={m.inputMode === "manual" ? "green" : "blue"}>
+            {m.inputMode === "manual" ? "Input Manual" : "Data Supplier"}
+          </Badge>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">
+              Nama Supplier <span className="text-red-500">*</span>
+            </label>
+            <SupplierCombobox
+              value={m.supplierName}
+              onChange={m.setSupplierName}
+              supplierList={m.supplierList}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
-        </Card>
-      )}
+          <Input
+            label={<>No. Nota Supplier <span className="text-red-500">*</span></>}
+            value={m.noNota}
+            onChange={(e) => m.setNoNota(e.target.value)}
+            placeholder="mis. INV-2026-0481"
+          />
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-slate-600">
+              Alamat Supplier{" "}
+              <span className="font-normal text-slate-400">— opsional (autofill alamat terbaru)</span>
+            </label>
+            <textarea
+              value={m.supplierAddress}
+              onChange={(e) => m.setSupplierAddress(e.target.value)}
+              rows={2}
+              placeholder="Kosongkan jika tidak ada — di laporan akan tampil '-'."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+        </div>
+      </Card>
 
       {/* Grid: preview (OCR) + tabel item */}
       <div className={`flex flex-col gap-4 ${m.inputMode === "ocr" ? "md:grid md:grid-cols-3" : ""}`}>
@@ -221,16 +236,14 @@ export function ValidateStep({ m }) {
           <Button variant="secondary" onClick={m.resetAll}>
             Cancel
           </Button>
-          {m.inputMode === "ocr" && (
-            <Button
-              variant="outline"
-              onClick={m.saveDraft}
-              disabled={m.savingDraft || !m.ocr?.file_nota_url}
-              title="Simpan progres sekarang, koreksi sisanya nanti di laptop"
-            >
-              {m.savingDraft ? "Saving..." : m.currentDraftId ? "Perbarui Draft" : "Save as Draft"}
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={m.saveDraft}
+            disabled={m.savingDraft || m.rows.length === 0}
+            title="Simpan progres sekarang (OCR/manual), lanjutkan nanti di perangkat manapun"
+          >
+            {m.savingDraft ? "Saving..." : m.currentDraftId ? "Perbarui Draft" : "Save as Draft"}
+          </Button>
           <Button onClick={m.commit} disabled={!m.canCommit || m.committing}>
             {m.committing ? "Saving..." : "Confirm & Save All"}
           </Button>

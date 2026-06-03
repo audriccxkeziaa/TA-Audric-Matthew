@@ -46,6 +46,11 @@ export function useProductForm({ editing, isAdmin, onClose }) {
         harga_beli: Number(form.harga_beli) || 0,
         harga_jual: Number(form.harga_jual) || 0,
       };
+      // Aturan margin: harga jual (bila di-set) wajib lebih besar dari harga beli.
+      // Divalidasi pada nilai akhir form → produk lama yang melanggar wajib dibenahi.
+      if (body.harga_jual > 0 && body.harga_jual <= body.harga_beli) {
+        throw new Error("Harga jual harus lebih besar dari harga beli (mencegah penjualan rugi).");
+      }
       if (isAdmin) body.min_stock = parseInt(form.min_stock, 10) || 0;
 
       if (isEdit) {
