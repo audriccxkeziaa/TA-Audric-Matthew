@@ -80,7 +80,7 @@ async function getPurchaseDetail(purchaseId) {
   const { data: items, error: iErr } = await supabase
     .from("purchase_items")
     .select(
-      "id, product_id, qty, harga_beli, diskon_persen, source, products(kode_barang, nama_barang, merk)"
+      "id, product_id, qty, harga_beli, diskon_persen, diskon_nominal, source, products(kode_barang, nama_barang, merk)"
     )
     .eq("purchase_id", purchaseId);
   if (iErr) throw new Error("Gagal memuat detail pembelian");
@@ -97,6 +97,7 @@ async function getPurchaseDetail(purchaseId) {
       qty: it.qty,
       harga_beli: Number(it.harga_beli),
       diskon_persen: Number(it.diskon_persen),
+      diskon_nominal: Number(it.diskon_nominal || 0),
       source: it.source,
     })),
   };

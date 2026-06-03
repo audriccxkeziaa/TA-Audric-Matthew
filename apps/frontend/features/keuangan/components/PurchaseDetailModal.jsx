@@ -43,13 +43,20 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
                     <th className="px-3 py-2">Barang</th>
                     <th className="px-3 py-2 text-right">Qty</th>
                     <th className="px-3 py-2 text-right">Harga Beli</th>
-                    <th className="px-3 py-2 text-right">Diskon</th>
+                    <th className="px-3 py-2 text-right">Diskon (Rp)</th>
                     <th className="px-3 py-2 text-right">Subtotal</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {detailPurchase.items.map((it, i) => {
-                    const sub = it.qty * it.harga_beli * (1 - (it.diskon_persen || 0) / 100);
+                    const pct = Number(it.diskon_persen) || 0;
+                    const nominal = Number(it.diskon_nominal) || 0; // Rp per unit
+                    const discTotal = Math.round(it.qty * it.harga_beli * pct / 100 + nominal * it.qty);
+                    const sub = Math.max(it.qty * it.harga_beli - discTotal, 0);
+                    // Catatan asal diskon (mis. "21%" / "Rp 10.000/unit")
+                    const notes = [];
+                    if (pct > 0) notes.push(`${pct}%`);
+                    if (nominal > 0) notes.push(`${rupiah(nominal)}/unit`);
                     return (
                       <tr key={it.id || i} className="hover:bg-slate-50">
                         <td className="px-3 py-2 text-xs text-slate-400">{i + 1}</td>
@@ -62,10 +69,13 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
                         <td className="px-3 py-2 text-right">{it.qty}</td>
                         <td className="px-3 py-2 text-right">{rupiah(it.harga_beli)}</td>
                         <td className="px-3 py-2 text-right">
-                          {Number(it.diskon_persen) > 0 ? (
-                            <span className="font-medium text-amber-600">{it.diskon_persen}%</span>
+                          {discTotal > 0 ? (
+                            <>
+                              <span className="font-medium text-amber-600">−{rupiah(discTotal)}</span>
+                              <span className="block text-[10px] text-slate-400">{notes.join(" + ")}</span>
+                            </>
                           ) : (
-                            <span className="text-slate-300">0%</span>
+                            <span className="text-slate-300">{rupiah(0)}</span>
                           )}
                         </td>
                         <td className="px-3 py-2 text-right font-medium">{rupiah(sub)}</td>
@@ -77,11 +87,13 @@ export function PurchaseDetailModal({ detailPurchase, loading, onClose }) {
             </div>
           )}
           {detailPurchase.items && detailPurchase.items.length > 0 && (() => {
-            // Subtotal setelah diskon per barang — basis diskon nota (sama seperti DB).
-            const subtotalItems = detailPurchase.items.reduce(
-              (s, it) => s + it.qty * it.harga_beli * (1 - (Number(it.diskon_persen) || 0) / 100),
-              0
-            );
+            // Subtotal setelah diskon per barang (% + Rp/unit) — basis diskon nota (sama seperti DB).
+            const subtotalItems = detailPurchase.items.reduce((s, it) => {
+              const pct = Number(it.diskon_persen) || 0;
+              const nominal = Number(it.diskon_nominal) || 0;
+              const discTotal = Math.round(it.qty * it.harga_beli * pct / 100 + nominal * it.qty);
+              return s + Math.max(it.qty * it.harga_beli - discTotal, 0);
+            }, 0);
             const notaPct = Math.min(Number(detailPurchase.diskon_persen) || 0, 100);
             const notaDiskonNilai = Math.round(subtotalItems * notaPct / 100);
             const potongan = Number(detailPurchase.potongan_harga) || 0;

@@ -162,7 +162,7 @@ export function LaporanDetailModal({ detailData, isSales, returMap, onClose }) {
                     <th className="px-3 py-2">Barang</th>
                     <th className="px-3 py-2 text-right">Qty</th>
                     <th className="px-3 py-2 text-right">Harga Beli</th>
-                    <th className="px-3 py-2 text-right">Diskon</th>
+                    <th className="px-3 py-2 text-right">Diskon (Rp)</th>
                     <th className="px-3 py-2 text-right">Subtotal</th>
                   </tr>
                 )}
@@ -188,15 +188,40 @@ export function LaporanDetailModal({ detailData, isSales, returMap, onClose }) {
                     <td className="px-3 py-2 text-right tabular-nums">
                       {rupiah(isSales ? it.harga_satuan : it.harga_beli)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {Number(it.diskon_persen) > 0 ? (
-                        <span className="font-medium text-rose-600">
-                          {it.diskon_persen}%
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">0%</span>
-                      )}
-                    </td>
+                    {isSales ? (
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {Number(it.diskon_persen) > 0 ? (
+                          <span className="font-medium text-rose-600">
+                            {it.diskon_persen}%
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">0%</span>
+                        )}
+                      </td>
+                    ) : (
+                      (() => {
+                        const pct = Number(it.diskon_persen) || 0;
+                        const nominal = Number(it.diskon_nominal) || 0; // Rp per unit
+                        const discTotal = Math.round(
+                          it.qty * it.harga_beli * pct / 100 + nominal * it.qty
+                        );
+                        const notes = [];
+                        if (pct > 0) notes.push(`${pct}%`);
+                        if (nominal > 0) notes.push(`${rupiah(nominal)}/unit`);
+                        return (
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {discTotal > 0 ? (
+                              <>
+                                <span className="font-medium text-rose-600">−{rupiah(discTotal)}</span>
+                                <span className="block text-[10px] text-slate-400">{notes.join(" + ")}</span>
+                              </>
+                            ) : (
+                              <span className="text-slate-300">{rupiah(0)}</span>
+                            )}
+                          </td>
+                        );
+                      })()
+                    )}
                     <td className="px-3 py-2 text-right font-medium tabular-nums">
                       {rupiah(it.subtotal)}
                     </td>

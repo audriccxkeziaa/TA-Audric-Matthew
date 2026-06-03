@@ -326,13 +326,15 @@ export function useStokMasuk() {
     () => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.harga_beli) || 0), 0),
     [rows]
   );
-  // Total potongan dari diskon per item.
+  // Total potongan dari diskon per item (diskon % + potongan Rp/unit × qty).
   const diskonItemNilai = useMemo(
     () =>
       rows.reduce((s, r) => {
-        const gross = (Number(r.qty) || 0) * (Number(r.harga_beli) || 0);
+        const qty = Number(r.qty) || 0;
+        const gross = qty * (Number(r.harga_beli) || 0);
         const pct = Math.min(Math.max(Number(r.diskon_persen) || 0, 0), 100);
-        return s + Math.round(gross * pct / 100);
+        const nominal = Math.max(Number(r.diskon_nominal) || 0, 0);
+        return s + Math.round(gross * pct / 100 + nominal * qty);
       }, 0),
     [rows]
   );
@@ -356,8 +358,9 @@ export function useStokMasuk() {
         const base = {
           qty: parseInt(r.qty, 10) || 0,
           harga_beli: Number(r.harga_beli) || 0,
-          // Diskon per barang (opsional, default 0). Di-clamp 0–100.
+          // Diskon per barang (opsional, default 0). % di-clamp 0–100; Rp/unit ≥ 0.
           diskon_persen: Math.min(Math.max(Number(r.diskon_persen) || 0, 0), 100),
+          diskon_nominal: Math.max(Number(r.diskon_nominal) || 0, 0),
           source: r.source,
         };
         if (r.action === "new") {

@@ -59,7 +59,7 @@ async function listPurchaseReport({ from = null, to = null, limit = 5000 }) {
   let query = supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, status_validasi, total, diskon_persen, potongan_harga, created_at, user_id, users(username), purchase_items(id, qty, harga_beli, diskon_persen, source, product_id, products(kode_barang, nama_barang, merk))"
+      "id, no_nota_supplier, status_validasi, total, diskon_persen, potongan_harga, created_at, user_id, users(username), purchase_items(id, qty, harga_beli, diskon_persen, diskon_nominal, source, product_id, products(kode_barang, nama_barang, merk))"
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -84,7 +84,8 @@ async function listPurchaseReport({ from = null, to = null, limit = 5000 }) {
       const harga = Number(item.harga_beli);
       const qty = Number(item.qty);
       const diskon = Number(item.diskon_persen);
-      itemsSum += harga * qty * (1 - diskon / 100);
+      const nominal = Number(item.diskon_nominal || 0); // Rp per unit
+      itemsSum += Math.max(harga * qty * (1 - diskon / 100) - nominal * qty, 0);
     }
     const diskonNilai = notaDiskonPersen > 0 || notaPotonganHarga > 0
       ? Math.round(itemsSum * notaDiskonPersen / 100) + notaPotonganHarga
@@ -94,6 +95,7 @@ async function listPurchaseReport({ from = null, to = null, limit = 5000 }) {
       const harga = Number(item.harga_beli);
       const qty = Number(item.qty);
       const diskon = Number(item.diskon_persen);
+      const nominal = Number(item.diskon_nominal || 0); // Rp per unit
       rows.push({
         purchase_item_id: item.id,
         purchase_id: purchase.id,
@@ -112,8 +114,9 @@ async function listPurchaseReport({ from = null, to = null, limit = 5000 }) {
         qty,
         harga_beli: harga,
         diskon_persen: diskon,
+        diskon_nominal: nominal,
         source: item.source,
-        subtotal: harga * qty * (1 - diskon / 100),
+        subtotal: Math.max(harga * qty * (1 - diskon / 100) - nominal * qty, 0),
       });
     }
   }

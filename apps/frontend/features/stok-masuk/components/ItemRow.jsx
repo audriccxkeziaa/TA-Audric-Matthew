@@ -132,11 +132,14 @@ export function ItemRow({
     "w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all";
 
   // Subtotal per baris dengan diskon per item (opsional — kosong berarti 0).
+  // Dua jenis: diskon % dan potongan Rp PER UNIT (keduanya boleh dipakai bersamaan).
   const qtyNum = Number(row.qty) || 0;
   const hargaNum = Number(row.harga_beli) || 0;
   const diskonNum = Math.min(Math.max(Number(row.diskon_persen) || 0, 0), 100);
+  const nominalNum = Math.max(Number(row.diskon_nominal) || 0, 0); // Rp per unit
   const lineGross = qtyNum * hargaNum;
-  const lineNet = Math.round(lineGross * (1 - diskonNum / 100));
+  const lineDisc = Math.round(lineGross * (diskonNum / 100) + nominalNum * qtyNum);
+  const lineNet = Math.max(lineGross - lineDisc, 0);
 
   return (
     <div className="rounded-lg border border-slate-200 p-3">
@@ -299,7 +302,22 @@ export function ItemRow({
             value={row.diskon_persen ? row.diskon_persen : ""}
             onChange={(e) => onPatch({ diskon_persen: e.target.value })}
             placeholder="0"
-            title="Diskon khusus barang ini. Kosongkan jika tidak ada."
+            title="Diskon persen khusus barang ini. Kosongkan jika tidak ada."
+            className={`${inputBase} border-slate-300`}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-slate-500">
+            Diskon Rp/unit <span className="font-normal text-slate-400">— opsional</span>
+          </span>
+          <input
+            type="number"
+            min="0"
+            step="500"
+            value={row.diskon_nominal ? row.diskon_nominal : ""}
+            onChange={(e) => onPatch({ diskon_nominal: e.target.value })}
+            placeholder="0"
+            title="Potongan Rupiah per unit barang ini (dikali qty). Kosongkan jika tidak ada."
             className={`${inputBase} border-slate-300`}
           />
         </label>
@@ -316,19 +334,24 @@ export function ItemRow({
         </label>
       </div>
 
-      {/* Subtotal per item — memperhitungkan diskon per barang bila ada */}
+      {/* Subtotal per item — memperhitungkan diskon % dan Rp/unit bila ada */}
       {lineGross > 0 && (
         <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">
-          <span className="flex items-center gap-1.5">
+          <span className="flex flex-wrap items-center gap-1.5">
             Subtotal: {qtyNum} × {rupiah(hargaNum)}
             {diskonNum > 0 && (
               <span className="rounded bg-amber-50 px-1.5 py-0.5 font-medium text-amber-600">
                 −{diskonNum}%
               </span>
             )}
+            {nominalNum > 0 && (
+              <span className="rounded bg-amber-50 px-1.5 py-0.5 font-medium text-amber-600">
+                −{rupiah(nominalNum)}/unit
+              </span>
+            )}
           </span>
           <span className="font-semibold text-slate-700">
-            {diskonNum > 0 && (
+            {lineDisc > 0 && (
               <span className="mr-1.5 font-normal text-slate-400 line-through">
                 {rupiah(lineGross)}
               </span>

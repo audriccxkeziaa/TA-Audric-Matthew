@@ -369,6 +369,8 @@ async function commitPurchase({ user, payload }) {
       qty: Number(it.qty),
       harga_beli: Number(it.harga_beli),
       diskon_persen: Number(it.diskon_persen ?? 0),
+      // Potongan Rupiah per unit barang (opsional, default 0).
+      diskon_nominal: Math.max(Number(it.diskon_nominal ?? 0), 0),
       source: it.source === "ocr" ? "ocr" : "manual",
     };
     if (action === "new") {
