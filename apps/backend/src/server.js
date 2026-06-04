@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 
+const log = require("./utils/logger");
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
 const productRoutes = require("./routes/products");
@@ -80,7 +81,12 @@ app.use("/api/expenses", expensesRoutes);
 app.use("/api/adjustments", adjustmentRoutes);
 
 app.use((err, req, res, next) => {
-  console.error("[POS-SRV]", err.stack);
+  // Tangkap semua error yang tak tertangani di route → log lokasi (method+path)
+  // + user + stack, supaya cepat ketahuan SUMBER error-nya tanpa menebak.
+  log.error("SRV", `Unhandled error ${req.method} ${req.originalUrl}`, err, {
+    username: req.user?.username || null,
+    ip: req.ip,
+  });
   res.status(500).json({ error: "Terjadi kesalahan pada server" });
 });
 

@@ -121,7 +121,7 @@ export default function ResetPasswordPage() {
                 className="absolute right-3 top-[37px] text-slate-400 transition-colors hover:text-slate-600"
                 tabIndex={-1}
               >
-                {showPw ? "Sembunyikan" : "Lihat"}
+                {showPw ? "Hide" : "Show"}
               </button>
             </div>
             <Input
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
               </div>
             )}
             <Button type="submit" size="lg" className="w-full" loading={saving}>
-              {saving ? "Menyimpan…" : "Simpan Password Baru"}
+              {saving ? "Saving…" : "Save New Password"}
             </Button>
           </form>
         )}
@@ -149,7 +149,7 @@ export default function ResetPasswordPage() {
               Password berhasil diubah. Silakan login dengan password baru.
             </div>
             <Button className="w-full" onClick={() => router.replace("/login")}>
-              Ke Halaman Login
+              Back to Login
             </Button>
           </div>
         )}

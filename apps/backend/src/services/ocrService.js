@@ -2,6 +2,7 @@
 
 const sharp = require("sharp");
 const { createWorker } = require("tesseract.js");
+const log = require("../utils/logger");
 
 let _cv = null;
 let _cvLoadError = null;
@@ -1014,7 +1015,10 @@ async function parseWithGroqVision(imageBuffer, rawText, expectedRows = 0) {
     console.log(`[POS-OCR] Groq Vision berhasil ekstrak ${parsedArray.length} item.`);
     return formatAiItems(parsedArray, "Groq-Vision");
   } catch (error) {
-    console.error("[POS-OCR] Groq Vision GAGAL:", error.message);
+    log.error("OCR", "Groq Vision gagal — fallback ke parser regex (baseline Tesseract)", error, {
+      model: GROQ_VISION_MODEL,
+      expected_rows: expectedRows,
+    });
     return null;
   }
 }

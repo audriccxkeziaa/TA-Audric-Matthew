@@ -3,6 +3,7 @@ const supabaseAdmin = require("../config/supabase");
 const adjustmentRepository = require("../repositories/adjustmentRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
 const ruleEngine = require("./ruleEngine");
+const log = require("../utils/logger");
 
 const { nextDocumentNumber } = require("../utils/documentCounter");
 
@@ -161,6 +162,14 @@ async function createAdjustment({ user, payload }) {
     });
   } catch (err) {
     const mapped = ruleEngine.mapDbErrorToHttp(err);
+    log.error("ADJ", `Commit ${type} gagal (RPC fn_create_stock_adjustment)`, err, {
+      kode,
+      type,
+      status,
+      username: user.username,
+      jumlah_item: normalizedItems.length,
+      rule: mapped.rule || null,
+    });
 
     if (mapped.rule === "R1") {
       await stockLogRepository.write({

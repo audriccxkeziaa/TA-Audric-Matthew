@@ -3,6 +3,7 @@ const salesRepository = require("../repositories/salesRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
 const ruleEngine = require("./ruleEngine");
 const { nextDocumentNumber } = require("../utils/documentCounter");
+const log = require("../utils/logger");
 
 // Pilar 2 — hanya validasi struktur minimal: product_id + qty.
 // Harga, diskon, subtotal, grand_total TIDAK diterima dari client.
@@ -44,9 +45,10 @@ async function createSale({ user, items }) {
   const hasTamperedFields = Array.isArray(items) &&
     items.some((it) => BLACKLISTED_PRICE_FIELDS.some((f) => it[f] !== undefined));
   if (hasTamperedFields) {
-    console.warn(
-      `[POS-SECURITY] Parameter harga terdeteksi di request user=${user.id} (${user.username}) — diabaikan.`
-    );
+    log.warn("SECURITY", "Parameter harga terdeteksi di request penjualan — diabaikan (harga otoritatif dari DB).", {
+      user_id: user.id,
+      username: user.username,
+    });
   }
 
   // Ambil product_id + qty + diskon_persen (diskon = input sah kasir).
@@ -127,6 +129,12 @@ async function createSale({ user, items }) {
     });
   } catch (err) {
     const mapped = ruleEngine.mapDbErrorToHttp(err);
+    log.error("SALES", "Commit penjualan gagal (RPC fn_create_sale)", err, {
+      kode_transaksi: kodeTransaksi,
+      username: user.username,
+      jumlah_item: secureItems.length,
+      rule: mapped.rule || null,
+    });
 
     if (mapped.rule === "R1") {
       await stockLogRepository.write({
@@ -161,9 +169,10 @@ async function createSale({ user, items }) {
   try {
     receipt = await salesRepository.getReceipt(rpcResult.sale_id);
   } catch (receiptErr) {
-    console.warn(
-      `[POS-SALES] getReceipt gagal untuk sale_id=${rpcResult.sale_id}, return minimal response`
-    );
+    log.warn("SALES", "getReceipt gagal — kirim respons minimal (transaksi tetap tersimpan).", {
+      sale_id: rpcResult.sale_id,
+      kode_transaksi: kodeTransaksi,
+    });
     receipt = {
       id: rpcResult.sale_id,
       kode_transaksi: kodeTransaksi,
@@ -173,9 +182,10 @@ async function createSale({ user, items }) {
     };
   }
 
-  console.log(
-    `[POS-SALES] Transaksi ${receipt.kode_transaksi} sukses oleh user=${user.username} total=${receipt.total_harga}`
-  );
+  log.info("SALES", `Transaksi ${receipt.kode_transaksi} sukses`, {
+    username: user.username,
+    total: receipt.total_harga,
+  });
   return receipt;
 }
 

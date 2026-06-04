@@ -15,6 +15,7 @@ const ruleEngine = require("./ruleEngine");
 const purchaseRepository = require("../repositories/purchaseRepository");
 const productRepository = require("../repositories/productRepository");
 const stockLogRepository = require("../repositories/stockLogRepository");
+const log = require("../utils/logger");
 
 // Strategi 4 — ambang fallback (untuk jalur tulisan tangan).
 const STRAT4_EMPTY_FIELD_PCT = 0.4; // > 40% field kosong → fallback
@@ -81,10 +82,10 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
     });
     signedUrl = await purchaseRepository.createNotaSignedUrl(filePath);
   } catch (upErr) {
-    console.error(
-      `[POS-OCR] Upload arsip nota gagal (mimetype=${file.mimetype}) → lanjut OCR tanpa arsip:`,
-      upErr.message
-    );
+    log.warn("OCR", "Upload arsip nota gagal → lanjut OCR tanpa arsip (non-fatal)", {
+      mimetype: file.mimetype,
+      error: upErr.message,
+    });
   }
 
   // (b1) JALUR PDF — kalau mimetype application/pdf, coba ekstrak text-layer
@@ -259,7 +260,11 @@ async function processOcr({ user, file, noNotaSupplier, notaType }) {
         items: [],
       };
     }
-    console.error("[POS-OCR] recognize error:", err.message);
+    log.error("OCR", "Gagal memproses OCR pada file nota", err, {
+      mimetype: file.mimetype,
+      nota_type: resolvedType,
+      username: user.username,
+    });
     const e = new Error("Gagal memproses OCR pada file nota");
     e.status = 500;
     throw e;
@@ -434,6 +439,13 @@ async function commitPurchase({ user, payload }) {
     });
   } catch (err) {
     const mapped = ruleEngine.mapDbErrorToHttp(err);
+    log.error("PURCHASES", "Commit stok masuk gagal (RPC fn_commit_purchase)", err, {
+      no_nota_supplier: no_nota_supplier || null,
+      supplier: supplier_name || null,
+      username: user.username,
+      jumlah_item: normalizedItems.length,
+      rule: mapped.rule || null,
+    });
     if (mapped.rule === "R3") {
       await stockLogRepository.write({
         product_id: null,
