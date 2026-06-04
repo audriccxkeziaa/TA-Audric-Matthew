@@ -254,7 +254,7 @@ async function updateUser(req, res) {
     if (username) {
       // Email internal di-regenerasi dari username HANYA jika email saat ini
       // masih placeholder @pos.local. Jangan timpa email asli (mis. email
-      // recovery admin spt cvasiajayamaju@gmail.com) — kalau tertimpa, alur
+      // recovery admin spt audriccmatthew@gmail.com) — kalau tertimpa, alur
       // "lupa password" lewat email jadi rusak.
       const { data: authUserData } = await supabaseAdmin.auth.admin.getUserById(id);
       const currentEmail = authUserData?.user?.email || "";

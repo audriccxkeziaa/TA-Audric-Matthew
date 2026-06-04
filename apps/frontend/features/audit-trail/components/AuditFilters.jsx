@@ -43,12 +43,14 @@ export function AuditFilters({
           value={filters.rule}
           onChange={(e) => setFilter("rule", e.target.value)}
         >
+          {/* R5 sengaja TIDAK ada di sini: R5 (Rekomendasi Restock) adalah view
+              read-only — tidak pernah menulis stock_logs, jadi tak ada datanya
+              di audit. R5 tampil di menu "Rekomendasi Restock" tersendiri. */}
           <option value="">Semua rule</option>
           <option value="R1">R1 — Stok Negatif</option>
           <option value="R2">R2 — Validasi Stok Masuk</option>
           <option value="R3">R3 — Stok Terpusat</option>
           <option value="R4">R4 — Konsistensi Stok</option>
-          <option value="R5">R5 — Rekomendasi Restock</option>
         </Select>
         <Select
           label="Aksi"
