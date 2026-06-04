@@ -130,6 +130,33 @@ export function draftItemToRow(it) {
   };
 }
 
+// Validasi satu baris untuk commit → objek { field: pesan } untuk kolom WAJIB
+// yang belum benar (objek kosong = baris valid). Urutan key mengikuti urutan
+// visual field, dipakai untuk mengarahkan fokus ke kolom pertama yang bermasalah.
+export function rowErrors(row, { isHandwritten = false } = {}) {
+  const e = {};
+  const num = (v) => Number(v) || 0;
+
+  // Keputusan produk (restock produk lama / buat produk baru)
+  if (row.action !== "new" && row.action !== "restock") {
+    e.action = "Pilih tindakan: restock produk yang ada atau buat produk baru.";
+  } else if (row.action === "restock" && !row.product_id) {
+    e.action = "Pilih produk master yang akan di-restock.";
+  }
+
+  if (!String(row.kode_barang || "").trim()) e.kode_barang = "Kode barang wajib diisi.";
+  if (!String(row.nama_barang || "").trim()) e.nama_barang = "Nama barang wajib diisi.";
+  if (!String(row.merk || "").trim()) e.merk = "Merk wajib diisi.";
+  if (num(row.qty) <= 0) e.qty = "Qty harus lebih dari 0.";
+  if (num(row.harga_beli) <= 0) e.harga_beli = "Harga beli wajib diisi (lebih dari 0).";
+  // Aturan margin: harga jual (bila di-set) wajib > harga beli (cegah jual rugi).
+  if (num(row.harga_jual) > 0 && num(row.harga_jual) <= num(row.harga_beli))
+    e.harga_jual = "Harga jual harus di atas harga beli.";
+  if (isHandwritten && !row.reviewed) e.reviewed = "Tandai 'Diperiksa' untuk baris ini dulu.";
+
+  return e;
+}
+
 // Kemiripan kode barang (Levenshtein ternormalisasi) — dipakai lookup di ItemRow.
 export function kodeSimilarity(a, b) {
   const na = (a || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();

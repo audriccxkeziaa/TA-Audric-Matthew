@@ -22,7 +22,7 @@ export function useProductForm({ editing, isAdmin, onClose }) {
     merk: editing?.merk || "",
     harga_beli: editing?.harga_beli ?? "",
     harga_jual: editing?.harga_jual ?? "",
-    min_stock: editing?.min_stock ?? 0,
+    min_stock: editing?.min_stock ?? 5,
   }));
   const [alasan, setAlasan] = useState("");
   const [err, setErr] = useState("");

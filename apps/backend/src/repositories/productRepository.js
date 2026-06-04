@@ -119,7 +119,7 @@ async function create({
   merk = null,
   harga_beli = 0,
   harga_jual = 0,
-  min_stock = 0,
+  min_stock = 5,
   status = "aktif",
 }) {
   const { data, error } = await supabase

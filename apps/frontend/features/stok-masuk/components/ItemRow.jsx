@@ -16,11 +16,21 @@ export function ItemRow({
   row,
   isHandwritten,
   merkList,
+  showErrors,
+  errors,
   onPatch,
   onRemove,
   onDecisionChange,
 }) {
   const [autoFillMsg, setAutoFillMsg] = useState("");
+  // Pesan error per-field & id stabil (untuk diarahkan/fokus). Hanya muncul
+  // setelah user menekan Save (showErrors=true).
+  const err = (field) => (showErrors && errors ? errors[field] : null);
+  const rid = (field) => `sm-row-${row.uid}-${field}`;
+  const errMsg = (field) =>
+    err(field) ? (
+      <span className="mt-0.5 block text-[10px] font-medium text-red-600">{err(field)}</span>
+    ) : null;
   const debounceRef = useRef(null);
   const onPatchRef = useRef(onPatch);
   onPatchRef.current = onPatch;
@@ -205,10 +215,11 @@ export function ItemRow({
           {highCandidates.length > 0 ? "Cocokkan ke produk yang ada" : "Pilih tindakan"}
         </span>
         <select
+          id={rid("action")}
           value={decisionValue}
           onChange={(e) => onDecisionChange(e.target.value)}
           className={`w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500 ${
-            showHighMatchAlert ? "border-amber-400" : "border-slate-300"
+            err("action") ? "border-red-400 bg-red-50" : showHighMatchAlert ? "border-amber-400" : "border-slate-300"
           }`}
         >
           <option value="">— Pilih tindakan —</option>
@@ -225,6 +236,7 @@ export function ItemRow({
           <option value="new">+ Buat produk baru</option>
           <option value="search">Cari produk lain di master barang...</option>
         </select>
+        {errMsg("action")}
       </label>
 
       {row.action === "restock" && row.picked_label && (
@@ -248,60 +260,71 @@ export function ItemRow({
             Kode Barang <span className="text-red-500">*</span>
           </span>
           <input
+            id={rid("kode_barang")}
             value={row.kode_barang}
             onChange={handleKodeChange}
             onKeyDown={handleKodeKeyDown}
             placeholder="Ketik / scan barcode → Enter"
-            className={`${inputBase} ${fieldClass("kode_barang") || "border-slate-300"}`}
+            className={`${inputBase} ${err("kode_barang") ? "border-red-400 bg-red-50" : fieldClass("kode_barang") || "border-slate-300"}`}
           />
           {autoFillMsg && (
             <span className="mt-0.5 block text-[10px] font-medium text-emerald-600">{autoFillMsg}</span>
           )}
+          {errMsg("kode_barang")}
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
             Nama Barang <span className="text-red-500">*</span>
           </span>
           <input
+            id={rid("nama_barang")}
             value={row.nama_barang}
             onChange={(e) => onPatch({ nama_barang: e.target.value })}
-            className={`${inputBase} ${fieldClass("nama_barang") || "border-slate-300"}`}
+            className={`${inputBase} ${err("nama_barang") ? "border-red-400 bg-red-50" : fieldClass("nama_barang") || "border-slate-300"}`}
           />
+          {errMsg("nama_barang")}
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
             Merk <span className="text-red-500">*</span>
           </span>
-          <MerkPopup
-            value={row.merk || ""}
-            onChange={(v) => onPatch({ merk: v })}
-            merkList={merkList}
-            placeholder="Pilih merk..."
-          />
+          <div id={rid("merk")} className={err("merk") ? "rounded-lg ring-2 ring-red-400" : ""}>
+            <MerkPopup
+              value={row.merk || ""}
+              onChange={(v) => onPatch({ merk: v })}
+              merkList={merkList}
+              placeholder="Pilih merk..."
+            />
+          </div>
+          {errMsg("merk")}
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
             Qty <span className="text-red-500">*</span>
           </span>
           <input
+            id={rid("qty")}
             type="number"
             min="1"
             value={row.qty}
             onChange={(e) => onPatch({ qty: e.target.value })}
-            className={`${inputBase} ${fieldClass("qty") || "border-slate-300"}`}
+            className={`${inputBase} ${err("qty") ? "border-red-400 bg-red-50" : fieldClass("qty") || "border-slate-300"}`}
           />
+          {errMsg("qty")}
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
             Harga Beli <span className="text-red-500">*</span>
           </span>
           <input
+            id={rid("harga_beli")}
             type="number"
             min="0"
             value={row.harga_beli}
             onChange={(e) => onPatch({ harga_beli: e.target.value })}
-            className={`${inputBase} ${fieldClass("harga_beli") || "border-slate-300"}`}
+            className={`${inputBase} ${err("harga_beli") ? "border-red-400 bg-red-50" : fieldClass("harga_beli") || "border-slate-300"}`}
           />
+          {errMsg("harga_beli")}
         </label>
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">
@@ -337,6 +360,7 @@ export function ItemRow({
         <label className="block">
           <span className="mb-1 block text-xs text-slate-500">Harga Jual</span>
           <input
+            id={rid("harga_jual")}
             type="number"
             min="0"
             value={row.harga_jual || ""}
@@ -383,11 +407,15 @@ export function ItemRow({
       {isHandwritten && (
         <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
           <input
+            id={rid("reviewed")}
             type="checkbox"
             checked={row.reviewed}
             onChange={(e) => onPatch({ reviewed: e.target.checked })}
+            className={err("reviewed") ? "outline outline-2 outline-red-400" : ""}
           />
-          Saya sudah memeriksa &amp; mengoreksi semua field baris ini
+          <span className={err("reviewed") ? "font-medium text-red-600" : ""}>
+            Saya sudah memeriksa &amp; mengoreksi semua field baris ini
+          </span>
         </label>
       )}
     </div>

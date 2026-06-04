@@ -131,7 +131,7 @@ async function createProduct(req, res) {
       merk: payload.merk?.trim() || null,
       harga_beli: Number(payload.harga_beli) || 0,
       harga_jual: Number(payload.harga_jual) || 0,
-      min_stock: Number.isInteger(payload.min_stock) ? payload.min_stock : 0,
+      min_stock: Number.isInteger(payload.min_stock) ? payload.min_stock : 5,
       status: payload.status || "aktif",
     });
 

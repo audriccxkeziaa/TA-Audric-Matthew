@@ -55,6 +55,16 @@ async function login(req, res) {
       });
     }
 
+    // Catat "Terakhir Login" di public.users (bukan auth.users) agar ter-broadcast
+    // via Supabase Realtime → daftar user admin update otomatis. Non-fatal.
+    const { error: stampErr } = await supabaseAdmin
+      .from("users")
+      .update({ last_login_at: new Date().toISOString() })
+      .eq("id", profile.id);
+    if (stampErr) {
+      console.warn("[POS-AUTH] Gagal catat last_login_at:", stampErr.message);
+    }
+
     res.json({
       user: {
         id: data.user.id,
@@ -171,27 +181,13 @@ async function listUsers(req, res) {
     const { data, error } = await supabaseAdmin
       .from("users")
       .select(
-        "id, username, role, is_active, nama_lengkap, no_telepon, created_at, updated_at, sales(count)"
+        "id, username, role, is_active, nama_lengkap, no_telepon, created_at, updated_at, last_login_at, sales(count)"
       )
       .order("username", { ascending: true });
     if (error) throw error;
 
-    // "Terakhir login" diambil dari Supabase Auth (auth.users.last_sign_in_at) —
-    // di-update otomatis oleh GoTrue saat signInWithPassword (lihat fn login).
-    // Non-fatal: kalau gagal, daftar user tetap tampil tanpa info login terakhir.
-    const lastSignInById = new Map();
-    try {
-      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
-      for (const au of authData?.users || []) {
-        lastSignInById.set(au.id, au.last_sign_in_at || null);
-      }
-    } catch (authErr) {
-      console.warn("[POS-AUTH] listUsers: gagal ambil last_sign_in_at:", authErr.message);
-    }
-
+    // "Terakhir Login" dibaca dari public.users.last_login_at (di-update oleh fn
+    // login). Tabel ini ada di publication realtime → daftar user update otomatis.
     const rows = (data || []).map((u) => ({
       id: u.id,
       username: u.username,
@@ -201,7 +197,7 @@ async function listUsers(req, res) {
       no_telepon: u.no_telepon || null,
       created_at: u.created_at,
       updated_at: u.updated_at,
-      last_sign_in_at: lastSignInById.get(u.id) ?? null,
+      last_sign_in_at: u.last_login_at ?? null,
       total_transaksi: u.sales?.[0]?.count ?? 0,
     }));
 

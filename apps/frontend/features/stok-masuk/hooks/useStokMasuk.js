@@ -13,6 +13,7 @@ import {
   blankManualRow,
   rowToDraftItem,
   draftItemToRow,
+  rowErrors,
 } from "../lib/rows";
 
 export function useStokMasuk() {
@@ -48,6 +49,7 @@ export function useStokMasuk() {
   const [ambiguous, setAmbiguous] = useState(null);
   const [rows, setRows] = useState([]);
   const [committing, setCommitting] = useState(false);
+  const [showErrors, setShowErrors] = useState(false); // tampilkan tanda merah setelah Save ditekan
   const [pickerRowUid, setPickerRowUid] = useState(null);
   const [done, setDone] = useState(null);
   const [diskonPersen, setDiskonPersen] = useState("");
@@ -342,29 +344,63 @@ export function useStokMasuk() {
   }
 
   // ---------- Validasi siap commit (R2 sisi klien) ----------
-  const canCommit = useMemo(() => {
-    if (rows.length === 0) return false;
-    if (!noNota.trim()) return false;
-    if (!supplierName.trim()) return false;
-    return rows.every((r) => {
-      const qtyOk = Number(r.qty) > 0;
-      const hargaOk = Number(r.harga_beli) > 0;
-      if (!qtyOk || !hargaOk) return false;
-      // Aturan margin: bila harga jual di-set, wajib > harga beli (tidak boleh rugi).
-      if (Number(r.harga_jual) > 0 && Number(r.harga_jual) <= Number(r.harga_beli)) return false;
-      if (!r.merk?.trim()) return false;
-      // Kode dan nama wajib untuk semua jenis item (new maupun restock)
-      if (!r.kode_barang.trim() || !r.nama_barang.trim()) return false;
-      if (r.action === "restock") {
-        if (!r.product_id) return false;
-      } else if (r.action !== "new") {
-        return false; // belum ada keputusan
+  // Menghasilkan rincian error (header + per-baris) + id field PERTAMA yang salah
+  // (untuk diarahkan & di-fokus). Tombol Save TIDAK lagi di-disable — saat ditekan
+  // dan ada error, kolom yang kurang ditandai merah lalu layar diarahkan ke sana.
+  const validation = useMemo(() => {
+    const header = {
+      supplierName: !supplierName.trim() ? "Nama Supplier wajib diisi." : null,
+      noNota: !noNota.trim() ? "No. Nota Supplier wajib diisi." : null,
+      empty: rows.length === 0 ? "Tambahkan minimal satu item barang." : null,
+    };
+
+    const rowErrs = {}; // uid -> { field: pesan }
+    for (const r of rows) {
+      const er = rowErrors(r, { isHandwritten });
+      if (Object.keys(er).length) rowErrs[r.uid] = er;
+    }
+
+    // Field pertama yang bermasalah (urutan visual: header dulu, lalu baris atas→bawah).
+    let firstId = null;
+    let firstMsg = null;
+    if (header.supplierName) { firstId = "sm-field-supplierName"; firstMsg = header.supplierName; }
+    else if (header.noNota) { firstId = "sm-field-noNota"; firstMsg = header.noNota; }
+    else if (header.empty) { firstId = null; firstMsg = header.empty; }
+    else {
+      for (const r of rows) {
+        const er = rowErrs[r.uid];
+        if (er) {
+          const field = Object.keys(er)[0];
+          firstId = `sm-row-${r.uid}-${field}`;
+          firstMsg = er[field];
+          break;
+        }
       }
-      // Strategi 3 — jalur tulisan tangan: tiap baris wajib ditandai diperiksa.
-      if (isHandwritten && !r.reviewed) return false;
-      return true;
+    }
+
+    const count =
+      (header.supplierName ? 1 : 0) +
+      (header.noNota ? 1 : 0) +
+      (header.empty ? 1 : 0) +
+      Object.values(rowErrs).reduce((s, er) => s + Object.keys(er).length, 0);
+
+    return { header, rowErrs, firstId, firstMsg, count, ok: count === 0 };
+  }, [rows, noNota, supplierName, isHandwritten]);
+
+  const canCommit = validation.ok;
+
+  // Arahkan (scroll) + fokus ke kolom wajib pertama yang belum benar.
+  function focusFirstError(id) {
+    if (!id || typeof document === "undefined") return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (typeof el.focus === "function") {
+        try { el.focus({ preventScroll: true }); } catch { el.focus(); }
+      }
     });
-  }, [rows, isHandwritten]);
+  }
 
   // ---------- Hitung subtotal & diskon (mirror perhitungan fn_commit_purchase) ----------
   // Subtotal kotor: sebelum diskon apa pun (Σ qty × harga_beli).
@@ -395,9 +431,18 @@ export function useStokMasuk() {
 
   // ---------- Commit (R2) ----------
   async function commit() {
-    if (!canCommit) return;
-    if (!noNota.trim()) { toast.error("No. Nota Supplier wajib diisi"); return; }
-    if (!supplierName.trim()) { toast.error("Nama Supplier wajib diisi"); return; }
+    // Save selalu bisa ditekan. Bila ada kolom wajib yang belum benar, tandai
+    // merah & arahkan layar ke kolom pertama yang bermasalah (bukan men-disable).
+    if (!validation.ok) {
+      setShowErrors(true);
+      focusFirstError(validation.firstId);
+      toast.error(
+        validation.count > 1
+          ? `${validation.count} kolom belum lengkap. ${validation.firstMsg}`
+          : validation.firstMsg
+      );
+      return;
+    }
     setCommitting(true);
     try {
       const items = rows.map((r) => {
@@ -493,6 +538,7 @@ export function useStokMasuk() {
     setOcr(null);
     setAmbiguous(null);
     setRows([]);
+    setShowErrors(false);
     setDone(null);
     setCurrentDraftId(null);
     setDraftSavedInfo(null);
@@ -557,6 +603,7 @@ export function useStokMasuk() {
     subtotalKotor, diskonItemNilai, subtotalSetelahItem,
     diskonPersen, setDiskonPersen, potonganHarga, setPotonganHarga,
     diskonNotaNilai, grandTotal, canCommit,
+    showErrors, validation,
     // drafts
     drafts, draftsLoading, refreshDrafts, saveDraft, savingDraft,
     loadDraft, removeDraft, currentDraftId, draftSavedInfo,

@@ -34,22 +34,28 @@ export function ValidateStep({ m }) {
           </Badge>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
+          <div id="sm-field-supplierName">
             <label className="mb-1 block text-xs font-medium text-slate-600">
               Nama Supplier <span className="text-red-500">*</span>
             </label>
-            <SupplierCombobox
-              value={m.supplierName}
-              onChange={m.setSupplierName}
-              supplierList={m.supplierList}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500"
-            />
+            <div className={m.showErrors && m.validation.header.supplierName ? "rounded-lg ring-2 ring-red-400" : ""}>
+              <SupplierCombobox
+                value={m.supplierName}
+                onChange={m.setSupplierName}
+                supplierList={m.supplierList}
+              />
+            </div>
+            {m.showErrors && m.validation.header.supplierName && (
+              <span className="mt-1 block text-xs text-red-600">{m.validation.header.supplierName}</span>
+            )}
           </div>
           <Input
+            id="sm-field-noNota"
             label={<>No. Nota Supplier <span className="text-red-500">*</span></>}
             value={m.noNota}
             onChange={(e) => m.setNoNota(e.target.value)}
             placeholder="mis. INV-2026-0481"
+            error={m.showErrors && m.validation.header.noNota ? m.validation.header.noNota : undefined}
           />
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-medium text-slate-600">
@@ -112,6 +118,8 @@ export function ValidateStep({ m }) {
                 row={row}
                 isHandwritten={m.isHandwritten}
                 merkList={m.merkList}
+                showErrors={m.showErrors}
+                errors={m.validation.rowErrs[row.uid]}
                 onPatch={(p) => m.patchRow(row.uid, p)}
                 onRemove={() => m.removeRow(row.uid)}
                 onDecisionChange={(v) => m.onDecisionChange(row, v)}
@@ -214,14 +222,14 @@ export function ValidateStep({ m }) {
         <div className="text-sm text-slate-500">
           {m.canCommit ? (
             <span className="text-emerald-600">Semua item siap dikonfirmasi.</span>
-          ) : !m.noNota.trim() ? (
-            <span className="text-red-600">No. Nota Supplier wajib diisi.</span>
-          ) : !m.supplierName.trim() ? (
-            <span className="text-red-600">Nama Supplier wajib diisi.</span>
+          ) : m.showErrors ? (
+            <span className="font-medium text-red-600">
+              {m.validation.count} kolom wajib belum lengkap — ditandai merah & diarahkan ke kolom pertama.
+            </span>
           ) : (
             <span>
-              Pastikan semua kolom sudah terisi agar tombol 'Confirm & Save' aktif.
-              {m.isHandwritten && " serta tandai 'Diperiksa'"}
+              Lengkapi kolom wajib (bertanda <span className="text-red-500">*</span>), lalu tekan &apos;Confirm &amp; Save All&apos;.
+              {m.isHandwritten && " Untuk nota tulisan tangan, tandai juga 'Diperiksa' tiap baris."}
             </span>
           )}
           {m.draftSavedInfo && (
@@ -242,9 +250,9 @@ export function ValidateStep({ m }) {
             disabled={m.savingDraft || m.rows.length === 0}
             title="Simpan progres sekarang (OCR/manual), lanjutkan nanti di perangkat manapun"
           >
-            {m.savingDraft ? "Saving..." : m.currentDraftId ? "Perbarui Draft" : "Save as Draft"}
+            {m.savingDraft ? "Saving..." : m.currentDraftId ? "UpdateDraft" : "Save as Draft"}
           </Button>
-          <Button onClick={m.commit} disabled={!m.canCommit || m.committing}>
+          <Button onClick={m.commit} disabled={m.committing}>
             {m.committing ? "Saving..." : "Confirm & Save All"}
           </Button>
         </div>
