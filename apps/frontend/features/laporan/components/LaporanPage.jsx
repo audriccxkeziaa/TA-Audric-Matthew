@@ -167,7 +167,7 @@ export default function LaporanPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-emerald-600">
-                  {rupiah(l.salesSummary?.total_revenue || 0)}
+                  {rupiah(l.filteredSalesTotal)}
                 </span>
                 <select
                   value={l.kasirFilter}
@@ -228,7 +228,7 @@ export default function LaporanPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-red-600">
-                  − {rupiah(totalPengeluaran)}
+                  − {rupiah(l.unifiedTotal)}
                 </span>
                 <select
                   value={l.jenisFilter}

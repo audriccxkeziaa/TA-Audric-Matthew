@@ -216,6 +216,9 @@ export function useStokMasuk() {
         quality: ocr?.quality || null,
         items: rows.map(rowToDraftItem),
         status: "draft",
+        // Diskon level-nota (opsional) — ikut disimpan agar tidak hilang saat resume.
+        diskon_persen: Number(diskonPersen) || 0,
+        potongan_harga: Number(potonganHarga) || 0,
       });
       setCurrentDraftId(res.data?.id || null);
       setDraftSavedInfo({ when: new Date(), count: rows.length });
@@ -254,6 +257,9 @@ export function useStokMasuk() {
       setNoNota(d.no_nota_supplier || "");
       setSupplierName(d.supplier_name || "");
       setSupplierAddress(d.supplier_address || "");
+      // Pulihkan diskon level-nota (0/null → kosong agar placeholder '0' tampil).
+      setDiskonPersen(Number(d.diskon_persen) ? String(Number(d.diskon_persen)) : "");
+      setPotonganHarga(Number(d.potongan_harga) ? String(Number(d.potongan_harga)) : "");
       const items = Array.isArray(d.items) ? d.items : [];
       setRows(items.length ? items.map(draftItemToRow) : [blankManualRow()]);
       setCurrentDraftId(d.id);

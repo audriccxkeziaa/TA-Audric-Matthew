@@ -10,14 +10,17 @@ import { rupiah } from "./format";
 //   - teks detail/footer hitam pekat (#000), bukan abu — abu menjadi blur/dither
 //   - print-color-adjust: exact + geometricPrecision biar tidak di-antialias pudar
 const RECEIPT_CSS = `
-  @page { size: 80mm auto; margin: 3mm 5mm; }
+  @page { size: 80mm auto; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Consolas', 'Courier New', monospace;
-    width: 70mm;
-    max-width: 70mm;
+    width: 80mm;
+    max-width: 80mm;
     margin: 0 auto;
-    padding: 0;
+    /* Padding kiri/kanan 8mm = ZONA AMAN agar teks rata-kiri & rata-kanan TIDAK
+       terpotong di tepi kertas (area cetak thermal lebih sempit dari 80mm).
+       Margin @page sengaja 0 karena banyak driver thermal mengabaikannya. */
+    padding: 2mm 8mm;
     color: #000;
     font-size: 10pt;
     line-height: 1.35;
@@ -28,23 +31,23 @@ const RECEIPT_CSS = `
   .header { text-align: center; margin-bottom: 2mm; }
   .shop-name { font-size: 13pt; font-weight: bold; }
   .shop-sub { font-size: 9pt; }
-  .shop-addr { font-size: 8pt; line-height: 1.4; }
+  .shop-addr { font-size: 7.5pt; line-height: 1.35; }
   .type-label { font-size: 11pt; font-weight: bold; text-align: center; letter-spacing: 1px; margin: 1.5mm 0; }
   .divider { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
-  .meta { font-size: 9pt; }
+  .meta { font-size: 9pt; width: 100%; }
   .meta td { padding: 0.5mm 0; }
-  .meta .label { width: 22mm; }
+  .meta .label { width: 19mm; }
   table.items { width: 100%; border-collapse: collapse; margin: 1mm 0; }
-  .items .item-name { font-size: 9.5pt; font-weight: bold; padding-top: 1.5mm; }
-  .items .item-detail { font-size: 9pt; padding-left: 3mm; color: #000; }
-  .items .item-subtotal { font-size: 9pt; text-align: right; }
+  .items .item-name { font-size: 9.5pt; font-weight: bold; padding-top: 1.5mm; word-break: break-word; }
+  .items .item-detail { font-size: 9pt; padding-left: 2mm; color: #000; }
+  .items .item-subtotal { font-size: 9pt; text-align: right; white-space: nowrap; }
   table.totals { width: 100%; border-collapse: collapse; font-size: 10pt; }
   .totals td { padding: 0.5mm 0; }
-  .totals .val { text-align: right; }
+  .totals .val { text-align: right; white-space: nowrap; }
   .totals .grand { font-size: 12pt; font-weight: bold; border-top: 1px solid #000; padding-top: 1mm; }
-  .footer { text-align: center; font-size: 8pt; margin-top: 3mm; color: #000; }
+  .footer { text-align: center; font-size: 7.5pt; margin-top: 3mm; color: #000; }
   @media screen {
-    body { width: 80mm; max-width: 80mm; padding: 3mm 4mm; border: 1px solid #ccc; background: #fff; margin-top: 10px; }
+    body { border: 1px solid #ccc; background: #fff; margin: 10px auto 0; }
   }
 `;
 

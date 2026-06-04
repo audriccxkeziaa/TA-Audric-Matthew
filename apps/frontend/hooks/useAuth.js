@@ -25,9 +25,16 @@ export function AuthProvider({ children }) {
       try {
         const res = await authApi.me();
         if (aktif) setUser(res.user);
-      } catch {
-        clearSession();
-        if (aktif) setUser(null);
+      } catch (err) {
+        if (err?.status === 401 || err?.status === 403) {
+          clearSession();
+          if (aktif) setUser(null);
+        } else if (aktif) {
+          // Backend sekejap tak terjangkau (redeploy/cold-start) → percayai
+          // sesi tersimpan dulu, JANGAN paksa logout saat baru buka halaman.
+          // Request berikutnya akan memvalidasi ulang.
+          setUser(session.user || null);
+        }
       } finally {
         if (aktif) setLoading(false);
       }
@@ -46,18 +53,23 @@ export function AuthProvider({ children }) {
     intervalRef.current = setInterval(async () => {
       try {
         const res = await authApi.me();
-        if (!res.user || res.user.is_active === false) {
+        if (!res.user) {
           clearSession();
           setUser(null);
           if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
             window.location.href = "/login";
           }
         }
-      } catch {
-        clearSession();
-        setUser(null);
-        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-          window.location.href = "/login";
+      } catch (err) {
+        // Hanya logout kalau sesi memang TIDAK SAH (401 token mati/akun
+        // dinonaktifkan, atau 403). Error jaringan sementara (backend blip /
+        // redeploy) JANGAN melempar user keluar — coba lagi siklus berikutnya.
+        if (err?.status === 401 || err?.status === 403) {
+          clearSession();
+          setUser(null);
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+            window.location.href = "/login";
+          }
         }
       }
     }, 15_000);

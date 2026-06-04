@@ -176,6 +176,8 @@ async function saveDraft({
   quality,
   items,
   status,
+  diskonPersen,
+  potonganHarga,
 }) {
   const payload = {
     user_id: userId,
@@ -190,6 +192,9 @@ async function saveDraft({
     quality: quality || null,
     items: items || [],
     status: status || "draft",
+    // Diskon level-nota (opsional) — ikut tersimpan agar pulih saat resume draft.
+    diskon_persen: Number(diskonPersen) || 0,
+    potongan_harga: Number(potonganHarga) || 0,
   };
 
   if (draftId) {

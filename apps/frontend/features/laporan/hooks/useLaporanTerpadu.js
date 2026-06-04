@@ -257,6 +257,19 @@ export function useLaporanTerpadu() {
     setExpensePage(1);
   }
 
+  // Total mengikuti FILTER aktif + periode:
+  //   pemasukan   → Σ filteredSales (filter kasir; "Semua Kasir" = total semua kasir)
+  //   pengeluaran → Σ unifiedRows  (filter jenis; "Semua Jenis"  = total semua jenis)
+  // Data sudah difetch per periode (from/to) → total otomatis ikut periode.
+  const filteredSalesTotal = useMemo(
+    () => filteredSales.reduce((s, g) => s + Number(g.total || 0), 0),
+    [filteredSales]
+  );
+  const unifiedTotal = useMemo(
+    () => unifiedRows.reduce((s, r) => s + Number(r.nominal || 0), 0),
+    [unifiedRows]
+  );
+
   return {
     isKasir,
     // periode
@@ -270,6 +283,7 @@ export function useLaporanTerpadu() {
     financeSummary,
     fs: financeSummary.data?.data,
     unifiedRows,
+    unifiedTotal,
     paginatedUnifiedRows,
     expensePage, setExpensePage,
     expenseTotalPages,
@@ -286,6 +300,7 @@ export function useLaporanTerpadu() {
     salesSummary,
     salesGrouped,
     filteredSales,
+    filteredSalesTotal,
     kasirFilter, setKasirFilter,
     kasirOptions,
     detailData, setDetailData, openSaleDetail, saleReturMap,

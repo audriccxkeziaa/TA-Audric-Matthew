@@ -524,6 +524,8 @@ async function saveDraft({ user, payload }) {
     quality: payload.quality,
     items: payload.items,
     status: payload.status,
+    diskonPersen: payload.diskon_persen,
+    potonganHarga: payload.potongan_harga,
   });
 }
 

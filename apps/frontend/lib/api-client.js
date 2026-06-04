@@ -75,6 +75,14 @@ export function clearSession() {
 // ---------- Refresh token ----------
 // Dipanggil sebelum tiap request. Kalau access_token kedaluwarsa < 60 detik
 // lagi, tukar refresh_token jadi token baru lewat Supabase.
+//
+// refreshPromise: dedup refresh yang terjadi BERSAMAAN. Refresh token Supabase
+// bersifat SEKALI-PAKAI (rotating) — kalau beberapa request menukar refresh
+// token yang sama bersamaan (mis. dashboard memuat banyak query, atau polling
+// 15 detik berbarengan), hanya satu yang berhasil & sisanya membuat token mati
+// → user tiba-tiba ter-logout. Satu in-flight promise dibagikan ke semua pemanggil.
+let refreshPromise = null;
+
 async function ensureFreshToken() {
   const session = getSession();
   if (!session?.access_token) return null;
@@ -86,23 +94,32 @@ async function ensureFreshToken() {
     return session.access_token;
   }
 
-  try {
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: session.refresh_token,
-    });
-    if (error || !data?.session) throw error || new Error("refresh gagal");
-    const next = {
-      ...session,
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-      expires_at: data.session.expires_at,
-    };
-    setSession(next);
-    return next.access_token;
-  } catch {
-    // Refresh gagal → token mati. Biarkan request jalan; backend balas 401.
-    return session.access_token;
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const { data, error } = await supabase.auth.refreshSession({
+          refresh_token: session.refresh_token,
+        });
+        if (error || !data?.session) throw error || new Error("refresh gagal");
+        const next = {
+          ...session,
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_at: data.session.expires_at,
+        };
+        setSession(next);
+        return next.access_token;
+      } catch {
+        // Refresh gagal (mis. token sudah dirotasi tab lain dgn user sama).
+        // Ambil token TERBARU dari localStorage — tab lain mungkin baru menyimpannya.
+        const latest = getSession();
+        return latest?.access_token || session.access_token;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
   }
+  return refreshPromise;
 }
 
 // ---------- Inti: apiFetch ----------
@@ -134,7 +151,20 @@ export async function apiFetch(path, options = {}) {
     payload = JSON.stringify(body);
   }
 
-  const res = await fetch(url, { method, headers, body: payload, signal });
+  let res;
+  try {
+    res = await fetch(url, { method, headers, body: payload, signal });
+  } catch (e) {
+    // Request dibatalkan (unmount / react-query) → lempar apa adanya.
+    if (e?.name === "AbortError") throw e;
+    // Gagal jaringan: server tak terjangkau / CORS / offline. INI BUKAN 401 —
+    // JANGAN hapus sesi (cegah logout massal saat backend sekejap redeploy/
+    // cold-start). status:0 menandai error jaringan agar pemanggil bisa membedakan.
+    throw new ApiError(
+      "Tidak dapat terhubung ke server. Coba lagi sebentar — server mungkin sedang restart.",
+      { status: 0 }
+    );
+  }
 
   // Unduhan CSV — kembalikan Blob mentah.
   const contentType = res.headers.get("content-type") || "";
