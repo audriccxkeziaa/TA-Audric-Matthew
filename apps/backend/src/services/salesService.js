@@ -39,6 +39,27 @@ const BLACKLISTED_PRICE_FIELDS = [
   "subtotal", "grand_total", "total",
 ];
 
+// Audit R1: tulis stock_logs REJECTED untuk SETIAP item yang gagal pre-check stok
+// (stok TIDAK berubah — hanya jejak forensik). Dipisah agar alur createSale ringkas.
+async function logR1Rejections({ failures, products, user, items }) {
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  for (const f of failures) {
+    const p = productMap.get(f.product_id);
+    await stockLogRepository.write({
+      product_id: f.product_id,
+      user_id: user.id,
+      delta_qty: 0,
+      stok_sebelum: p?.stok ?? null,
+      stok_sesudah: p?.stok ?? null,
+      source_type: "sales",
+      rule_triggered: "R1",
+      rule_action: "REJECTED",
+      reason_detail: f.reason,
+      context_payload: { attempted_items: items, failure: f },
+    });
+  }
+}
+
 async function createSale({ user, items }) {
   // Pilar 2 — Strip & log: buang semua field harga/diskon dari request.
   // Server adalah satu-satunya authority untuk kalkulasi harga.
@@ -75,27 +96,7 @@ async function createSale({ user, items }) {
   const failures = ruleEngine.checkR1StockAvailability({ items: safeItems, products });
 
   if (failures.length > 0) {
-    const productMap = new Map(products.map((p) => [p.id, p]));
-
-    // Tulis stock_logs REJECTED untuk SETIAP item yang gagal R1
-    for (const f of failures) {
-      const p = productMap.get(f.product_id);
-      await stockLogRepository.write({
-        product_id: f.product_id,
-        user_id: user.id,
-        delta_qty: 0,
-        stok_sebelum: p?.stok ?? null,
-        stok_sesudah: p?.stok ?? null,
-        source_type: "sales",
-        rule_triggered: "R1",
-        rule_action: "REJECTED",
-        reason_detail: f.reason,
-        context_payload: {
-          attempted_items: safeItems,
-          failure: f,
-        },
-      });
-    }
+    await logR1Rejections({ failures, products, user, items: safeItems });
 
     const e = new Error(failures.map((f) => f.reason).join("; "));
     e.status = 409;

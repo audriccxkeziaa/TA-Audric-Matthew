@@ -7,6 +7,26 @@ const log = require("../utils/logger");
 
 const { nextDocumentNumber } = require("../utils/documentCounter");
 
+// Guard RBAC: lempar 403 bila user bukan admin. `action` mengisi pesan error
+// (mis. "menyetujui retur") → pesan sama persis seperti sebelumnya.
+function requireAdmin(user, action) {
+  if (user.role !== "admin") {
+    const e = new Error(`Hanya admin yang dapat ${action}`);
+    e.status = 403;
+    throw e;
+  }
+}
+
+// Map error RPC (SQLSTATE custom dari trigger) → Error ber-status untuk dilempar
+// ke controller. Dipakai oleh approve/resolve/verify yang pola catch-nya identik.
+function throwMappedRpcError(err) {
+  const mapped = ruleEngine.mapDbErrorToHttp(err);
+  const e = new Error(mapped.message || err.message);
+  e.status = mapped.status || 400;
+  e.rule = mapped.rule;
+  throw e;
+}
+
 // Catat refund retur pelanggan sebagai pengeluaran agar saldo kas/omset berkurang.
 async function recordRefundExpense({ kode, items, userId }) {
   const refundTotal = items
@@ -201,11 +221,7 @@ async function createAdjustment({ user, payload }) {
 }
 
 async function approveAdjustment({ adminUser, adjustmentId }) {
-  if (adminUser.role !== "admin") {
-    const e = new Error("Hanya admin yang dapat menyetujui retur");
-    e.status = 403;
-    throw e;
-  }
+  requireAdmin(adminUser, "menyetujui retur");
 
   let rpcResult;
   try {
@@ -214,11 +230,7 @@ async function approveAdjustment({ adminUser, adjustmentId }) {
       adminId: adminUser.id,
     });
   } catch (err) {
-    const mapped = ruleEngine.mapDbErrorToHttp(err);
-    const e = new Error(mapped.message || err.message);
-    e.status = mapped.status || 400;
-    e.rule = mapped.rule;
-    throw e;
+    throwMappedRpcError(err);
   }
 
   const detail = await adjustmentRepository.getDetail(adjustmentId);
@@ -236,11 +248,7 @@ async function approveAdjustment({ adminUser, adjustmentId }) {
 }
 
 async function rejectAdjustment({ adminUser, adjustmentId, reason }) {
-  if (adminUser.role !== "admin") {
-    const e = new Error("Hanya admin yang dapat menolak retur");
-    e.status = 403;
-    throw e;
-  }
+  requireAdmin(adminUser, "menolak retur");
 
   try {
     await adjustmentRepository.rejectViaRpc({
@@ -324,11 +332,7 @@ async function verifyAdminAndApprove({ adjustmentId, username, password }) {
       adminId: profile.id,
     });
   } catch (err) {
-    const mapped = ruleEngine.mapDbErrorToHttp(err);
-    const e = new Error(mapped.message || err.message);
-    e.status = mapped.status || 400;
-    e.rule = mapped.rule;
-    throw e;
+    throwMappedRpcError(err);
   }
 
   const detail = await adjustmentRepository.getDetail(adjustmentId);
@@ -371,11 +375,7 @@ async function lookupPurchase(nota) {
 
 // Tahap 2 Retur Supplier: konfirmasi barang ganti diterima → stok bertambah, status='selesai'
 async function resolveSupplierReturn({ adminUser, adjustmentId }) {
-  if (adminUser.role !== "admin") {
-    const e = new Error("Hanya admin yang dapat menyelesaikan retur supplier");
-    e.status = 403;
-    throw e;
-  }
+  requireAdmin(adminUser, "menyelesaikan retur supplier");
 
   let rpcResult;
   try {
@@ -384,11 +384,7 @@ async function resolveSupplierReturn({ adminUser, adjustmentId }) {
       adminId: adminUser.id,
     });
   } catch (err) {
-    const mapped = ruleEngine.mapDbErrorToHttp(err);
-    const e = new Error(mapped.message || err.message);
-    e.status = mapped.status || 400;
-    e.rule = mapped.rule;
-    throw e;
+    throwMappedRpcError(err);
   }
 
   const detail = await adjustmentRepository.getDetail(adjustmentId);
@@ -419,11 +415,7 @@ async function reverseRefundExpense({ kode, userId }) {
 }
 
 async function voidAdjustment({ adminUser, adjustmentId }) {
-  if (adminUser.role !== "admin") {
-    const e = new Error("Hanya admin yang dapat membatalkan retur");
-    e.status = 403;
-    throw e;
-  }
+  requireAdmin(adminUser, "membatalkan retur");
 
   try {
     await adjustmentRepository.voidViaRpc({

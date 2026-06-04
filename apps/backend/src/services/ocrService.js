@@ -1,4 +1,20 @@
-﻿// ocrService.js — Pipeline OCR (jalur CETAK + jalur TULISAN TANGAN)
+﻿// ocrService.js — Pipeline OCR nota supplier (jalur CETAK & TULISAN TANGAN).
+//
+// ALUR UTAMA (hibrida): preprocessing citra → Tesseract (baseline OCR) →
+// Groq Vision LLM (peningkatan akurasi, grounding pakai teks Tesseract) →
+// validasi & flag confidence. Bila Groq gagal / tak ada API key → fallback ke
+// parser regex berbasis hasil Tesseract.
+//
+// PETA FUNGSI (urut sesuai alur — memudahkan menelusuri & menjelaskan):
+//   1. Setup         : getCv (opencv), getWorker/terminateWorker (Tesseract worker)
+//   2. Preprocessing : detectPaperColor, computeOtsuThreshold, preprocessPrinted*,
+//                      preprocessHandwritten, deskewPerLineMat  (image processing)
+//   3. Parsing teks  : parseTesseractData → parseWordsToRows / parseLineToItemTextOnly
+//                      + helper zona (extractItemCode/Qty/Price/Name), cleanItemName
+//   4. Validasi      : flagLowConfidence, countValidItems, validateAndFlagItems
+//   5. Recognize     : recognizePrintedReceipt / recognizeHandwrittenReceipt
+//                      (preprocessing + Tesseract multi-PSM)
+//   6. AI parser     : parseWithGroqVision / parseWithGroqText, formatAiItems  (Groq)
 
 const sharp = require("sharp");
 const { createWorker } = require("tesseract.js");

@@ -51,91 +51,63 @@ function checkR1StockAvailability({ items, products }) {
 }
 
 // R2 pre-check: validasi payload commit pembelian.
-// Dua bentuk item: action='restock' (product_id) atau action='new' (kode+nama baru).
+// Alur: validasi header (status + ada item) → validasi tiap item satu per satu;
+// gagal pada item PERTAMA yang tidak valid (sama seperti perilaku sebelumnya).
 function checkR2PurchaseValidation({ status_validasi, items }) {
+  const fail = (reason) => ({ ok: false, reason });
+
   if (status_validasi !== "tervalidasi") {
-    return {
-      ok: false,
-      reason:
-        "R2: stok masuk belum dikonfirmasi user. status_validasi harus 'tervalidasi'",
-    };
+    return fail("R2: stok masuk belum dikonfirmasi user. status_validasi harus 'tervalidasi'");
   }
   if (!Array.isArray(items) || items.length === 0) {
-    return {
-      ok: false,
-      reason: "R2: minimal 1 item harus divalidasi sebelum disimpan",
-    };
+    return fail("R2: minimal 1 item harus divalidasi sebelum disimpan");
   }
+
   for (let i = 0; i < items.length; i++) {
-    const it = items[i];
-    const action = it.action || "restock";
-    if (action !== "restock" && action !== "new") {
-      return {
-        ok: false,
-        reason: `R2: item baris #${i + 1} action harus 'restock' atau 'new'`,
-      };
-    }
-    if (action === "restock") {
-      if (!it.product_id || typeof it.product_id !== "string") {
-        return {
-          ok: false,
-          reason: `R2: item baris #${i + 1} (restock) wajib menyertakan product_id`,
-        };
-      }
-    } else {
-      // action === 'new'
-      const kode = typeof it.kode_barang === "string" ? it.kode_barang.trim() : "";
-      const nama = typeof it.nama_barang === "string" ? it.nama_barang.trim() : "";
-      if (!kode) {
-        return {
-          ok: false,
-          reason: `R2: item baris #${i + 1} (produk baru) wajib menyertakan kode_barang`,
-        };
-      }
-      if (kode.length > 30) {
-        return {
-          ok: false,
-          reason: `R2: item baris #${i + 1} kode_barang terlalu panjang (maks 30 karakter)`,
-        };
-      }
-      if (!nama) {
-        return {
-          ok: false,
-          reason: `R2: item baris #${i + 1} (produk baru) wajib menyertakan nama_barang`,
-        };
-      }
-      if (nama.length > 150) {
-        return {
-          ok: false,
-          reason: `R2: item baris #${i + 1} nama_barang terlalu panjang (maks 150 karakter)`,
-        };
-      }
-    }
-    if (!Number.isInteger(it.qty) || it.qty <= 0) {
-      return {
-        ok: false,
-        reason: `R2: item baris #${i + 1} qty harus bilangan bulat > 0`,
-      };
-    }
-    if (typeof it.harga_beli !== "number" || it.harga_beli < 0) {
-      return {
-        ok: false,
-        reason: `R2: item baris #${i + 1} harga_beli harus angka >= 0`,
-      };
-    }
-    if (
-      it.diskon_persen != null &&
-      (typeof it.diskon_persen !== "number" ||
-        it.diskon_persen < 0 ||
-        it.diskon_persen > 100)
-    ) {
-      return {
-        ok: false,
-        reason: `R2: item baris #${i + 1} diskon_persen harus 0-100`,
-      };
-    }
+    const reason = validatePurchaseItem(items[i], i + 1);
+    if (reason) return fail(reason);
   }
   return { ok: true };
+}
+
+// Validasi satu baris item commit pembelian. Kembalikan STRING alasan bila tidak
+// valid, atau null bila valid. Dua bentuk item:
+//   action='restock' → wajib product_id
+//   action='new'     → wajib kode_barang & nama_barang (produk baru dibuat)
+function validatePurchaseItem(it, lineNo) {
+  const action = it.action || "restock";
+
+  if (action !== "restock" && action !== "new") {
+    return `R2: item baris #${lineNo} action harus 'restock' atau 'new'`;
+  }
+
+  if (action === "restock") {
+    if (!it.product_id || typeof it.product_id !== "string") {
+      return `R2: item baris #${lineNo} (restock) wajib menyertakan product_id`;
+    }
+  } else {
+    const kode = typeof it.kode_barang === "string" ? it.kode_barang.trim() : "";
+    const nama = typeof it.nama_barang === "string" ? it.nama_barang.trim() : "";
+    if (!kode) return `R2: item baris #${lineNo} (produk baru) wajib menyertakan kode_barang`;
+    if (kode.length > 30) return `R2: item baris #${lineNo} kode_barang terlalu panjang (maks 30 karakter)`;
+    if (!nama) return `R2: item baris #${lineNo} (produk baru) wajib menyertakan nama_barang`;
+    if (nama.length > 150) return `R2: item baris #${lineNo} nama_barang terlalu panjang (maks 150 karakter)`;
+  }
+
+  if (!Number.isInteger(it.qty) || it.qty <= 0) {
+    return `R2: item baris #${lineNo} qty harus bilangan bulat > 0`;
+  }
+  if (typeof it.harga_beli !== "number" || it.harga_beli < 0) {
+    return `R2: item baris #${lineNo} harga_beli harus angka >= 0`;
+  }
+  if (
+    it.diskon_persen != null &&
+    (typeof it.diskon_persen !== "number" || it.diskon_persen < 0 || it.diskon_persen > 100)
+  ) {
+    return `R2: item baris #${lineNo} diskon_persen harus 0-100`;
+  }
+
+  return null;
 }
 
 // Map error dari supabase.rpc() ke HTTP status + pesan ID
