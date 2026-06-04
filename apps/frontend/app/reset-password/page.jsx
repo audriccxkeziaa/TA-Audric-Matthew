@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
               variant="secondary"
               onClick={() => router.replace("/login")}
             >
-              Kembali ke Login
+              Back to Login
             </Button>
           </div>
         )}

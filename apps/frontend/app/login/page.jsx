@@ -229,7 +229,7 @@ export default function LoginPage() {
               className="w-full"
               loading={resetSending}
             >
-              {resetSending ? "Mengirim…" : "Kirim Link Reset"}
+              {resetSending ? "Sending…" : "Send Reset Link"}
             </Button>
             <button
               type="button"
@@ -240,7 +240,7 @@ export default function LoginPage() {
               }}
               className="block w-full text-center text-sm font-medium text-slate-500 hover:underline"
             >
-              Kembali ke Login
+              Back to Login
             </button>
           </form>
         )}
