@@ -173,12 +173,35 @@ async function update(id, patch) {
   return data;
 }
 
+// Ambil SELURUH produk untuk katalog Browse kasir (slim fields, termasuk
+// nonaktif). Paginasi internal menembus batas max-rows Supabase (default
+// ~1000/permintaan) supaya semua barang (ribuan) benar-benar terambil.
+async function getCatalog() {
+  const PAGE = 1000;
+  let all = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, kode_barang, nama_barang, merk, harga_beli, harga_jual, stok, status")
+      .order("nama_barang", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      console.error("[POS-PRODREPO] getCatalog error:", error.message);
+      throw new Error("Gagal memuat katalog produk");
+    }
+    all = all.concat(data || []);
+    if (!data || data.length < PAGE) break;
+  }
+  return all;
+}
+
 module.exports = {
   findByIds,
   findById,
   existsByKodeBarang,
   listDistinctMerks,
   search,
+  getCatalog,
   create,
   update,
 };

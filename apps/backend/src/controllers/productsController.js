@@ -88,6 +88,32 @@ async function listMerks(req, res) {
   }
 }
 
+// ---------- Katalog produk (Browse kasir) + cache in-memory ----------
+// Ambil SEMUA produk sekali lalu simpan di memori (TTL). Banyak kasir membuka
+// Browse bersamaan → DB hanya kena sekali per TTL (hemat, tidak "meledak").
+// Cache dibatalkan saat ada produk dibuat/diubah agar perubahan langsung tampil.
+let _catalogCache = null; // { data, at }
+const CATALOG_TTL_MS = 60_000;
+function bustCatalogCache() {
+  _catalogCache = null;
+}
+
+// GET /api/products/catalog
+async function listCatalog(req, res) {
+  try {
+    const now = Date.now();
+    if (_catalogCache && now - _catalogCache.at < CATALOG_TTL_MS) {
+      return res.json({ data: _catalogCache.data, cached: true });
+    }
+    const data = await productRepository.getCatalog();
+    _catalogCache = { data, at: now };
+    return res.json({ data, cached: false });
+  } catch (err) {
+    console.error("[POS-PROD] listCatalog error:", err.message);
+    return res.status(500).json({ error: "Gagal memuat katalog produk" });
+  }
+}
+
 // GET /api/products/:id
 async function getProduct(req, res) {
   try {
@@ -134,6 +160,7 @@ async function createProduct(req, res) {
       min_stock: Number.isInteger(payload.min_stock) ? payload.min_stock : 5,
       status: payload.status || "aktif",
     });
+    bustCatalogCache();
 
     console.log(
       `[POS-PROD] Produk baru ${created.kode_barang} dibuat oleh ${req.user.username}`
@@ -238,6 +265,7 @@ async function updateProduct(req, res) {
     }
 
     const updated = await productRepository.update(id, patch);
+    bustCatalogCache();
 
     // Audit perubahan harga / status / min_stock (bukan stock_logs entry stok,
     // tapi sebagai jejak perubahan master data — pakai source_type='manual' agar tidak ambigu).
@@ -285,6 +313,7 @@ async function updateProduct(req, res) {
 module.exports = {
   searchProducts,
   listMerks,
+  listCatalog,
   getProduct,
   createProduct,
   updateProduct,

@@ -11,7 +11,6 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { productsApi, salesApi } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
-import { useDebounce } from "@/hooks/useDebounce";
 import { supabase } from "@/lib/supabase";
 
 // Keranjang disimpan di sessionStorage: bertahan saat kasir pindah menu &
@@ -31,7 +30,6 @@ export function useKasir() {
   const [barcode, setBarcode] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
-  const debouncedQ = useDebounce(q, 300);
   const [merkFilter, setMerkFilter] = useState("");
   const [cart, setCart] = useState([]); // [{id, kode_barang, nama_barang, harga_jual, stok, qty, status}]
   const [bayarOpen, setBayarOpen] = useState(false);
@@ -57,30 +55,46 @@ export function useKasir() {
     cartLoadedRef.current = true;
   }, []);
 
-  // ----- Pencarian produk — termasuk nonaktif agar kasir bisa melihatnya -----
-  // Browse kosong sampai kasir mengetik nama/kode ATAU memilih merk.
-  const hasSearch = debouncedQ.trim().length > 0 || !!merkFilter;
-  const { data: searchRes, isFetching: searchFetching } = useQuery({
-    queryKey: ["pos-products", debouncedQ, merkFilter],
-    queryFn: () =>
-      productsApi.list({
-        q: debouncedQ,
-        status: "all",
-        merk: merkFilter || undefined,
-        limit: 1000,
-      }),
-    enabled: searchOpen && hasSearch,
-  });
-  const results = hasSearch ? searchRes?.data || [] : [];
-
-  // Daftar merk untuk filter di panel pencarian (dimuat saat browse dibuka).
-  const merksQ = useQuery({
-    queryKey: ["product-merks"],
-    queryFn: productsApi.merks,
-    staleTime: 60_000,
+  // ----- Katalog Browse: ambil SEMUA barang sekali (cache backend + React
+  // Query), lalu filter di sisi klien (instan, tanpa request per ketikan).
+  // Daftar dirender ter-virtualisasi di SearchPanel agar ribuan baris tetap
+  // mulus. Termasuk produk nonaktif agar kasir tetap bisa melihatnya.
+  const catalogQ = useQuery({
+    queryKey: ["product-catalog"],
+    queryFn: productsApi.catalog,
     enabled: searchOpen,
+    staleTime: 60_000,
   });
-  const merkList = merksQ.data?.data || [];
+  const catalog = catalogQ.data?.data || [];
+  const searchFetching = catalogQ.isFetching && catalog.length === 0;
+
+  // Daftar merk diturunkan langsung dari katalog (tanpa request terpisah).
+  const merkList = useMemo(
+    () =>
+      [...new Set(catalog.map((p) => p.merk).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b)
+      ),
+    [catalog]
+  );
+
+  // Filter nama/kode + merk dilakukan di klien → hasil tampil instan.
+  const results = useMemo(() => {
+    let r = catalog;
+    if (merkFilter) r = r.filter((p) => p.merk === merkFilter);
+    const term = q.trim().toLowerCase();
+    if (term) {
+      const normTerm = term.replace(/[^a-z0-9]/g, "");
+      r = r.filter(
+        (p) =>
+          (p.nama_barang || "").toLowerCase().includes(term) ||
+          (p.kode_barang || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "")
+            .includes(normTerm)
+      );
+    }
+    return r;
+  }, [catalog, q, merkFilter]);
 
   // ----- Total (dengan diskon per item) -----
   const subtotal = useMemo(
