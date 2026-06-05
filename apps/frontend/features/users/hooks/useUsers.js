@@ -17,9 +17,18 @@ export function useUsers() {
   const [viewTarget, setViewTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
 
+  // Kolom "Terakhir Login" harus segar tanpa refresh manual. Realtime
+  // (useRealtimeSync) membuatnya instan saat event UPDATE tabel users tiba;
+  // namun event itu bisa tidak terkirim ke admin (mis. keterbatasan RLS pada
+  // realtime untuk baris user lain). Karena itu ditambahkan polling ringan tiap
+  // 15 detik + refetch saat tab kembali fokus sebagai cadangan yang andal.
   const { data, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: usersApi.list,
+    staleTime: 0,
+    refetchInterval: 15000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   const deleteMutation = useMutation({
