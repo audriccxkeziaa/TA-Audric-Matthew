@@ -4,7 +4,7 @@
 // merk, filter kondisi stok, filter status, paging, scan barcode, kontrol modal.
 
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { productsApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -15,6 +15,7 @@ function normKode(k) {
 export function useMasterBarang() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const queryClient = useQueryClient();
 
   const [searchInput, setSearchInput] = useState("");
   const [q, setQ] = useState("");
@@ -93,6 +94,29 @@ export function useMasterBarang() {
       }),
   });
 
+  const totalPages = data?.total_pages || 1;
+
+  // Prefetch halaman berikutnya → tombol "Next" terasa instan (datanya sudah
+  // tersimpan). Bersama placeholderData:keepPreviousData (default global), data
+  // lama tetap tampil saat berpindah halaman sehingga tidak ada kedipan "memuat".
+  useEffect(() => {
+    if (page < totalPages) {
+      const next = page + 1;
+      queryClient.prefetchQuery({
+        queryKey: ["products", q, merkFilter, stockFilter, statusFilter, next],
+        queryFn: () =>
+          productsApi.list({
+            q,
+            status: statusFilter || "aktif",
+            stock: stockFilter || undefined,
+            merk: merkFilter || undefined,
+            limit: 20,
+            page: next,
+          }),
+      });
+    }
+  }, [page, totalPages, q, merkFilter, stockFilter, statusFilter, queryClient]);
+
   return {
     isAdmin,
     // pencarian & filter
@@ -113,7 +137,7 @@ export function useMasterBarang() {
     // paging
     page,
     setPage,
-    totalPages: data?.total_pages || 1,
+    totalPages,
     total: data?.total || 0,
     // data
     products: data?.data || [],

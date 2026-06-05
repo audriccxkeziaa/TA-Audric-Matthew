@@ -32,6 +32,7 @@ export function useKasir() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const debouncedQ = useDebounce(q, 300);
+  const [merkFilter, setMerkFilter] = useState("");
   const [cart, setCart] = useState([]); // [{id, kode_barang, nama_barang, harga_jual, stok, qty, status}]
   const [bayarOpen, setBayarOpen] = useState(false);
   const [receipt, setReceipt] = useState(null);
@@ -57,13 +58,29 @@ export function useKasir() {
   }, []);
 
   // ----- Pencarian produk — termasuk nonaktif agar kasir bisa melihatnya -----
+  // Browse kosong sampai kasir mengetik nama/kode ATAU memilih merk.
+  const hasSearch = debouncedQ.trim().length > 0 || !!merkFilter;
   const { data: searchRes, isFetching: searchFetching } = useQuery({
-    queryKey: ["pos-products", debouncedQ],
+    queryKey: ["pos-products", debouncedQ, merkFilter],
     queryFn: () =>
-      productsApi.list({ q: debouncedQ, status: "all", limit: 1000 }),
+      productsApi.list({
+        q: debouncedQ,
+        status: "all",
+        merk: merkFilter || undefined,
+        limit: 1000,
+      }),
+    enabled: searchOpen && hasSearch,
+  });
+  const results = hasSearch ? searchRes?.data || [] : [];
+
+  // Daftar merk untuk filter di panel pencarian (dimuat saat browse dibuka).
+  const merksQ = useQuery({
+    queryKey: ["product-merks"],
+    queryFn: productsApi.merks,
+    staleTime: 60_000,
     enabled: searchOpen,
   });
-  const results = searchRes?.data || [];
+  const merkList = merksQ.data?.data || [];
 
   // ----- Total (dengan diskon per item) -----
   const subtotal = useMemo(
@@ -293,6 +310,9 @@ export function useKasir() {
     toggleSearch,
     q,
     setQ,
+    merkFilter,
+    setMerkFilter,
+    merkList,
     results,
     searchFetching,
     handleBarcodeSubmit,

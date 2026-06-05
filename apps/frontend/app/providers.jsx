@@ -2,7 +2,7 @@
 // Provider global: React Query (cache server-state) + Auth + Toast.
 
 import { useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, keepPreviousData } from "@tanstack/react-query";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ToastProvider } from "@/hooks/useToast";
 
@@ -16,6 +16,9 @@ export default function Providers({ children }) {
             refetchOnWindowFocus: false,
             staleTime: 60 * 1000,
             gcTime: 5 * 60 * 1000,
+            // Saat key query berubah (paging/filter), tahan data lama tampil
+            // sampai data baru siap → tidak ada kedipan "memuat" di seluruh app.
+            placeholderData: keepPreviousData,
           },
         },
       })

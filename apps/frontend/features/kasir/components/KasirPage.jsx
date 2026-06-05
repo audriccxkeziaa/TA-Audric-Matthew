@@ -32,6 +32,9 @@ export default function KasirPage() {
         <SearchPanel
           q={k.q}
           onQChange={k.setQ}
+          merkFilter={k.merkFilter}
+          onMerkChange={k.setMerkFilter}
+          merkList={k.merkList}
           onClose={() => k.setSearchOpen(false)}
           searchRef={k.searchRef}
           results={k.results}
