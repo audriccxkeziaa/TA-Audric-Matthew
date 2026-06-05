@@ -14,12 +14,18 @@ import { useToast } from "@/hooks/useToast";
 import { useDebounce } from "@/hooks/useDebounce";
 import { supabase } from "@/lib/supabase";
 
+// Keranjang disimpan di sessionStorage: bertahan saat kasir pindah menu &
+// refresh halaman, tetapi otomatis hilang ketika tab/website ditutup. Saat
+// logout, dibersihkan oleh clearSession() di lib/api-client.js.
+const CART_KEY = "pos.kasir_cart";
+
 export function useKasir() {
   const toast = useToast();
   const barcodeRef = useRef(null);
   const searchRef = useRef(null);
   const lastQtyRef = useRef(1);
   const tunaiRef = useRef(0);
+  const cartLoadedRef = useRef(false);
 
   // ----- State -----
   const [barcode, setBarcode] = useState("");
@@ -30,11 +36,31 @@ export function useKasir() {
   const [bayarOpen, setBayarOpen] = useState(false);
   const [receipt, setReceipt] = useState(null);
 
+  // ----- Persistensi keranjang (sessionStorage) -----
+  // Bertahan saat pindah menu / refresh; hilang otomatis saat tab/website
+  // ditutup, atau saat logout (clearSession). Effect SIMPAN sengaja ditaruh
+  // SEBELUM effect MUAT agar saat mount tidak menimpa data tersimpan dengan
+  // keranjang kosong.
+  useEffect(() => {
+    if (!cartLoadedRef.current) return;
+    try {
+      window.sessionStorage.setItem(CART_KEY, JSON.stringify(cart));
+    } catch {}
+  }, [cart]);
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(CART_KEY);
+      const saved = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(saved) && saved.length) setCart(saved);
+    } catch {}
+    cartLoadedRef.current = true;
+  }, []);
+
   // ----- Pencarian produk — termasuk nonaktif agar kasir bisa melihatnya -----
   const { data: searchRes, isFetching: searchFetching } = useQuery({
     queryKey: ["pos-products", debouncedQ],
     queryFn: () =>
-      productsApi.list({ q: debouncedQ, status: "all", limit: 30 }),
+      productsApi.list({ q: debouncedQ, status: "all", limit: 1000 }),
     enabled: searchOpen,
   });
   const results = searchRes?.data || [];

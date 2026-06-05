@@ -31,7 +31,10 @@ export function SearchPanel({
           Close
         </button>
       </div>
-      <div className="mt-2 max-h-48 space-y-1 overflow-y-auto thin-scroll">
+      <p className="mt-1 text-[11px] text-slate-400">
+        {searchFetching ? "Memuat…" : `${results.length} produk ditampilkan`} · ketik nama/kode untuk mempersempit
+      </p>
+      <div className="mt-2 max-h-[60vh] space-y-1 overflow-y-auto thin-scroll">
         {searchFetching && (
           <div className="py-3">
             <Spinner label="Mencari…" />

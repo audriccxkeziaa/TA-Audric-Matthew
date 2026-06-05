@@ -70,6 +70,8 @@ export function clearSession() {
   const uid = activeUid();
   if (uid) window.localStorage.removeItem(`${SESSION_PREFIX}${uid}`);
   window.sessionStorage.removeItem(TAB_USER_KEY);
+  // Keranjang kasir ikut dibersihkan saat logout (lihat useKasir.js).
+  window.sessionStorage.removeItem("pos.kasir_cart");
 }
 
 // ---------- Refresh token ----------
