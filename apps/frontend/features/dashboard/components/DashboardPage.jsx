@@ -73,6 +73,51 @@ function StokCard({ menipis, habis, kritis }) {
   );
 }
 
+function JualRugiAlert({ items = [] }) {
+  if (!items.length) return null;
+  return (
+    <Card className="mt-3 shrink-0 border-red-200 bg-red-50/60 p-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
+          <I d={<><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></>} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-red-700">
+            {items.length} barang berpotensi jual rugi
+          </p>
+          <p className="mt-0.5 text-xs text-red-600/80">
+            Harga jual ≤ harga beli. Segera sesuaikan harga jual di Master Barang
+            (harga beli bisa naik otomatis saat stok masuk).
+          </p>
+          <div className="mt-2 max-h-44 overflow-auto rounded-lg bg-white/70 ring-1 ring-red-100">
+            <table className="w-full text-xs">
+              <thead className="text-slate-400">
+                <tr>
+                  <th className="px-2 py-1 text-left font-medium">Barang</th>
+                  <th className="px-2 py-1 text-right font-medium">Harga Beli</th>
+                  <th className="px-2 py-1 text-right font-medium">Harga Jual</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-red-50">
+                {items.map((it) => (
+                  <tr key={it.id}>
+                    <td className="px-2 py-1">
+                      <span className="font-medium text-slate-700">{it.nama_barang}</span>
+                      <span className="block font-mono text-[10px] text-slate-400">{it.kode_barang}</span>
+                    </td>
+                    <td className="px-2 py-1 text-right tabular-nums text-slate-600">{rupiah(it.harga_beli)}</td>
+                    <td className="px-2 py-1 text-right tabular-nums font-semibold text-red-600">{rupiah(it.harga_jual)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
   const d = useDashboard();
   const { s } = d;
@@ -118,6 +163,8 @@ export default function DashboardPage() {
           />
         </div>
       )}
+
+      {!d.summary.isLoading && <JualRugiAlert items={s?.jual_rugi_items} />}
 
       {s?.r1_rejected_today > 0 && (
         <p className="mt-2 shrink-0 text-xs text-slate-500">

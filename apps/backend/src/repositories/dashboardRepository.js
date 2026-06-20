@@ -73,6 +73,28 @@ async function getSummary({ from, to } = {}) {
   const stok_habis_count  = (restockData || []).filter((r) => r.tingkat_urgensi === "HABIS").length;
   const stok_kritis_count = (restockData || []).filter((r) => r.tingkat_urgensi === "KRITIS").length;
 
+  // (5) Barang "jual rugi": harga_jual sudah di-set TAPI <= harga_beli.
+  // Perbandingan antar-kolom tidak didukung query builder → filter di JS.
+  // Kondisi state terkini (tidak tergantung periode).
+  const { data: priceData, error: priceErr } = await supabase
+    .from("products")
+    .select("id, kode_barang, nama_barang, merk, harga_beli, harga_jual")
+    .eq("status", "aktif");
+  if (priceErr) throw new Error("Gagal memuat data harga produk");
+
+  const jual_rugi_items = (priceData || [])
+    .filter((p) => Number(p.harga_jual) > 0 && Number(p.harga_jual) <= Number(p.harga_beli))
+    .map((p) => ({
+      id: p.id,
+      kode_barang: p.kode_barang,
+      nama_barang: p.nama_barang,
+      merk: p.merk,
+      harga_beli: Number(p.harga_beli),
+      harga_jual: Number(p.harga_jual),
+    }))
+    // Kerugian terbesar (selisih beli−jual) di urutan teratas.
+    .sort((a, b) => (b.harga_beli - b.harga_jual) - (a.harga_beli - a.harga_jual));
+
   return {
     tx_today_count,
     revenue_today,
@@ -81,6 +103,8 @@ async function getSummary({ from, to } = {}) {
     low_stock_count,
     stok_habis_count,
     stok_kritis_count,
+    jual_rugi_count: jual_rugi_items.length,
+    jual_rugi_items,
   };
 }
 
@@ -169,33 +193,8 @@ async function getTopProducts({ days = 30, limit = 10 }) {
     .slice(0, limit);
 }
 
-// Heatmap stok menipis: produk yang stok <= min_stock * threshold (default 1.5)
-async function getLowStockHeatmap({ thresholdRatio = 1.5 } = {}) {
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, kode_barang, nama_barang, merk, stok, min_stock")
-    .eq("status", "aktif")
-    .order("stok", { ascending: true });
-  if (error) throw new Error("Gagal memuat heatmap stok");
-
-  return (data || [])
-    .map((p) => {
-      const stok = Number(p.stok);
-      const min = Number(p.min_stock);
-      const threshold = Math.max(1, Math.ceil(min * thresholdRatio));
-      const ratio = min > 0 ? stok / min : stok > 0 ? 999 : 0;
-      let level = "normal";
-      if (stok === 0) level = "out";
-      else if (stok <= min) level = "low";
-      else if (stok <= threshold) level = "warning";
-      return { ...p, ratio, level, threshold };
-    })
-    .filter((p) => p.level !== "normal");
-}
-
 module.exports = {
   getSummary,
   getSalesTrend,
   getTopProducts,
-  getLowStockHeatmap,
 };

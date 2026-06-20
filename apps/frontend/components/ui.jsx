@@ -93,6 +93,13 @@ const FIELD_BASE =
 
 // ---------- Input teks ----------
 export function Input({ label, error, className = "", ...props }) {
+  // Cegah scroll mouse mengubah nilai input number. Saat field number ter-fokus
+  // lalu user men-scroll, browser diam-diam menaik/menurunkan angka (step ±1) —
+  // mis. harga 25000 berubah jadi 24999/24998. Blur saat wheel mematikan itu.
+  function handleWheel(e) {
+    if (props.type === "number") e.currentTarget.blur();
+    props.onWheel?.(e);
+  }
   return (
     <label className="block">
       {label && (
@@ -103,6 +110,7 @@ export function Input({ label, error, className = "", ...props }) {
       <input
         className={`${FIELD_BASE} ${error ? "border-red-400 focus:border-red-500 focus:ring-red-500/30" : "border-slate-300"} ${className}`}
         {...props}
+        onWheel={handleWheel}
       />
       {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
     </label>

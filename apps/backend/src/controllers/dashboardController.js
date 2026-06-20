@@ -37,14 +37,4 @@ async function getTopProducts(req, res) {
   }
 }
 
-async function getLowStock(req, res) {
-  try {
-    const data = await dashboardRepository.getLowStockHeatmap();
-    return res.json({ data });
-  } catch (err) {
-    console.error("[POS-DASH] lowStock error:", err.message);
-    return res.status(500).json({ error: "Gagal memuat data stok menipis" });
-  }
-}
-
-module.exports = { getSummary, getSalesTrend, getTopProducts, getLowStock };
+module.exports = { getSummary, getSalesTrend, getTopProducts };

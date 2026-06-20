@@ -4,7 +4,6 @@ const {
   getSummary,
   getSalesTrend,
   getTopProducts,
-  getLowStock,
 } = require("../controllers/dashboardController");
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
@@ -15,6 +14,5 @@ router.use(authMiddleware, roleMiddleware("admin"));
 router.get("/summary", getSummary);
 router.get("/sales-trend", getSalesTrend);
 router.get("/top-products", getTopProducts);
-router.get("/low-stock", getLowStock);
 
 module.exports = router;

@@ -14,7 +14,6 @@ export const productsApi = {
   list: (params) => apiFetch("/products", { query: params }),
   merks: () => apiFetch("/products/merks"),
   catalog: () => apiFetch("/products/catalog"),
-  get: (id) => apiFetch(`/products/${id}`),
   create: (body) => apiFetch("/products", { method: "POST", body }),
   update: (id, body) => apiFetch(`/products/${id}`, { method: "PATCH", body }),
 };
@@ -31,7 +30,6 @@ export const purchasesApi = {
   ocr: (formData) =>
     apiFetch("/purchases/ocr", { method: "POST", body: formData, isForm: true }),
   commit: (body) => apiFetch("/purchases/commit", { method: "POST", body }),
-  suppliers: () => apiFetch("/purchases/suppliers"),
   list: (params) => apiFetch("/purchases", { query: params }),
   get: (id) => apiFetch(`/purchases/${id}`),
   drafts: {
@@ -53,7 +51,6 @@ export const dashboardApi = {
   salesTrend: (days) => apiFetch("/dashboard/sales-trend", { query: { days } }),
   topProducts: (params) =>
     apiFetch("/dashboard/top-products", { query: params }),
-  lowStock: () => apiFetch("/dashboard/low-stock"),
 };
 
 export const auditApi = {
@@ -82,7 +79,6 @@ export const adjustmentsApi = {
   create: (body) => apiFetch("/adjustments", { method: "POST", body }),
   list: (params) => apiFetch("/adjustments", { query: params }),
   get: (id) => apiFetch(`/adjustments/${id}`),
-  remove: (id) => apiFetch(`/adjustments/${id}`, { method: "DELETE" }),
   lookupSale: (kode) =>
     apiFetch("/adjustments/lookup/sale", { query: { kode } }),
   lookupPurchase: (nota) =>

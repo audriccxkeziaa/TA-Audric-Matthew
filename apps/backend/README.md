@@ -75,7 +75,7 @@ tests/
 | POST   | `/api/purchases/ocr`              | kasir/admin  | Upload nota + OCR |
 | POST   | `/api/purchases/commit`           | kasir/admin  | Commit purchase (R2, R4) |
 | GET    | `/api/purchases`                  | auth         | Daftar pembelian |
-| GET    | `/api/dashboard/*`                | admin        | Summary, sales-trend, top-products, low-stock heatmap |
+| GET    | `/api/dashboard/*`                | admin        | Summary, sales-trend, top-products |
 | GET    | `/api/audit-logs`                 | admin        | Audit trail + filter + CSV |
 | GET    | `/api/reports/*`                  | admin        | Laporan penjualan / pembelian (CSV) |
 | GET    | `/api/restock`                    | admin        | R5 rekomendasi restock |

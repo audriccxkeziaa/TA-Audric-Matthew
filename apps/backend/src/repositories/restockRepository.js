@@ -11,16 +11,22 @@ const LEAD_TIME_HARI = 3;
 
 function computeRop(row) {
   const avgSales = Number(row.avg_sales_30d || 0);
+  const stok = Number(row.stok || 0);
   if (avgSales === 0) {
-    return { rop: 0, lead_time_hari: LEAD_TIME_HARI, safety_stock: 0, dibawah_rop: false };
+    // Belum ada penjualan 30 hari → ROP tak bisa dihitung dari laju jual.
+    // Tetapi stok yang sudah habis tidak boleh dianggap "Aman".
+    return { rop: 0, lead_time_hari: LEAD_TIME_HARI, safety_stock: 0, dibawah_rop: stok <= 0 };
   }
-  const safetyStock = Math.round(avgSales * 2);
-  const rop = Math.round(avgSales * LEAD_TIME_HARI + safetyStock);
+  // Pakai ceil + minimal 1: barang slow-mover (laju < 1/hari) jangan sampai
+  // ROP-nya membulat ke 0 sehingga stok habis salah dikira "Aman".
+  const safetyStock = Math.ceil(avgSales * 2);
+  const rop = Math.max(1, Math.ceil(avgSales * LEAD_TIME_HARI + safetyStock));
   return {
     rop,
     lead_time_hari: LEAD_TIME_HARI,
     safety_stock: safetyStock,
-    dibawah_rop: Number(row.stok) < rop,
+    // <= : begitu stok menyentuh ROP sudah harus pesan (termasuk stok 0).
+    dibawah_rop: stok <= rop,
   };
 }
 

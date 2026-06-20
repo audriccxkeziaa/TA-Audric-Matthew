@@ -48,18 +48,19 @@ export function humanReason(row) {
 
 const FIELD_LABELS = {
   qty: "Jumlah", harga_beli: "Harga Beli", harga_jual: "Harga Jual",
-  diskon_persen: "Diskon", source: "Input Via", kode_transaksi: "Kode Transaksi",
+  diskon_persen: "Diskon (%)", diskon_nominal: "Diskon (Rp/unit)",
+  source: "Input Via", kode_transaksi: "Kode Transaksi",
   kode_barang: "Kode Barang", nama_barang: "Nama Barang", merk: "Merk",
   stok: "Stok", min_stock: "Min. Stok", status: "Status",
   changed_by: "Diubah Oleh", alasan: "Alasan", edited_at: "Waktu Edit",
   jenis: "Jenis", deskripsi: "Deskripsi", nominal: "Nominal", tanggal: "Tanggal",
 };
-const SKIP_KEYS = ["sale_id", "sale_item_id", "purchase_id", "purchase_item_id", "id", "created_at", "updated_at"];
+const SKIP_KEYS = ["sale_id", "sale_item_id", "purchase_id", "purchase_item_id", "id", "created_at", "updated_at", "harga_beli_lama"];
 
 function formatField(k, v) {
   if (v === null || v === undefined) return "—";
   if ((k === "harga_beli" || k === "harga_jual") && typeof v === "number") return rupiah(v);
-  if (k === "nominal") return rupiah(Number(v) || 0);
+  if (k === "nominal" || k === "diskon_nominal") return rupiah(Number(v) || 0);
   if (k === "diskon_persen") return `${v}%`;
   if (k === "source") return v === "ocr" ? "OCR" : v === "manual" ? "Manual" : v;
   if (k === "edited_at" && typeof v === "string") return tanggalJam(v);
@@ -135,9 +136,27 @@ export function ContextPayloadTable({ payload }) {
     );
   }
 
-  const entries = Object.entries(payload).filter(
-    ([k, v]) => !SKIP_KEYS.includes(k) && typeof v !== "object"
+  // Payload datar (mis. event stok masuk). Bila harga beli produk berubah karena
+  // batch ini, tampilkan before→after di atas tabel field→nilai (seperti stok).
+  const hbLama = payload.harga_beli_lama;
+  const hbBaru = payload.harga_beli;
+  const hargaBeliBerubah =
+    hbLama != null && hbBaru != null && String(hbLama) !== String(hbBaru);
+
+  const flat = renderPayloadObject(payload, null);
+  if (!flat && !hargaBeliBerubah) return null;
+  return (
+    <div className="mt-2 space-y-2">
+      {hargaBeliBerubah && (
+        <div className="rounded-lg bg-slate-50 p-3">
+          <p className="text-xs uppercase text-slate-400">Perubahan Harga Beli Produk</p>
+          <p className="mt-1 font-semibold">
+            {rupiah(Number(hbLama))} <span className="text-slate-400">→</span>{" "}
+            {rupiah(Number(hbBaru))}
+          </p>
+        </div>
+      )}
+      {flat}
+    </div>
   );
-  if (entries.length === 0) return null;
-  return renderPayloadObject(payload, null);
 }
