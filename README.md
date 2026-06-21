@@ -18,7 +18,7 @@ Mengintegrasikan:
   (R1 Pencegahan Stok Negatif, R2 Validasi Stok Masuk, R3 Stok Terpusat,
   R4 Konsistensi Stok, R5 Rekomendasi Restock) — ditegakkan **dua lapis**
   (service Express + trigger/fungsi PostgreSQL).
-- **Dashboard analitik** (tren penjualan, heatmap stok menipis), **audit
+- **Dashboard analitik** (tren penjualan & statistik kunci), **audit
   trail**, **laporan** penjualan/pembelian, **manajemen pengguna (RBAC)**,
   serta modul tambahan: **retur/penyesuaian stok**, **pengeluaran &
   ringkasan keuangan**, dan **notifikasi stok menipis**.
@@ -40,7 +40,6 @@ Mengintegrasikan:
 ├── docs/
 │   ├── black-box-testing/      Tabel skenario pengujian fungsional
 │   ├── security-testing/       Prosedur uji keamanan 4 lapisan
-│   ├── uat/                    Template UAT + kuesioner SUS
 │   └── DEPLOY_RAILWAY.md        Panduan deploy Railway
 └── tests/
     ├── perf/                   Skrip uji beban k6 (sales & purchases)
@@ -86,7 +85,7 @@ cd apps/frontend && npm install && cd ../..
    **Project URL**, **anon key**, dan **service role key**.
 2. Di **SQL Editor**, jalankan SELURUH migrasi di
    `apps/backend/database/migrations/` **secara berurutan** mulai dari
-   `001_initial_schema.sql` sampai migrasi tertinggi (`037_…`).
+   `001_initial_schema.sql` sampai migrasi tertinggi (`048_…`).
    - Termasuk `036_rls_hardening.sql` (pengetatan RLS) dan
      `037_drop_password_plain.sql` (hapus kolom password plaintext).
    - Penomoran boleh ada loncatan kecil (mis. tidak ada `035`); itu normal.
@@ -172,7 +171,6 @@ pembelian dijalankan via fungsi PostgreSQL atomik (`fn_create_sale`,
 | Black-box | [`docs/black-box-testing/`](./docs/black-box-testing/) | Skenario fungsional ter-tabulasi |
 | Performa | [`tests/perf/`](./tests/perf/) | Skrip k6 — target p95 < 500 ms |
 | Keamanan | [`docs/security-testing/`](./docs/security-testing/) · [`tests/security/`](./tests/security/) | SQL injection, RBAC/JWT, HTTP headers |
-| UAT | [`docs/uat/`](./docs/uat/) | Skenario UAT + kuesioner SUS |
 
 Contoh: `node tests/security/rbac-jwt-test.js` (backend hidup) ·
 `k6 run tests/perf/sales-load.js`.
