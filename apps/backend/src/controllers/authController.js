@@ -129,18 +129,29 @@ async function requestPasswordReset(req, res) {
       return res.status(404).json({ error: "Email tidak terdaftar." });
     }
 
-    // Email ada → kirim link reset
+    // Email ada → kirim link reset. Pakai klien ANON (alur publik resmi untuk
+    // kirim email reset), bukan klien service-role.
     const origin = (process.env.FRONTEND_URL || "").split(",")[0].trim();
-    const { error: rErr } = await supabaseAdmin.auth.resetPasswordForEmail(
+    const supabaseAnon = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY
+    );
+    const { error: rErr } = await supabaseAnon.auth.resetPasswordForEmail(
       email.trim(),
       { redirectTo: `${origin}/reset-password` }
     );
-    if (rErr) throw rErr;
+    if (rErr) {
+      console.error("[POS-AUTH] resetPasswordForEmail gagal:", rErr.message);
+      // Tampilkan pesan asli Supabase agar mudah didiagnosis (mis. rate limit).
+      return res
+        .status(502)
+        .json({ error: `Gagal kirim email reset: ${rErr.message}` });
+    }
 
     res.json({ message: "Link reset password telah dikirim. Cek inbox / folder spam." });
   } catch (err) {
     console.error("[POS-AUTH] forgot-password error:", err.message);
-    res.status(500).json({ error: "Gagal mengirim link reset" });
+    res.status(500).json({ error: err.message || "Gagal mengirim link reset" });
   }
 }
 
