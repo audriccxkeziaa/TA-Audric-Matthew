@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { authApi } from "@/lib/api";
 import { Button, Input, Card, Spinner } from "@/components/ui";
 import LoginLoadingScreen from "@/components/LoginLoadingScreen";
 import { supabase } from "@/lib/supabase";
@@ -69,20 +70,19 @@ export default function LoginPage() {
       setResetErr("Email wajib diisi");
       return;
     }
-    if (!supabase) {
-      setResetErr("Layanan reset password tidak tersedia");
-      return;
-    }
     setResetSending(true);
-    // Pesan SELALU netral (sukses/gagal sama) agar tidak membocorkan
-    // apakah suatu email terdaftar.
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setResetSending(false);
-    setResetMsg(
-      "Jika email terdaftar, link reset password telah dikirim. Cek inbox / folder spam."
-    );
+    // Cek ke backend: kirim link HANYA jika email terdaftar; kalau tidak,
+    // tampilkan pesan error spesifik "Email tidak terdaftar".
+    try {
+      const res = await authApi.forgotPassword(email);
+      setResetMsg(
+        res?.message || "Link reset password telah dikirim. Cek inbox / folder spam."
+      );
+    } catch (err) {
+      setResetErr(err?.message || "Gagal mengirim link reset");
+    } finally {
+      setResetSending(false);
+    }
   }
 
   // Overlay loading profesional setelah login sukses.

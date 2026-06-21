@@ -106,6 +106,44 @@ async function logout(req, res) {
   }
 }
 
+// POST /api/auth/forgot-password — cek email terdaftar, lalu kirim link reset.
+// Catatan: berbeda dari resetPasswordForEmail sisi client (yang selalu balas
+// sukses untuk cegah enumeration), endpoint ini sengaja memberitahu bila email
+// tidak terdaftar sesuai kebutuhan UX. Dibatasi rate-limit di router.
+async function requestPasswordReset(req, res) {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email wajib diisi" });
+
+  try {
+    // Email disimpan di auth.users (bukan public.users) → cek lewat Admin API
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (error) throw error;
+
+    const found = data?.users?.find(
+      (u) => (u.email || "").toLowerCase() === email.trim().toLowerCase()
+    );
+    if (!found) {
+      return res.status(404).json({ error: "Email tidak terdaftar." });
+    }
+
+    // Email ada → kirim link reset
+    const origin = (process.env.FRONTEND_URL || "").split(",")[0].trim();
+    const { error: rErr } = await supabaseAdmin.auth.resetPasswordForEmail(
+      email.trim(),
+      { redirectTo: `${origin}/reset-password` }
+    );
+    if (rErr) throw rErr;
+
+    res.json({ message: "Link reset password telah dikirim. Cek inbox / folder spam." });
+  } catch (err) {
+    console.error("[POS-AUTH] forgot-password error:", err.message);
+    res.status(500).json({ error: "Gagal mengirim link reset" });
+  }
+}
+
 // POST /api/users — admin only, buat user baru (dipanggil dari users router)
 // Email di-auto-generate dari username (username@pos.local) karena Supabase Auth butuh email.
 async function register(req, res) {
@@ -390,6 +428,7 @@ async function deleteUser(req, res) {
 module.exports = {
   login,
   logout,
+  requestPasswordReset,
   register,
   getMe,
   listUsers,
