@@ -50,3 +50,7 @@ venv/
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Catatan persiapan pribadi (tidak untuk publik)
+docs/BELAJAR-*.md
+docs/PANDUAN-SIDANG-*.md
