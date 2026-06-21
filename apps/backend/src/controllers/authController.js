@@ -129,23 +129,52 @@ async function requestPasswordReset(req, res) {
       return res.status(404).json({ error: "Email tidak terdaftar." });
     }
 
+    // Fitur reset hanya untuk ADMIN. Kasir mereset password lewat admin di
+    // Manajemen User, bukan via email. Balas pesan yang sama dgn "tidak
+    // terdaftar" agar tidak membocorkan email mana yg ada/role-nya (anti-enumeration).
+    const { data: profile } = await supabaseAdmin
+      .from("users")
+      .select("role")
+      .eq("id", found.id)
+      .single();
+    if (profile?.role !== "admin") {
+      return res.status(404).json({ error: "Email tidak terdaftar." });
+    }
+
     // Email ada → kirim link reset. Pakai klien ANON (alur publik resmi untuk
     // kirim email reset), bukan klien service-role.
     const origin = (process.env.FRONTEND_URL || "").split(",")[0].trim();
+    // redirectTo wajib URL absolut & terdaftar di Supabase Redirect URLs.
+    // Bila FRONTEND_URL belum diset, biarkan Supabase pakai Site URL default
+    // (kirim redirectTo tanpa domain justru bisa ditolak Supabase).
+    const resetOpts = origin
+      ? { redirectTo: `${origin}/reset-password` }
+      : {};
+    if (!origin) {
+      console.warn(
+        "[POS-AUTH] FRONTEND_URL kosong — pakai Site URL default Supabase untuk redirect reset."
+      );
+    }
     const supabaseAnon = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_ANON_KEY
     );
     const { error: rErr } = await supabaseAnon.auth.resetPasswordForEmail(
       email.trim(),
-      { redirectTo: `${origin}/reset-password` }
+      resetOpts
     );
     if (rErr) {
-      console.error("[POS-AUTH] resetPasswordForEmail gagal:", rErr.message);
-      // Tampilkan pesan asli Supabase agar mudah didiagnosis (mis. rate limit).
-      return res
-        .status(502)
-        .json({ error: `Gagal kirim email reset: ${rErr.message}` });
+      // Log lengkap (status + message) agar mudah didiagnosis dari log Railway.
+      console.error(
+        "[POS-AUTH] resetPasswordForEmail gagal:",
+        rErr.status,
+        rErr.message
+      );
+      // Pesan ramah pengguna; detail teknis cukup di log server.
+      return res.status(502).json({
+        error:
+          "Gagal mengirim email reset. Coba lagi beberapa saat atau hubungi admin.",
+      });
     }
 
     res.json({ message: "Link reset password telah dikirim. Cek inbox / folder spam." });
