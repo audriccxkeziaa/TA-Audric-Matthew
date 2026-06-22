@@ -4,9 +4,13 @@ import { rupiah, angka } from "@/lib/format";
 import { Pencil } from "lucide-react";
 
 function stokBadge(p) {
-  if (Number(p.stok) === 0) return <Badge tone="red">Stok Habis</Badge>;
-  if (Number(p.stok) <= Number(p.min_stock))
-    return <Badge tone="amber">Stok Menipis</Badge>;
+  // 4 tingkat, selaras dengan rekomendasi restock (R5):
+  // habis: 0 · kritis: stok ≤ ⌈min×0,5⌉ · menipis: stok ≤ min · normal: > min
+  const stok = Number(p.stok);
+  const min = Number(p.min_stock);
+  if (stok === 0) return <Badge tone="red">Stok Habis</Badge>;
+  if (stok <= Math.ceil(min * 0.5)) return <Badge tone="orange">Stok Kritis</Badge>;
+  if (stok <= min) return <Badge tone="amber">Stok Menipis</Badge>;
   return <Badge tone="green">Normal</Badge>;
 }
 

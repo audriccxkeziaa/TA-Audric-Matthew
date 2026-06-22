@@ -1,7 +1,7 @@
 ﻿"use client";
 // components/Topbar.jsx — Bar atas: notifikasi stok menipis + pending approval + profil
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { notificationsApi, adjustmentsApi } from "@/lib/api";
@@ -11,6 +11,19 @@ import { angka } from "@/lib/format";
 export default function Topbar({ onToggleSidebar }) {
   const { user, logout } = useAuth();
   const [openNotif, setOpenNotif] = useState(false);
+  const notifRef = useRef(null);
+
+  // Tutup dropdown notifikasi saat klik komponen lain (di luar area lonceng).
+  useEffect(() => {
+    if (!openNotif) return;
+    function onClickOutside(e) {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setOpenNotif(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [openNotif]);
 
   // Notifikasi stok menipis — polling tiap 60 detik (admin & kasir).
   const { data } = useQuery({
@@ -59,7 +72,7 @@ export default function Topbar({ onToggleSidebar }) {
       {/* Kanan: notifikasi + profil */}
       <div className="flex items-center gap-2">
         {/* Lonceng notifikasi */}
-        <div className="relative">
+        <div className="relative" ref={notifRef}>
           <button
             onClick={() => setOpenNotif((v) => !v)}
             className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100"

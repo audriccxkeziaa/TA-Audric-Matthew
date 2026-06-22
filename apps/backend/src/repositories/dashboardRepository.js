@@ -188,6 +188,24 @@ async function getTopProducts({ days = 30, limit = 10 }) {
     e.total_revenue += Number(r.subtotal || 0);
   }
 
+  // Kurangi qty yang DIRETUR pelanggan (sales_return yg sudah approved) dalam
+  // periode sama → "produk terlaris" mencerminkan penjualan BERSIH. Non-fatal:
+  // bila query gagal, lewati pengurangan (jangan sampai dashboard error).
+  try {
+    const { data: retData } = await supabase
+      .from("stock_adjustment_items")
+      .select("product_id, qty, stock_adjustments!inner(type, status, created_at)")
+      .eq("stock_adjustments.type", "sales_return")
+      .eq("stock_adjustments.status", "approved")
+      .gte("stock_adjustments.created_at", start);
+    for (const r of retData || []) {
+      const e = agg.get(r.product_id);
+      if (e) e.total_qty = Math.max(0, e.total_qty - Number(r.qty || 0));
+    }
+  } catch (_) {
+    /* abaikan — tampilkan angka penjualan kotor bila data retur tak terbaca */
+  }
+
   return Array.from(agg.values())
     .sort((a, b) => b.total_qty - a.total_qty)
     .slice(0, limit);

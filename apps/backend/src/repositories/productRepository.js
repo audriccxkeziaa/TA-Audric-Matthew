@@ -101,10 +101,16 @@ async function search({ q = "", status = null, stockFilter = null, merk = null, 
   }
 
   let result = data || [];
+  // 4 tingkat (selaras dengan rekomendasi restock R5):
+  //   habis: stok 0 · kritis: stok ≤ ⌈min×0,5⌉ · menipis: ⌈min×0,5⌉ < stok ≤ min · normal: > min
   if (stockFilter === "out") {
     result = result.filter((p) => p.stok === 0);
+  } else if (stockFilter === "critical") {
+    result = result.filter((p) => p.stok > 0 && p.stok <= Math.ceil(p.min_stock * 0.5));
   } else if (stockFilter === "low") {
-    result = result.filter((p) => p.stok > 0 && p.stok <= p.min_stock);
+    result = result.filter(
+      (p) => p.stok > Math.ceil(p.min_stock * 0.5) && p.stok <= p.min_stock
+    );
   } else if (stockFilter === "normal") {
     result = result.filter((p) => p.stok > p.min_stock);
   }

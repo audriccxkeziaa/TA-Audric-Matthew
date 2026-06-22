@@ -113,7 +113,7 @@ export function CartPanel({
                       <input
                         type="number"
                         min="0"
-                        max="100"
+                        max="12"
                         step="0.5"
                         value={x.diskon_persen || 0}
                         onChange={(e) => setDiskon(x.id, e.target.value)}
@@ -201,7 +201,7 @@ export function CartPanel({
                         <input
                           type="number"
                           min="0"
-                          max="100"
+                          max="12"
                           step="0.5"
                           value={x.diskon_persen || 0}
                           onChange={(e) => setDiskon(x.id, e.target.value)}

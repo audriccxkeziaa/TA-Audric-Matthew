@@ -27,7 +27,6 @@ export function AddUserModal({ open, onClose }) {
         <PasswordInput label="Password" value={form.password} onChange={(e) => set("password", e.target.value)} />
         <Select label="Role" value={form.role} onChange={(e) => set("role", e.target.value)}>
           <option value="kasir">Kasir</option>
-          <option value="superadmin">Superadmin</option>
         </Select>
 
         {err && (

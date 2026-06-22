@@ -18,13 +18,15 @@ function validatePayload(items) {
     if (!Number.isInteger(it.qty) || it.qty <= 0) {
       return "qty wajib bilangan bulat > 0";
     }
+    // Diskon per item dibatasi maksimal 12% (kebijakan toko). Server otoritatif —
+    // cegah "jebol" diskon 100% dari klien.
     if (
       it.diskon_persen != null &&
       (typeof it.diskon_persen !== "number" ||
         it.diskon_persen < 0 ||
-        it.diskon_persen > 100)
+        it.diskon_persen > 12)
     ) {
-      return "diskon_persen harus angka 0-100";
+      return "diskon_persen maksimal 12%";
     }
   }
   return null;

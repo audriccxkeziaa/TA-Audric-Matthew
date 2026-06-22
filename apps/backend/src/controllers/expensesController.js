@@ -253,6 +253,16 @@ async function getSummary(req, res) {
       0
     );
 
+    // Pisahkan pengeluaran OPERASIONAL (gaji/listrik/air/supplier/custom) dari
+    // REFUND retur pelanggan — supaya "Pengeluaran Operasional" tidak tercampur
+    // refund. Keduanya tetap mengurangi saldo_bersih (lewat total_pengeluaran).
+    const total_operasional = (expRows || [])
+      .filter((r) => ALLOWED_JENIS.includes(r.jenis))
+      .reduce((a, r) => a + Number(r.nominal || 0), 0);
+    const total_refund = (expRows || [])
+      .filter((r) => r.jenis === "refund_pelanggan")
+      .reduce((a, r) => a + Number(r.nominal || 0), 0);
+
     // Breakdown pengeluaran per jenis
     const per_jenis = {};
     for (const j of ALLOWED_JENIS) per_jenis[j] = 0;
@@ -267,6 +277,8 @@ async function getSummary(req, res) {
         omset_kotor,
         total_pembelian,
         total_pengeluaran,
+        total_operasional,
+        total_refund,
         saldo_bersih,
         per_jenis,
         n_sales: salesRows?.length || 0,

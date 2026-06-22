@@ -50,10 +50,31 @@ export function useHistory() {
     }
   }
 
+  // Batalkan retur yang sudah terlanjur diproses (void): stok & refund dibalik,
+  // status jadi "dibatalkan", tetap tampil di riwayat + tercatat audit trail.
+  const [confirmCancel, setConfirmCancel] = useState(null); // row yang akan dibatalkan
+  const [canceling, setCanceling] = useState(false);
+
+  async function doCancel() {
+    if (!confirmCancel) return;
+    setCanceling(true);
+    try {
+      await adjustmentsApi.void(confirmCancel.id);
+      toast.success("Retur berhasil dibatalkan");
+      setConfirmCancel(null);
+      await load(filterType);
+    } catch (e) {
+      toast.error(e?.message || "Gagal membatalkan retur");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
   return {
     data, loading, loaded, load,
     filterType, setFilterType,
     detail, setDetail, detailLoading, openDetail,
     page, setPage, totalPages, pagedData,
+    confirmCancel, setConfirmCancel, canceling, doCancel,
   };
 }

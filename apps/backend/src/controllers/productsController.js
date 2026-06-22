@@ -65,7 +65,7 @@ async function searchProducts(req, res) {
     const result = await productRepository.search({
       q,
       status: status === "aktif" || status === "nonaktif" || status === "all" ? status : "aktif",
-      stockFilter: ["low", "out", "normal"].includes(stock) ? stock : null,
+      stockFilter: ["low", "out", "critical", "normal"].includes(stock) ? stock : null,
       merk: merk || null,
       limit: limit ? Math.min(parseInt(limit, 10), 1000) : 20,
       page: parseInt(page, 10) || 1,

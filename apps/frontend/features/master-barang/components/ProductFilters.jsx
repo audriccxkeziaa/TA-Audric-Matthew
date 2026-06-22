@@ -40,6 +40,7 @@ export function ProductFilters({
         >
           <option value="">Semua Kondisi</option>
           <option value="out">Stok Habis</option>
+          <option value="critical">Stok Kritis</option>
           <option value="low">Stok Menipis</option>
           <option value="normal">Stok Normal</option>
         </Select>

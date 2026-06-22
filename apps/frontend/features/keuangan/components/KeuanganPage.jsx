@@ -100,9 +100,13 @@ export default function KeuanganPage() {
           />
           <StatCard
             label="Pengeluaran Operasional"
-            value={rupiah(s?.total_pengeluaran || 0)}
+            value={rupiah(s?.total_operasional || 0)}
             tone="bad"
-            hint={`${angka(s?.n_expenses || 0)} items`}
+            hint={
+              s?.total_refund > 0
+                ? `+ refund retur ${rupiah(s.total_refund)}`
+                : `${angka(s?.n_expenses || 0)} items`
+            }
             icon={<TrendingDown size={18} />}
           />
           <StatCard

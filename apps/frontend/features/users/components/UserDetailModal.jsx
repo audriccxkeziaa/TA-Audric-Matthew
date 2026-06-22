@@ -46,7 +46,7 @@ export function UserDetailModal({ open, onClose, target, isSelf }) {
           disabled={isSelf}
         >
           <option value="kasir">Kasir</option>
-          <option value="superadmin">Superadmin</option>
+          <option value="admin">Admin</option>
         </Select>
 
         {err && (

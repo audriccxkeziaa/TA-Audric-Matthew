@@ -430,6 +430,19 @@ async function setUserStatus(req, res) {
         return res.status(404).json({ error: "User tidak ditemukan" });
       throw error;
     }
+
+    // Berlaku LANGSUNG: bust cache profil agar request berikutnya (termasuk
+    // heartbeat 1,5 detik) memakai is_active terbaru → user yang dinonaktifkan
+    // ter-logout <2 detik, tidak menunggu TTL cache 60 detik. Saat dinonaktifkan,
+    // lepas juga sesi aktifnya agar slot single-session bersih.
+    authMiddleware.invalidateProfile(id);
+    if (is_active === false) {
+      await supabaseAdmin
+        .from("users")
+        .update({ active_session_id: null })
+        .eq("id", id);
+    }
+
     console.log(
       `[POS-AUTH] User ${data.username} ${is_active ? "diaktifkan" : "dinonaktifkan"} oleh ${req.user.username}`
     );

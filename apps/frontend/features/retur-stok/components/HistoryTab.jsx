@@ -1,5 +1,5 @@
 "use client";
-import { Card, Button, Badge, Modal, Spinner, EmptyState } from "@/components/ui";
+import { Card, Button, Badge, Modal, Spinner, EmptyState, ConfirmDialog } from "@/components/ui";
 import { rupiah, angka, tanggalJam } from "@/lib/format";
 import { Eye } from "lucide-react";
 import { TYPE_BADGES, getStatusBadge } from "../lib/badges";
@@ -192,13 +192,24 @@ export function HistoryTab() {
                         <td className="py-2 px-4 text-right">{angka(row.total_qty)}</td>
                         <td className="py-2 pr-2 text-xs text-slate-500">{tanggalJam(row.created_at)}</td>
                         <td className="py-2 text-center">
-                          <button
-                            onClick={() => h.openDetail(row.id)}
-                            className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
-                            title="Lihat detail"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                          <div className="inline-flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => h.openDetail(row.id)}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-500 transition hover:bg-slate-100 hover:text-brand-600"
+                              title="Lihat detail"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            {["approved", "selesai"].includes(row.status) && (
+                              <button
+                                onClick={() => h.setConfirmCancel(row)}
+                                className="inline-flex h-6 items-center rounded px-1.5 text-[11px] font-medium text-red-600 transition hover:bg-red-50"
+                                title="Batalkan retur"
+                              >
+                                Batalkan
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -269,6 +280,21 @@ export function HistoryTab() {
           </>
         )}
       </Card>
+
+      {/* Konfirmasi pembatalan retur (void): stok & refund dibalik, status → Dibatalkan,
+          dokumen tetap di riwayat + tercatat audit trail. */}
+      <ConfirmDialog
+        open={!!h.confirmCancel}
+        onClose={() => h.setConfirmCancel(null)}
+        onConfirm={h.doCancel}
+        title="Batalkan Retur?"
+        message={
+          h.confirmCancel
+            ? `Retur ${h.confirmCancel.kode_adjustment || "ini"} akan dibatalkan: stok & refund (bila ada) dikembalikan ke kondisi semula. Dokumen tetap tersimpan di riwayat berstatus "Dibatalkan" dan tercatat di audit trail.`
+            : ""
+        }
+        confirmLabel={h.canceling ? "Membatalkan..." : "Ya, Batalkan"}
+      />
 
       {/* Detail Modal — Dual-Panel untuk return_supplier, single-panel untuk lainnya */}
       <Modal

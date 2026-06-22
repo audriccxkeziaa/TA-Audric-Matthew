@@ -155,7 +155,9 @@ export function useKasir() {
     );
   }
   function setDiskon(id, persen) {
-    const v = Math.max(0, Math.min(100, Number(persen) || 0));
+    // Diskon per item dibatasi 0–12% (kebijakan toko). Clamp di sini + validasi
+    // ulang di backend (otoritatif) supaya tidak bisa "dijebol" 100%.
+    const v = Math.max(0, Math.min(12, Number(persen) || 0));
     setCart((c) => c.map((x) => (x.id === id ? { ...x, diskon_persen: v } : x)));
   }
   function removeItem(id) {
