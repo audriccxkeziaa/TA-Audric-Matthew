@@ -35,6 +35,8 @@ export const purchasesApi = {
   commit: (body) => apiFetch("/purchases/commit", { method: "POST", body }),
   list: (params) => apiFetch("/purchases", { query: params }),
   get: (id) => apiFetch(`/purchases/${id}`),
+  // Daftar nama + alamat supplier (autocomplete di form stok masuk).
+  suppliers: () => apiFetch("/purchases/suppliers"),
   drafts: {
     list: () => apiFetch("/purchases/drafts"),
     save: (body) => apiFetch("/purchases/drafts", { method: "POST", body }),
