@@ -37,10 +37,6 @@ Mengintegrasikan:
 │       ├── app/(app)/<fitur>/  page.jsx tipis → re-export dari features/
 │       ├── features/<fitur>/   hooks + components + lib per fitur
 │       └── lib/                api.js (service layer tunggal) + api-client.js + supabase.js
-├── docs/
-│   ├── black-box-testing/      Tabel skenario pengujian fungsional
-│   ├── security-testing/       Prosedur uji keamanan 4 lapisan
-│   └── DEPLOY_RAILWAY.md        Panduan deploy Railway
 └── tests/
     ├── perf/                   Skrip uji beban k6 (sales & purchases)
     └── security/               Skrip uji RBAC & JWT tampering
@@ -168,23 +164,70 @@ pembelian dijalankan via fungsi PostgreSQL atomik (`fn_create_sale`,
 
 | Jenis | Lokasi | Keterangan |
 | --- | --- | --- |
-| Black-box | [`docs/black-box-testing/`](./docs/black-box-testing/) | Skenario fungsional ter-tabulasi |
+| Black-box | Laporan skripsi Bab 4.7.1 (Tabel 4.2) | Skenario fungsional ter-tabulasi |
 | Performa | [`tests/perf/`](./tests/perf/) | Skrip k6 — target p95 < 500 ms |
-| Keamanan | [`docs/security-testing/`](./docs/security-testing/) · [`tests/security/`](./tests/security/) | SQL injection, RBAC/JWT, HTTP headers |
+| Keamanan | [`tests/security/`](./tests/security/) + Laporan Bab 4.7.7 | SQL injection, RBAC/JWT, HTTP headers |
 
 Contoh: `node tests/security/rbac-jwt-test.js` (backend hidup) ·
 `k6 run tests/perf/sales-load.js`.
 
-## Deployment
+## Deployment (Railway)
 
-- **Frontend & Backend**: Railway (lihat [`docs/DEPLOY_RAILWAY.md`](./docs/DEPLOY_RAILWAY.md)) — set env vars, build/start otomatis. Railway menyediakan HTTPS.
-- **Database & Storage**: Supabase.
+Sistem di-deploy sebagai **dua service terpisah di Railway** — backend & frontend — dengan
+**Supabase** (basis data + storage + auth) dan **Groq** (Vision LLM) sebagai layanan eksternal.
+Railway menyediakan HTTPS otomatis dan auto-deploy setiap push ke branch `main`.
 
-Checklist sebelum operasional nyata:
-1. Jalankan SEMUA migrasi (termasuk 036 & 037) di Supabase.
+### 1. Siapkan Supabase (sekali)
+
+1. Buat project di [supabase.com](https://supabase.com); salin **Project URL**, **anon key**, dan **service role key**.
+2. Di **SQL Editor**, jalankan SELURUH migrasi `apps/backend/database/migrations/*.sql` **berurutan** (`001_…` sampai migrasi tertinggi `048_…`).
+3. Di **Storage**, buat bucket **`nota-supplier`** (private).
+
+### 2. Deploy Backend (service ke-1)
+
+1. Railway → **New Project → Deploy from GitHub repo** → pilih repo ini.
+2. **Settings → Root Directory:** `apps/backend`
+3. **Start Command** terdeteksi otomatis dari `package.json`: `node src/server.js`.
+4. **Settings → Variables:**
+
+   ```
+   PORT=5000
+   NODE_ENV=production
+   SUPABASE_URL=https://xxx.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=...
+   SUPABASE_ANON_KEY=...
+   FRONTEND_URL=https://<domain-frontend>.up.railway.app
+   GROQ_API_KEY=gsk_...
+   GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+   ```
+
+5. Deploy → catat domain backend (mis. `https://backend-xxx.up.railway.app`).
+
+### 3. Deploy Frontend (service ke-2)
+
+1. Di project Railway yang sama → **+ New → GitHub Repo** (repo yang sama).
+2. **Settings → Root Directory:** `apps/frontend`
+3. **Build:** `npm run build` · **Start:** `npm run start` (Next.js, terdeteksi otomatis).
+4. **Settings → Variables:**
+
+   ```
+   NEXT_PUBLIC_API_URL=https://<domain-backend>.up.railway.app/api
+   NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+   ```
+
+5. Deploy → buka domain frontend.
+6. **Kembali ke service backend**, isi `FRONTEND_URL` dengan domain frontend (untuk CORS) → redeploy backend.
+
+> `FRONTEND_URL` boleh comma-separated bila perlu beberapa origin
+> (mis. `https://app.up.railway.app,http://localhost:3000`).
+
+### Checklist sebelum operasional nyata
+
+1. Jalankan SEMUA migrasi di Supabase (termasuk `036_rls_hardening` & `037_drop_password_plain`).
 2. Ganti password user demo & **bersihkan data seed**.
-3. Set `FRONTEND_URL` (backend) & `NEXT_PUBLIC_API_URL` (frontend) ke domain produksi.
-4. Pertimbangkan strategi backup data (Supabase) untuk data toko nyata.
+3. Pastikan `FRONTEND_URL` (backend) & `NEXT_PUBLIC_API_URL` (frontend) menunjuk domain produksi.
+4. Pertimbangkan strategi backup data Supabase untuk data toko nyata.
 
 ## Lisensi
 
