@@ -33,7 +33,7 @@ function KeuanganDoc({ fs, unifiedRows, salesGrouped }) {
         <div className="border-x border-slate-200 text-center">
           <p className="text-[10px] uppercase text-slate-500">Total Pengeluaran</p>
           <p className="mt-1 text-sm font-bold text-red-700">{rupiah(totalPengeluaran)}</p>
-          <p className="text-[9px] text-slate-400">Pembelian Supplier + Pengeluaran Operasional</p>
+          <p className="text-[9px] text-slate-400">Pembelian + Operasional + Refund retur</p>
         </div>
         <div className="text-center">
           <p className="text-[10px] uppercase text-slate-500">Net Income</p>

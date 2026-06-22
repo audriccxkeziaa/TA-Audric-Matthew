@@ -483,7 +483,10 @@ async function commitPurchase({ user, payload }) {
             delta_qty: 0,
             stok_sebelum: existing.stok,
             stok_sesudah: existing.stok,
-            source_type: "manual",
+            // Pembaruan data barang yang terjadi DI DALAM alur stok masuk → sumber
+            // "Stok Masuk" (purchase), bukan "Manual". Sumber "manual" hanya untuk
+            // edit data barang di menu Master Barang.
+            source_type: "purchase",
             rule_triggered: null,
             rule_action: "ACCEPTED",
             reason_detail: `Data barang diperbarui oleh ${user.username} selama proses stok masuk`,

@@ -130,16 +130,20 @@ export default function LaporanPage() {
             />
             <StatCard
               label="Pengeluaran Operasional"
-              value={rupiah(fs?.total_pengeluaran || 0)}
+              value={rupiah(fs?.total_operasional || 0)}
               tone="bad"
-              hint={`${angka(fs?.n_expenses || 0)} entri`}
+              hint={
+                fs?.total_refund > 0
+                  ? `+ refund retur ${rupiah(fs.total_refund)}`
+                  : "gaji, listrik, air, dll"
+              }
               icon={<TrendingDown size={18} />}
             />
             <StatCard
               label="Total Pengeluaran"
               value={rupiah(totalPengeluaran)}
               tone="bad"
-              hint="Pembelian Supplier + Pengeluaran Operasional"
+              hint="Pembelian + Operasional + Refund retur"
               icon={<ReceiptText size={18} />}
             />
             <StatCard
