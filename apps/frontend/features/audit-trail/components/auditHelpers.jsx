@@ -59,12 +59,64 @@ const SKIP_KEYS = ["sale_id", "sale_item_id", "purchase_id", "purchase_item_id",
 
 function formatField(k, v) {
   if (v === null || v === undefined) return "—";
-  if ((k === "harga_beli" || k === "harga_jual") && typeof v === "number") return rupiah(v);
+  if (
+    typeof v === "number" &&
+    ["harga_beli", "harga_jual", "harga_satuan", "harga", "total", "subtotal"].includes(k)
+  )
+    return rupiah(v);
   if (k === "nominal" || k === "diskon_nominal") return rupiah(Number(v) || 0);
   if (k === "diskon_persen") return `${v}%`;
+  if (k === "arah") return v === "kurang" ? "Kurang (−)" : v === "tambah" ? "Tambah (+)" : v;
   if (k === "source") return v === "ocr" ? "OCR" : v === "manual" ? "Manual" : v;
   if (k === "edited_at" && typeof v === "string") return tanggalJam(v);
   return String(v);
+}
+
+// Render array of objects (mis. context_payload.items) sebagai tabel rapi —
+// menggantikan JSON mentah. Kolom dari union keys, kecuali product_id (UUID panjang).
+const ITEM_LABELS = {
+  qty: "Qty",
+  arah: "Arah",
+  kondisi: "Kondisi",
+  harga_satuan: "Harga",
+  nama_barang: "Barang",
+  kode_barang: "Kode",
+  diskon_persen: "Disc %",
+};
+function ItemsTable({ items }) {
+  if (!Array.isArray(items) || items.length === 0)
+    return <span className="text-slate-400">—</span>;
+  const cols = [...new Set(items.flatMap((it) => Object.keys(it || {})))].filter(
+    (c) => c !== "product_id" && c !== "id"
+  );
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full border border-slate-200 text-[11px]">
+        <thead>
+          <tr className="bg-slate-50 text-slate-500">
+            <th className="border-b border-slate-200 px-2 py-1 text-left">#</th>
+            {cols.map((c) => (
+              <th key={c} className="border-b border-slate-200 px-2 py-1 text-left whitespace-nowrap">
+                {ITEM_LABELS[c] || FIELD_LABELS[c] || c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((it, i) => (
+            <tr key={i} className="border-b border-slate-100 last:border-0">
+              <td className="px-2 py-1 text-slate-400">{i + 1}</td>
+              {cols.map((c) => (
+                <td key={c} className="px-2 py-1 whitespace-nowrap">
+                  {formatField(c, it?.[c])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function renderPayloadObject(obj, label) {
@@ -82,7 +134,11 @@ function renderPayloadObject(obj, label) {
                 {FIELD_LABELS[k] || k}
               </td>
               <td className="py-1 text-xs font-medium text-slate-800">
-                {typeof v === "object" ? JSON.stringify(v) : formatField(k, v)}
+                {Array.isArray(v)
+                  ? <ItemsTable items={v} />
+                  : typeof v === "object"
+                  ? JSON.stringify(v)
+                  : formatField(k, v)}
               </td>
             </tr>
           ))}

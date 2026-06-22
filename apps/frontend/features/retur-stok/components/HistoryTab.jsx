@@ -200,7 +200,8 @@ export function HistoryTab() {
                             >
                               <Eye className="h-4 w-4" />
                             </button>
-                            {["approved", "selesai"].includes(row.status) && (
+                            {row.type === "return_supplier" &&
+                              ["approved", "selesai"].includes(row.status) && (
                               <button
                                 onClick={() => h.setConfirmCancel(row)}
                                 className="inline-flex h-6 items-center rounded px-1.5 text-[11px] font-medium text-red-600 transition hover:bg-red-50"
