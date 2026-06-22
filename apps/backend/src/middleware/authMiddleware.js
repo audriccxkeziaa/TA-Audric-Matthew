@@ -85,6 +85,20 @@ async function authMiddleware(req, res, next) {
       return res.status(401).json({ error: "Akun Anda telah dinonaktifkan" });
     }
 
+    // Single-session (Last-Login-Wins): hanya SATU sesi aktif per user. Login
+    // baru menimpa active_session_id (lihat authController) & mem-bust cache
+    // profil ini, sehingga sesi lama (header X-Session-Id berbeda) langsung
+    // ditolak di request berikutnya — termasuk heartbeat 1,5 detik (<2 detik).
+    // Bila active_session_id null/kosong (mis. migrasi 048 belum diterapkan),
+    // pemeriksaan dilewati agar tidak mengganggu login.
+    const clientSession = req.headers["x-session-id"] || null;
+    if (profile.active_session_id && clientSession !== profile.active_session_id) {
+      return res.status(401).json({
+        error: "Sesi berakhir: akun Anda login di perangkat atau tab lain.",
+        code: "SESSION_SUPERSEDED",
+      });
+    }
+
     req.user = { ...profile, id: userId, email: email || profile.email };
     next();
   } catch (err) {
@@ -93,4 +107,11 @@ async function authMiddleware(req, res, next) {
   }
 }
 
+// Buang cache profil satu user. Dipanggil authController saat login/logout agar
+// pemeriksaan single-session segera memakai active_session_id terbaru.
+function invalidateProfile(userId) {
+  profileCache.delete(userId);
+}
+
+authMiddleware.invalidateProfile = invalidateProfile;
 module.exports = authMiddleware;

@@ -7,6 +7,7 @@ export const authApi = {
     apiFetch("/auth/login", { method: "POST", body: { username, password } }),
   logout: () => apiFetch("/auth/logout", { method: "POST" }),
   me: () => apiFetch("/auth/me"),
+  sessionCheck: () => apiFetch("/auth/session-check"),
   forgotPassword: (email) =>
     apiFetch("/auth/forgot-password", { method: "POST", body: { email } }),
 };

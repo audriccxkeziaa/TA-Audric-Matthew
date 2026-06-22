@@ -1,5 +1,7 @@
 const { createClient } = require("@supabase/supabase-js");
+const crypto = require("crypto");
 const supabaseAdmin = require("../config/supabase");
+const authMiddleware = require("../middleware/authMiddleware");
 
 // POST /api/auth/login — login via username + password
 // Supabase Auth membutuhkan email, jadi kita lookup email dari username dulu.
@@ -55,15 +57,25 @@ async function login(req, res) {
       });
     }
 
-    // Catat "Terakhir Login" di public.users (bukan auth.users) agar ter-broadcast
-    // via Supabase Realtime → daftar user admin update otomatis. Non-fatal.
+    // Single-session: terbitkan ID sesi baru sebagai SATU-SATUNYA sesi aktif user
+    // ini. Login baru menimpa active_session_id → sesi lama otomatis ditolak
+    // authMiddleware. Catat juga "Terakhir Login" sekaligus (satu query); kolom
+    // last_login_at ter-broadcast via Supabase Realtime → daftar user admin
+    // update otomatis. Non-fatal bila gagal (mis. migrasi 048 belum diterapkan).
+    const sessionId = crypto.randomUUID();
     const { error: stampErr } = await supabaseAdmin
       .from("users")
-      .update({ last_login_at: new Date().toISOString() })
+      .update({
+        last_login_at: new Date().toISOString(),
+        active_session_id: sessionId,
+      })
       .eq("id", profile.id);
     if (stampErr) {
-      console.warn("[POS-AUTH] Gagal catat last_login_at:", stampErr.message);
+      console.warn("[POS-AUTH] Gagal catat last_login_at / set sesi:", stampErr.message);
     }
+    // Bust cache profil agar sesi lama langsung memakai active_session_id baru
+    // (penolakan sesi lama terjadi <2 detik, tidak menunggu TTL cache 60 detik).
+    authMiddleware.invalidateProfile(profile.id);
 
     res.json({
       user: {
@@ -75,6 +87,7 @@ async function login(req, res) {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
         expires_at: data.session.expires_at,
+        session_id: sessionId,
       },
     });
   } catch (err) {
@@ -99,11 +112,31 @@ async function logout(req, res) {
     );
 
     await supabase.auth.signOut();
+
+    // Lepas sesi aktif user ini agar slot single-session kosong. logout berada di
+    // belakang authMiddleware → hanya sesi yang SAH (aktif) yang sampai sini,
+    // jadi aman menghapus active_session_id miliknya sendiri.
+    if (req.user?.id) {
+      await supabaseAdmin
+        .from("users")
+        .update({ active_session_id: null })
+        .eq("id", req.user.id);
+      authMiddleware.invalidateProfile(req.user.id);
+    }
+
     res.json({ message: "Logout berhasil." });
   } catch (err) {
     console.error("[POS-AUTH] Logout error:", err.message);
     res.status(500).json({ error: "Gagal logout" });
   }
+}
+
+// GET /api/auth/session-check — heartbeat single-session. authMiddleware sudah
+// memvalidasi JWT, status akun, & kecocokan X-Session-Id; bila sesi ini sudah
+// digantikan login baru, middleware membalas 401 SESSION_SUPERSEDED sebelum
+// sampai sini. Handler cukup membalas OK (ringan, dipanggil tiap 1,5 detik).
+function sessionCheck(req, res) {
+  res.json({ ok: true });
 }
 
 // POST /api/auth/forgot-password — cek email terdaftar, lalu kirim link reset.
@@ -468,6 +501,7 @@ async function deleteUser(req, res) {
 module.exports = {
   login,
   logout,
+  sessionCheck,
   requestPasswordReset,
   register,
   getMe,

@@ -38,6 +38,16 @@ export default function LoginPage() {
     }
   }, [user, loading, router, authenticated]);
 
+  // Pesan saat sesi berakhir karena login baru di perangkat/tab lain
+  // (single-session — Last-Login-Wins; dipicu redirect ?reason=session).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reason") === "session") {
+      setError("Sesi Anda berakhir karena akun ini login di perangkat atau tab lain.");
+    }
+  }, []);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");

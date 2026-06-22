@@ -144,6 +144,10 @@ export async function apiFetch(path, options = {}) {
   const token = await ensureFreshToken();
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
+  // Single-session: kirim ID sesi agar backend menolak sesi lama bila user yang
+  // sama sudah login di perangkat/tab lain (Last-Login-Wins).
+  const sess = getSession();
+  if (sess?.session_id) headers["X-Session-Id"] = sess.session_id;
 
   let payload;
   if (isForm) {
@@ -182,11 +186,14 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
-    // 401 di mana pun → sesi mati, paksa kembali ke halaman login.
+    // 401 di mana pun → sesi mati, paksa kembali ke halaman login. Bila sebabnya
+    // sesi digantikan login baru, sertakan ?reason=session agar halaman login
+    // menampilkan pesan yang jelas ke pengguna.
     if (res.status === 401 && typeof window !== "undefined") {
       clearSession();
       if (!window.location.pathname.startsWith("/login")) {
-        window.location.href = "/login";
+        const reason = json?.code === "SESSION_SUPERSEDED" ? "?reason=session" : "";
+        window.location.href = `/login${reason}`;
       }
     }
     throw new ApiError(json?.error || `Permintaan gagal (${res.status})`, {

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { login, logout, getMe, requestPasswordReset } = require("../controllers/authController");
+const { login, logout, sessionCheck, getMe, requestPasswordReset } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 const rateLimit = require("../middleware/rateLimit");
 
@@ -25,5 +25,7 @@ router.post("/login", loginLimiter, login);
 router.post("/logout", authMiddleware, logout);
 router.post("/forgot-password", forgotLimiter, requestPasswordReset);
 router.get("/me", authMiddleware, getMe);
+// Heartbeat single-session (dipanggil tiap 1,5 detik oleh frontend).
+router.get("/session-check", authMiddleware, sessionCheck);
 
 module.exports = router;

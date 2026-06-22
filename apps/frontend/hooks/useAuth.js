@@ -76,12 +76,36 @@ export function AuthProvider({ children }) {
     return () => clearInterval(intervalRef.current);
   }, [user]);
 
+  // Heartbeat single-session: deteksi "didepak" oleh login baru di perangkat/tab
+  // lain dalam <2 detik. Memanggil endpoint ringan /auth/session-check tiap 1,5
+  // detik; bila sesi ini bukan lagi sesi aktif, backend membalas 401
+  // SESSION_SUPERSEDED → bersihkan sesi & arahkan ke login dengan pesan.
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(async () => {
+      try {
+        await authApi.sessionCheck();
+      } catch (err) {
+        if (err?.status === 401 || err?.status === 403) {
+          clearSession();
+          setUser(null);
+          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+            window.location.href = "/login?reason=session";
+          }
+        }
+        // Error jaringan sementara (status 0) diabaikan — coba lagi siklus berikutnya.
+      }
+    }, 1500);
+    return () => clearInterval(id);
+  }, [user]);
+
   const login = useCallback(async (username, password) => {
     const res = await authApi.login(username, password);
     setSession({
       access_token: res.session.access_token,
       refresh_token: res.session.refresh_token,
       expires_at: res.session.expires_at,
+      session_id: res.session.session_id, // single-session (Last-Login-Wins)
       user: res.user,
     });
     setUser(res.user);
