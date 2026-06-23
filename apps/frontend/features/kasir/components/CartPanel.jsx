@@ -113,7 +113,7 @@ export function CartPanel({
                       <input
                         type="number"
                         min="0"
-                        max="12"
+                        max="100"
                         step="0.5"
                         value={x.diskon_persen || 0}
                         onChange={(e) => setDiskon(x.id, e.target.value)}
@@ -201,7 +201,7 @@ export function CartPanel({
                         <input
                           type="number"
                           min="0"
-                          max="12"
+                          max="100"
                           step="0.5"
                           value={x.diskon_persen || 0}
                           onChange={(e) => setDiskon(x.id, e.target.value)}
@@ -273,7 +273,7 @@ export function CartPanel({
               size="lg"
               variant="success"
               loading={saleProcessing}
-              disabled={cart.length === 0 || overStock.length > 0 || saleProcessing}
+              disabled={cart.length === 0 || saleProcessing}
               onClick={onCheckout}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -286,7 +286,7 @@ export function CartPanel({
         </div>
         {overStock.length > 0 && (
           <p className="mt-1.5 text-right text-xs text-red-600">
-            {overStock.length} barang melebihi stok — perbaiki dulu.
+            {overStock.length} barang melebihi stok — akan ditolak (R1) saat checkout.
           </p>
         )}
       </div>

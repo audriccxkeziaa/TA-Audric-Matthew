@@ -155,9 +155,9 @@ export function useKasir() {
     );
   }
   function setDiskon(id, persen) {
-    // Diskon per item dibatasi 0–12% (kebijakan toko). Clamp di sini + validasi
-    // ulang di backend (otoritatif) supaya tidak bisa "dijebol" 100%.
-    const v = Math.max(0, Math.min(12, Number(persen) || 0));
+    // Diskon boleh diinput 0–100; batas KEBIJAKAN 12% ditegakkan saat CHECKOUT —
+    // backend menolak transaksi & mencatat REJECTED bila ada item >12% (demonstratif).
+    const v = Math.max(0, Math.min(100, Number(persen) || 0));
     setCart((c) => c.map((x) => (x.id === id ? { ...x, diskon_persen: v } : x)));
   }
   function removeItem(id) {
@@ -273,7 +273,9 @@ export function useKasir() {
         setTimeout(() => searchRef.current?.focus(), 50);
       } else if (e.key === "F12") {
         e.preventDefault();
-        if (cart.length > 0 && overStock.length === 0) {
+        // Checkout tetap boleh walau ada item over-stok → ditolak R1 saat commit
+        // (demonstratif), bukan diblok di sini.
+        if (cart.length > 0) {
           setBayarOpen(true);
         }
       } else if (e.key === "Escape") {
@@ -302,8 +304,14 @@ export function useKasir() {
       toast.success("Transaksi berhasil disimpan.");
     },
     onError: (e) => {
-      if (e.rule === "R1") {
-        toast.error("Transaksi ditolak (R1): " + e.message);
+      // R1 (stok kurang) atau DISKON (>12%): transaksi DITOLAK & tercatat REJECTED
+      // di audit. Tampilkan alasan + auto-hapus item yang melanggar dari keranjang.
+      if ((e.rule === "R1" || e.rule === "DISKON") && Array.isArray(e.failures)) {
+        const ids = e.failures.map((f) => f.product_id).filter(Boolean);
+        if (ids.length) setCart((c) => c.filter((x) => !ids.includes(x.id)));
+        setBayarOpen(false);
+        const label = e.rule === "DISKON" ? "diskon melebihi 12%" : "stok tidak cukup";
+        toast.error(`Transaksi ditolak (${label}): ${e.message}`);
       } else {
         toast.error(e.message || "Transaksi gagal");
       }

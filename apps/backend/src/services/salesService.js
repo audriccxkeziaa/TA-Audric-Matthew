@@ -18,15 +18,16 @@ function validatePayload(items) {
     if (!Number.isInteger(it.qty) || it.qty <= 0) {
       return "qty wajib bilangan bulat > 0";
     }
-    // Diskon per item dibatasi maksimal 12% (kebijakan toko). Server otoritatif —
-    // cegah "jebol" diskon 100% dari klien.
+    // Sanity: diskon angka 0–100. Batas KEBIJAKAN 12% ditegakkan sebagai RULE
+    // saat checkout (lihat createSale) agar pelanggaran tercatat REJECTED di audit,
+    // bukan diblok diam-diam di sini.
     if (
       it.diskon_persen != null &&
       (typeof it.diskon_persen !== "number" ||
         it.diskon_persen < 0 ||
-        it.diskon_persen > 12)
+        it.diskon_persen > 100)
     ) {
-      return "diskon_persen maksimal 12%";
+      return "diskon_persen harus angka 0–100";
     }
   }
   return null;
@@ -104,6 +105,44 @@ async function createSale({ user, items }) {
     e.status = 409;
     e.rule = "R1";
     e.failures = failures;
+    throw e;
+  }
+
+  // RULE Diskon — batas kebijakan 12% per item. Tidak di-disable di UI: kasir boleh
+  // checkout, lalu DITOLAK di sini & tercatat REJECTED di audit (demonstratif).
+  const MAX_DISKON = 12;
+  const diskonViolations = safeItems
+    .filter((it) => Number(it.diskon_persen) > MAX_DISKON)
+    .map((it) => ({ it, p: products.find((pr) => pr.id === it.product_id) }));
+  if (diskonViolations.length > 0) {
+    for (const { it, p } of diskonViolations) {
+      await stockLogRepository.write({
+        product_id: it.product_id,
+        user_id: user.id,
+        source_type: "sales",
+        rule_triggered: null,
+        rule_action: "REJECTED",
+        reason_detail: `Diskon ${it.diskon_persen}% melebihi batas maksimum ${MAX_DISKON}% untuk "${p?.nama_barang || it.product_id}"`,
+        context_payload: {
+          product_id: it.product_id,
+          nama_barang: p?.nama_barang,
+          diskon_persen: it.diskon_persen,
+          batas_maksimum: MAX_DISKON,
+        },
+      });
+    }
+    const e = new Error(
+      `Diskon melebihi batas maksimum ${MAX_DISKON}% pada: ${diskonViolations
+        .map(({ it, p }) => `${p?.nama_barang || "barang"} (${it.diskon_persen}%)`)
+        .join("; ")}`
+    );
+    e.status = 409;
+    e.rule = "DISKON";
+    e.failures = diskonViolations.map(({ it, p }) => ({
+      product_id: it.product_id,
+      nama_barang: p?.nama_barang,
+      reason: `Diskon ${it.diskon_persen}% melebihi ${MAX_DISKON}%`,
+    }));
     throw e;
   }
 

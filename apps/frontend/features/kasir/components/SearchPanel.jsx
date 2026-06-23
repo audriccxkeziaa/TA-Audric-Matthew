@@ -73,7 +73,9 @@ export function SearchPanel({
             renderRow={(p) => {
               const habis = Number(p.stok) === 0;
               const discontinue = p.status === "nonaktif";
-              const disabled = habis || discontinue;
+              // Barang HABIS (stok 0) tetap boleh dipilih → ditolak R1 saat checkout
+              // (demonstratif). Hanya discontinue/nonaktif yang tidak bisa ditambah.
+              const disabled = discontinue;
               return (
                 <button
                   key={p.id}

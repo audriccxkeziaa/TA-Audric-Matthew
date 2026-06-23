@@ -117,7 +117,9 @@ export function useReturPelanggan() {
   function setQty(idx, val) {
     setReturnItems((prev) =>
       prev.map((it, i) =>
-        i === idx ? { ...it, return_qty: Math.max(0, Math.min(val, it.max_qty)) } : it
+        // Boleh diisi melebihi batas → DITOLAK saat confirm & tercatat REJECTED
+        // di audit (demonstratif), tidak di-clamp diam-diam di sini.
+        i === idx ? { ...it, return_qty: Math.max(0, val) } : it
       )
     );
   }

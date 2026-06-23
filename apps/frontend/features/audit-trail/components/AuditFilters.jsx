@@ -58,8 +58,9 @@ export function AuditFilters({
           onChange={(e) => setFilter("action", e.target.value)}
         >
           <option value="">Semua aksi</option>
-          <option value="REJECTED">REJECTED</option>
           <option value="ACCEPTED">ACCEPTED</option>
+          <option value="REJECTED">REJECTED</option>
+          <option value="TRIGGERED">TRIGGERED</option>
         </Select>
         <Select
           label="Sumber"

@@ -130,10 +130,64 @@ async function createAdjustment({ user, payload }) {
       }
       const available = info.qty_sold - info.already_returned;
       if (Number(it.qty) > available) {
+        // Tidak diblok diam-diam: dicoba → DITOLAK & tercatat REJECTED di audit.
+        await stockLogRepository.write({
+          product_id: it.product_id,
+          user_id: user.id,
+          source_type: "adjustment",
+          rule_triggered: null,
+          rule_action: "REJECTED",
+          reason_detail: `Retur pelanggan ${it.qty} unit melebihi sisa yang bisa diretur (maks ${Math.max(0, available)})`,
+          context_payload: {
+            product_id: it.product_id,
+            qty_retur: Number(it.qty),
+            maks_bisa_diretur: Math.max(0, available),
+          },
+        });
         const e = new Error(
-          `Item baris #${i + 1}: qty retur melebihi sisa yang bisa diretur (maks ${Math.max(0, available)})`
+          `Retur ditolak — qty (${it.qty}) melebihi sisa yang bisa diretur (maks ${Math.max(0, available)})`
         );
-        e.status = 400;
+        e.status = 409;
+        e.rule = "RETUR";
+        throw e;
+      }
+    }
+  }
+
+  // return_supplier: batas retur = STOK AKTUAL di master barang (BUKAN jumlah beli).
+  // Sebagian barang mungkin sudah laku terjual, jadi retur tidak boleh melebihi stok
+  // aktual. Over-qty TIDAK diblok diam-diam: dicoba → DITOLAK & tercatat REJECTED.
+  if (type === "return_supplier") {
+    const ids = [...new Set(items.map((it) => it.product_id))];
+    const { data: prods } = await supabaseAdmin
+      .from("products")
+      .select("id, nama_barang, stok")
+      .in("id", ids);
+    const stokMap = new Map((prods || []).map((p) => [p.id, p]));
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const p = stokMap.get(it.product_id);
+      const stokAktual = Number(p?.stok ?? 0);
+      if (Number(it.qty) > stokAktual) {
+        await stockLogRepository.write({
+          product_id: it.product_id,
+          user_id: user.id,
+          source_type: "adjustment",
+          rule_triggered: null,
+          rule_action: "REJECTED",
+          reason_detail: `Retur supplier ${it.qty} unit melebihi stok aktual ${stokAktual} untuk "${p?.nama_barang || it.product_id}"`,
+          context_payload: {
+            product_id: it.product_id,
+            nama_barang: p?.nama_barang,
+            qty_retur: Number(it.qty),
+            stok_aktual: stokAktual,
+          },
+        });
+        const e = new Error(
+          `Retur ditolak — qty (${it.qty}) melebihi stok aktual (${stokAktual}) untuk ${p?.nama_barang || "barang"}`
+        );
+        e.status = 409;
+        e.rule = "RETUR";
         throw e;
       }
     }
