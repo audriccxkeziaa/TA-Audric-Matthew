@@ -304,6 +304,22 @@ async function updateProduct(req, res) {
   } catch (err) {
     console.error("[POS-PROD] updateProduct error:", err.message);
     if (err.rule === "R3") {
+      await stockLogRepository.write({
+        product_id: id,
+        user_id: req.user.id,
+        delta_qty: 0,
+        stok_sebelum: existing?.stok ?? null,
+        stok_sesudah: existing?.stok ?? null,
+        source_type: "manual",
+        rule_triggered: "R3",
+        rule_action: "TRIGGERED",
+        reason_detail: `Percobaan update stok manual diblokir oleh R3: ${err.message}`,
+        context_payload: {
+          attempted_changes: patch,
+          product_id: id,
+          user: req.user.username,
+        },
+      });
       return res.status(409).json({ error: err.message, rule: "R3" });
     }
     return res.status(500).json({ error: err.message || "Gagal mengupdate produk" });
