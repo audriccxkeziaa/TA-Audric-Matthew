@@ -1,6 +1,8 @@
 const supabase = require("../config/supabase");
 
-const ALLOWED_RULES = ["R1", "R2", "R3", "R4", "R5"];
+// Perlu menerima juga aturan kebijakan non-standar yang dicatat di stock_logs
+// (mis. DISKON, RETUR) agar UI dapat memfilternya.
+const ALLOWED_RULES = ["R1", "R2", "R3", "R4", "R5", "DISKON", "RETUR"];
 const ALLOWED_ACTIONS = ["TRIGGERED", "REJECTED", "ACCEPTED"];
 const ALLOWED_SOURCES = ["sales", "purchase", "manual", "adjustment"];
 

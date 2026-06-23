@@ -8,6 +8,13 @@ const __dirname = dirname(__filename);
 // Header keamanan untuk domain frontend (target securityheaders.com grade A).
 // CSP dibuat permisif untuk Next.js (inline/eval hydration) + Supabase (https/wss)
 // + kamera (blob/media) agar tidak memecah aplikasi.
+// Di DEVELOPMENT (run lokal), izinkan backend Express http://localhost:5000 + HMR ws.
+// Di PRODUCTION tetap ketat (https/wss saja) agar securityheaders.com grade A.
+const isDev = process.env.NODE_ENV !== "production";
+const connectSrc = isDev
+  ? "connect-src 'self' https: wss: http://localhost:5000 ws://localhost:*"
+  : "connect-src 'self' https: wss:";
+
 const securityHeaders = [
   {
     key: "Content-Security-Policy",
@@ -17,7 +24,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https: wss:",
+      connectSrc,
       "media-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",

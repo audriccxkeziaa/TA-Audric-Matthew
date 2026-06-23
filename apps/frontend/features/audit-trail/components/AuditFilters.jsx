@@ -51,6 +51,10 @@ export function AuditFilters({
           <option value="R2">R2 — Validasi Stok Masuk</option>
           <option value="R3">R3 — Stok Terpusat</option>
           <option value="R4">R4 — Konsistensi Stok</option>
+          {/* Aturan kebijakan (di luar inti R1–R5 stok) — dilabeli agar tercatat
+              & terfilter di audit, bukan kosong. */}
+          <option value="DISKON">DISKON — Batas Diskon 12%</option>
+          <option value="RETUR">RETUR — Batas Retur</option>
         </Select>
         <Select
           label="Aksi"
