@@ -24,6 +24,8 @@ export function useReturSupplier() {
   const [resolveId, setResolveId] = useState(null);
   const [resolveTarget, setResolveTarget] = useState(null);
   const [resolveSubmitting, setResolveSubmitting] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [canceling, setCanceling] = useState(false);
   const listRef = useRef(null);
 
   // Retur supplier yang sudah dikirim, menunggu barang ganti (status='approved')
@@ -180,6 +182,24 @@ export function useReturSupplier() {
     }
   }
 
+  // Batalkan retur supplier yang masih "Menunggu Barang Ganti" (status approved →
+  // cancelled): stok yang tadi berkurang dikembalikan lewat RPC void.
+  async function handleCancel() {
+    if (!cancelTarget) return;
+    setCanceling(true);
+    try {
+      await adjustmentsApi.void(cancelTarget.id);
+      toast.success("Retur dibatalkan — stok dikembalikan.");
+      setCancelTarget(null);
+      refetchPending();
+      qc.invalidateQueries({ queryKey: ["adjustments"] });
+    } catch (err) {
+      toast.error(err.message || "Gagal membatalkan retur");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
   return {
     notaQ, setNotaQ,
     loading, filtered, listRef, handleBrowse,
@@ -194,5 +214,6 @@ export function useReturSupplier() {
     resolveId, setResolveId,
     resolveTarget, initiateResolve,
     resolveSubmitting, handleResolve,
+    cancelTarget, setCancelTarget, canceling, handleCancel,
   };
 }

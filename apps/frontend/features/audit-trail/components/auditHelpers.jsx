@@ -54,8 +54,13 @@ const FIELD_LABELS = {
   stok: "Stok", min_stock: "Min. Stok", status: "Status",
   changed_by: "Diubah Oleh", alasan: "Alasan", edited_at: "Waktu Edit",
   jenis: "Jenis", deskripsi: "Deskripsi", nominal: "Nominal", tanggal: "Tanggal",
+  // Forensik penolakan (R1 / RETUR / DISKON)
+  failure: "Detail Penolakan", attempted_items: "Item Dicoba", reason: "Alasan",
+  qty_diminta: "Qty Diminta", stok_tersedia: "Stok Tersedia",
+  qty_retur: "Qty Retur", qty_nota_beli: "Qty di Nota", stok_aktual: "Stok Aktual",
+  batas_maksimum: "Batas Maks", batas: "Batas Maks", maks_bisa_diretur: "Maks Diretur",
 };
-const SKIP_KEYS = ["sale_id", "sale_item_id", "purchase_id", "purchase_item_id", "id", "created_at", "updated_at", "harga_beli_lama"];
+const SKIP_KEYS = ["sale_id", "sale_item_id", "purchase_id", "purchase_item_id", "id", "product_id", "created_at", "updated_at", "harga_beli_lama"];
 
 function formatField(k, v) {
   if (v === null || v === undefined) return "—";
@@ -136,8 +141,8 @@ function renderPayloadObject(obj, label) {
               <td className="py-1 text-xs font-medium text-slate-800">
                 {Array.isArray(v)
                   ? <ItemsTable items={v} />
-                  : typeof v === "object"
-                  ? JSON.stringify(v)
+                  : v && typeof v === "object"
+                  ? renderPayloadObject(v, null)
                   : formatField(k, v)}
               </td>
             </tr>

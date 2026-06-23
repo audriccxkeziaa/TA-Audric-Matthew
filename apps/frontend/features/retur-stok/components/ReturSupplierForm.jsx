@@ -56,14 +56,24 @@ export function ReturSupplierForm() {
                     {ret.alasan}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="success"
-                  onClick={() => r.initiateResolve(ret)}
-                  disabled={r.resolveSubmitting}
-                >
-                  Complete Return
-                </Button>
+                <div className="flex shrink-0 gap-2 sm:flex-col">
+                  <Button
+                    size="sm"
+                    variant="success"
+                    onClick={() => r.initiateResolve(ret)}
+                    disabled={r.resolveSubmitting}
+                  >
+                    Complete Return
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => r.setCancelTarget(ret)}
+                    disabled={r.canceling}
+                  >
+                    Batalkan
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -161,7 +171,9 @@ export function ReturSupplierForm() {
                     </td>
                     <td className="py-2 pr-2">
                       <p className="font-medium text-slate-800">{it.nama_barang}</p>
-                      <p className="text-xs text-slate-400">{it.kode_barang}</p>
+                      <p className="text-xs text-slate-400">
+                        {it.kode_barang} · stok master {angka(it.stok ?? 0)}
+                      </p>
                     </td>
                     <td className="py-2 pr-2 text-right">{angka(it.qty)}</td>
                     <td className="py-2 pr-2 text-right">{rupiah(it.harga_beli)}</td>
@@ -170,7 +182,7 @@ export function ReturSupplierForm() {
                         <input
                           type="number"
                           min={1}
-                          max={it.qty}
+                          max={Math.max(Number(it.qty) || 0, Number(it.stok) || 0)}
                           value={it.return_qty}
                           onChange={(e) => r.setQty(idx, parseInt(e.target.value) || 0)}
                           className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
@@ -240,6 +252,17 @@ export function ReturSupplierForm() {
         message="Pastikan barang pengganti dari supplier sudah masuk ke gudang. Stok akan bertambah sesuai jumlah retur semula. Lanjutkan?"
         confirmLabel="Yes, Item Received"
         tone="success"
+      />
+
+      {/* Dialog: batalkan retur supplier (stok dikembalikan) */}
+      <ConfirmDialog
+        open={!!r.cancelTarget}
+        onClose={() => r.setCancelTarget(null)}
+        onConfirm={r.handleCancel}
+        title="Batalkan Retur Supplier"
+        message={`Retur ${r.cancelTarget?.kode_adjustment || ""} akan DIBATALKAN dan stok yang tadi berkurang dikembalikan ke gudang. Lanjutkan?`}
+        confirmLabel="Ya, Batalkan"
+        tone="danger"
       />
     </>
   );

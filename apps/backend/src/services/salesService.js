@@ -120,7 +120,7 @@ async function createSale({ user, items }) {
         product_id: it.product_id,
         user_id: user.id,
         source_type: "sales",
-        rule_triggered: null,
+        rule_triggered: "DISKON",
         rule_action: "REJECTED",
         reason_detail: `Diskon ${it.diskon_persen}% melebihi batas maksimum ${MAX_DISKON}% untuk "${p?.nama_barang || it.product_id}"`,
         context_payload: {

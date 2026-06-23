@@ -327,7 +327,7 @@ async function lookupPurchaseByNota(nota) {
   let query = supabase
     .from("purchases")
     .select(
-      "id, no_nota_supplier, supplier_name, user_id, total, status_validasi, created_at, purchase_items(id, product_id, qty, harga_beli, diskon_persen, source, products(kode_barang, nama_barang, merk))"
+      "id, no_nota_supplier, supplier_name, user_id, total, status_validasi, created_at, purchase_items(id, product_id, qty, harga_beli, diskon_persen, source, products(kode_barang, nama_barang, merk, stok))"
     )
     .eq("status_validasi", "tervalidasi")
     .order("created_at", { ascending: false })
@@ -356,6 +356,7 @@ async function lookupPurchaseByNota(nota) {
       nama_barang: it.products?.nama_barang,
       merk: it.products?.merk,
       qty: it.qty,
+      stok: Number(it.products?.stok ?? 0), // stok master saat ini (utk batas retur)
       harga_beli: Number(it.harga_beli),
       diskon_persen: Number(it.diskon_persen || 0),
     })),

@@ -135,7 +135,7 @@ async function createAdjustment({ user, payload }) {
           product_id: it.product_id,
           user_id: user.id,
           source_type: "adjustment",
-          rule_triggered: null,
+          rule_triggered: "RETUR",
           rule_action: "REJECTED",
           reason_detail: `Retur pelanggan ${it.qty} unit melebihi sisa yang bisa diretur (maks ${Math.max(0, available)})`,
           context_payload: {
@@ -154,9 +154,10 @@ async function createAdjustment({ user, payload }) {
     }
   }
 
-  // return_supplier: batas retur = STOK AKTUAL di master barang (BUKAN jumlah beli).
-  // Sebagian barang mungkin sudah laku terjual, jadi retur tidak boleh melebihi stok
-  // aktual. Over-qty TIDAK diblok diam-diam: dicoba → DITOLAK & tercatat REJECTED.
+  // return_supplier: batas retur per item = MIN(qty di nota beli, stok aktual master).
+  //  - Tak boleh > yang dibeli di nota itu (nota beli 10 → maks 10 walau stok 20).
+  //  - Tak boleh > stok aktual (stok tinggal 5 → maks 5 walau nota 8).
+  // Input UI bebas; pelanggaran DITOLAK saat confirm & tercatat REJECTED (demonstratif).
   if (type === "return_supplier") {
     const ids = [...new Set(items.map((it) => it.product_id))];
     const { data: prods } = await supabaseAdmin
@@ -164,27 +165,44 @@ async function createAdjustment({ user, payload }) {
       .select("id, nama_barang, stok")
       .in("id", ids);
     const stokMap = new Map((prods || []).map((p) => [p.id, p]));
+    // Jumlah per produk yang DIBELI di nota referensi
+    const { data: pitems } = await supabaseAdmin
+      .from("purchase_items")
+      .select("product_id, qty")
+      .eq("purchase_id", reference_purchase_id);
+    const notaMap = new Map();
+    for (const pi of pitems || []) {
+      notaMap.set(pi.product_id, (notaMap.get(pi.product_id) || 0) + Number(pi.qty));
+    }
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       const p = stokMap.get(it.product_id);
       const stokAktual = Number(p?.stok ?? 0);
-      if (Number(it.qty) > stokAktual) {
+      const notaQty = Number(notaMap.get(it.product_id) ?? 0);
+      const batas = Math.min(notaQty, stokAktual);
+      if (Number(it.qty) > batas) {
+        const sebab =
+          notaQty <= stokAktual
+            ? `melebihi jumlah di nota beli (${notaQty})`
+            : `melebihi stok aktual (${stokAktual})`;
         await stockLogRepository.write({
           product_id: it.product_id,
           user_id: user.id,
           source_type: "adjustment",
-          rule_triggered: null,
+          rule_triggered: "RETUR",
           rule_action: "REJECTED",
-          reason_detail: `Retur supplier ${it.qty} unit melebihi stok aktual ${stokAktual} untuk "${p?.nama_barang || it.product_id}"`,
+          reason_detail: `Retur supplier ${it.qty} unit ${sebab} untuk "${p?.nama_barang || it.product_id}" (maks ${batas})`,
           context_payload: {
             product_id: it.product_id,
             nama_barang: p?.nama_barang,
             qty_retur: Number(it.qty),
+            qty_nota_beli: notaQty,
             stok_aktual: stokAktual,
+            batas_maksimum: batas,
           },
         });
         const e = new Error(
-          `Retur ditolak — qty (${it.qty}) melebihi stok aktual (${stokAktual}) untuk ${p?.nama_barang || "barang"}`
+          `Retur ditolak — qty (${it.qty}) ${sebab} untuk ${p?.nama_barang || "barang"} (maks ${batas})`
         );
         e.status = 409;
         e.rule = "RETUR";
