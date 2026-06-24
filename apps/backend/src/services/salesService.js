@@ -99,7 +99,16 @@ async function createSale({ user, items }) {
   const failures = ruleEngine.checkR1StockAvailability({ items: safeItems, products });
 
   if (failures.length > 0) {
-    await logR1Rejections({ failures, products, user, items: safeItems });
+    // Audit REJECTED bersifat best-effort: kegagalan menulis log TIDAK boleh
+    // membatalkan penolakan transaksi (sale tetap ditolak 409 di bawah).
+    try {
+      await logR1Rejections({ failures, products, user, items: safeItems });
+    }
+    catch (logErr) {
+      log.error("SALES", "Gagal menulis stock_logs REJECTED (R1)", logErr, {
+        user_id: user.id,
+      });
+    }
 
     const e = new Error(failures.map((f) => f.reason).join("; "));
     e.status = 409;
